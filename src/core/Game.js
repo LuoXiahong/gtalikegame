@@ -3,6 +3,7 @@
  * Inicjalizuje systemy i uruchamia główną pętlę.
  */
 import { Time } from './Time.js';
+import { EventBus } from './EventBus.js';
 import { World } from '../world/World.js';
 import { Camera } from '../world/Camera.js';
 import { InputSystem } from '../input/InputManager.js';
@@ -87,6 +88,7 @@ export const Game = {
                     PlayerMovementSystem.update(dt, controlled);
                 } else if (controlled.type === 'car') {
                     VehiclePhysicsSystem.update(dt, controlled);
+                    EventBus.emit('speed_update', Math.abs(controlled.physics.speed));
                 }
             }
 

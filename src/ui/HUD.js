@@ -1,6 +1,6 @@
 /**
  * UI System (HUD)
- * Warstwa UI - misje, dialogi
+ * Warstwa UI - misje, dialogi, poszukiwania i prędkościomierz.
  */
 import { EventBus } from '../core/EventBus.js';
 
@@ -12,6 +12,8 @@ export const UISystem = {
     missionText: '',
     wantedStars: 0,
     isBlinking: false,
+    speedValue: 0,
+    showSpeed: false,
 
     init() {
         this.layer = document.getElementById('uiLayer');
@@ -54,6 +56,22 @@ export const UISystem = {
             this.wantedStars = 0;
             this.updateDOM();
         });
+
+        EventBus.on('speed_update', (speed) => {
+            this.speedValue = speed;
+            this.updateDOM();
+        });
+
+        EventBus.on('vehicle_entered', () => {
+            this.showSpeed = true;
+            this.updateDOM();
+        });
+
+        EventBus.on('vehicle_exited', () => {
+            this.showSpeed = false;
+            this.speedValue = 0;
+            this.updateDOM();
+        });
     },
 
     updateDOM() {
@@ -74,6 +92,11 @@ export const UISystem = {
             }
             const color = this.isBlinking ? '#e74c3c' : '#f1c40f'; // red flash, gold normal
             html += `<div style="position:absolute; top:20px; right:20px; font-size:32px; letter-spacing:2px; color:${color}; text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; transition: color 0.2s;">${starsHtml}</div>`;
+        }
+        if (this.showSpeed) {
+            // Zamieniamy speed z px/s na fikcyjne km/h (np. 500 maxSpeed -> ~150 km/h)
+            const kmh = Math.round(this.speedValue * 0.3);
+            html += `<div id="speedometer" style="position:absolute; bottom:20px; left:20px; font-size:28px; font-weight:bold; color:#2ecc71; font-family:monospace; text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${kmh} KM/H</div>`;
         }
         this.layer.innerHTML = html;
     }
