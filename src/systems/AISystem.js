@@ -18,6 +18,22 @@ export const AISystem = {
                 }
             });
         });
+
+        EventBus.on('explosion', (data) => {
+            const npcs = World.getEntitiesByType('npc');
+            npcs.forEach(npc => {
+                const dx = npc.transform.x - data.x;
+                const dy = npc.transform.y - data.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                const radius = data.radius || 1000;
+                if (dist < radius) {
+                    npc.ai.state = 'flee';
+                    npc.ai.timer = 8 + Math.random() * 5; // Dłuższy strach po wybuchu
+                    npc.transform.angle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.8;
+                }
+            });
+        });
     },
 
     update(dt) {

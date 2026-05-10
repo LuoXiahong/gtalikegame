@@ -11,6 +11,7 @@ vi.mock('../world/World.js', () => ({
 
 vi.mock('../input/InputManager.js', () => ({
     InputSystem: {
+        consumeExplode: vi.fn(() => false),
         consumeAction: vi.fn(() => false),
         consumeShoot: vi.fn(() => false)
     }

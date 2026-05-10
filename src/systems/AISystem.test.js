@@ -18,6 +18,7 @@ vi.mock('../core/EventBus.js', () => ({
 describe('AISystem', () => {
     let mockNPC;
     let gunshotCallback;
+    let explosionCallback;
 
     beforeEach(() => {
         mockNPC = {
@@ -33,9 +34,10 @@ describe('AISystem', () => {
         // Mock Math.random żeby kontrolować stany w testach
         vi.spyOn(Math, 'random').mockReturnValue(0.5); 
 
-        // Capture gunshot callback
+        // Capture callbacks
         EventBus.on.mockImplementation((event, cb) => {
             if (event === 'gunshot') gunshotCallback = cb;
+            if (event === 'explosion') explosionCallback = cb;
         });
         
         AISystem.init();
@@ -71,5 +73,13 @@ describe('AISystem', () => {
         const expectedFleeSpeed = mockNPC.physics.speed * 2.5;
         const totalVel = Math.sqrt(mockNPC.physics.velX ** 2 + mockNPC.physics.velY ** 2);
         expect(totalVel).toBeCloseTo(expectedFleeSpeed * 0.1);
+    });
+
+    it('should change to flee state on explosion event within range', () => {
+        // Trigger explosion far away but within radius
+        explosionCallback({ x: 800, y: 0, radius: 1000 });
+        
+        expect(mockNPC.ai.state).toBe('flee');
+        expect(mockNPC.ai.timer).toBeGreaterThan(8);
     });
 });

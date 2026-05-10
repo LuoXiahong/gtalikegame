@@ -14,12 +14,19 @@ export const InteractionSystem = {
 
         const isActionPressed = InputSystem.consumeAction();
         const isShootPressed = InputSystem.consumeShoot();
+        const isExplodePressed = InputSystem.consumeExplode();
         const controlled = VehicleSystem.getControlledEntity();
 
-        // 1. Strzelanie (tylko pieszo na razie dla prostoty)
-        if (controlled && controlled.type === 'player' && isShootPressed) {
-            EventBus.emit('gunshot', { x: p.transform.x, y: p.transform.y });
-            EventBus.emit('audio_play', 'gunshot');
+        // 1. Strzelanie i Eksplozje (tylko pieszo na razie)
+        if (controlled && controlled.type === 'player') {
+            if (isShootPressed) {
+                EventBus.emit('gunshot', { x: p.transform.x, y: p.transform.y });
+                EventBus.emit('audio_play', 'gunshot');
+            }
+            if (isExplodePressed) {
+                EventBus.emit('explosion', { x: p.transform.x, y: p.transform.y, radius: 1000 });
+                EventBus.emit('audio_play', 'explosion');
+            }
         }
 
         // 2. Jeśli jesteśmy w aucie, sprawdź tylko wyjście
