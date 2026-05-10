@@ -31,6 +31,7 @@ export const Game = {
     init() {
         World.init();
         InputSystem.init();
+        Camera.init();
         RenderSystem.init();
         AudioSystem.init();
         UISystem.init();
