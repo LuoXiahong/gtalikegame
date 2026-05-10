@@ -244,4 +244,61 @@ describe('TrafficSystem', () => {
         const speedMult = TrafficSystem.computeSpeedMult(car);
         expect(speedMult).toBeLessThan(1.0); // should detect and slow down or stop
     });
+
+    it('should trigger collision reaction (stop & bounce) on overlap with building', () => {
+        TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.update(0.1);
+        const car = World.getEntitiesByType('car')[0];
+        
+        car.transform.x = 100;
+        car.transform.y = 100;
+        car.transform.width = 90;
+        car.transform.height = 45;
+        car.ai.currentSpeed = 100;
+        
+        // Place building overlapping predicted next position
+        // If heading EAST (angle = 0, nextX = 100 + 10 = 110)
+        World.buildings.push({ x: 120, y: 80, w: 50, h: 40 });
+        
+        const originalX = car.transform.x;
+        
+        // Update
+        TrafficSystem.update(0.1);
+        
+        // Speed should be reset to 0
+        expect(car.ai.currentSpeed).toBe(0);
+        expect(car.physics.velX).toBe(0);
+        
+        // Position should be bounced back (pushed away from building center at x=145, meaning pushed WEST to < 100)
+        expect(car.transform.x).toBeLessThan(originalX);
+    });
+
+    it('should trigger collision reaction (stop & bounce) on overlap with another car', () => {
+        TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.update(0.1);
+        const car = World.getEntitiesByType('car')[0];
+        
+        car.transform.x = 100;
+        car.transform.y = 100;
+        car.transform.width = 90;
+        car.transform.height = 45;
+        car.ai.currentSpeed = 100;
+        
+        const otherCar = {
+            type: 'car',
+            transform: { x: 120, y: 100, width: 90, height: 45 }
+        };
+        World.entities.push(otherCar);
+        
+        const originalX = car.transform.x;
+        
+        TrafficSystem.update(0.1);
+        
+        expect(car.ai.currentSpeed).toBe(0);
+        expect(car.physics.velX).toBe(0);
+        // Pushed away from otherCar center at x=120, meaning WEST to < 100
+        expect(car.transform.x).toBeLessThan(originalX);
+    });
 });

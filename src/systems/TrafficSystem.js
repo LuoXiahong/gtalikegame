@@ -182,8 +182,74 @@ export const TrafficSystem = {
         const targetSpeed = car.ai.maxSpeed * speedMult;
         car.ai.currentSpeed += (targetSpeed - car.ai.currentSpeed) * 0.1;
         
-        // Ustawienie vel dla MovementSystem
-        car.physics.velX = Math.cos(angle) * car.ai.currentSpeed * dt;
-        car.physics.velY = Math.sin(angle) * car.ai.currentSpeed * dt;
+        // 3. Sprawdź ewentualną kolizję na przewidywanej pozycji
+        const predVelX = Math.cos(angle) * car.ai.currentSpeed * dt;
+        const predVelY = Math.sin(angle) * car.ai.currentSpeed * dt;
+        const nextX = car.transform.x + predVelX;
+        const nextY = car.transform.y + predVelY;
+        
+        const hw = car.transform.width / 2;
+        const hh = car.transform.height / 2;
+        
+        let collisionOccurred = false;
+        let pushX = 0;
+        let pushY = 0;
+        
+        // A. Kolizje z Budynkami
+        if (World.buildings && World.buildings.length > 0) {
+            for (const b of World.buildings) {
+                if (nextX - hw < b.x + b.w &&
+                    nextX + hw > b.x &&
+                    nextY - hh < b.y + b.h &&
+                    nextY + hh > b.y) {
+                    
+                    collisionOccurred = true;
+                    const bx = b.x + b.w / 2;
+                    const by = b.y + b.h / 2;
+                    const bdx = car.transform.x - bx;
+                    const bdy = car.transform.y - by;
+                    const bdist = Math.sqrt(bdx * bdx + bdy * bdy) || 1;
+                    pushX = (bdx / bdist) * 10;
+                    pushY = (bdy / bdist) * 10;
+                    break;
+                }
+            }
+        }
+        
+        // B. Kolizje z innymi autami / graczem
+        if (!collisionOccurred) {
+            const others = World.entities.filter(e => e !== car && (e.type === 'car' || e.type === 'player'));
+            for (const other of others) {
+                const ohw = other.transform.width / 2;
+                const ohh = other.transform.height / 2;
+                
+                if (nextX - hw < other.transform.x + ohw &&
+                    nextX + hw > other.transform.x - ohw &&
+                    nextY - hh < other.transform.y + ohh &&
+                    nextY + hh > other.transform.y - ohh) {
+                    
+                    collisionOccurred = true;
+                    const cdx = car.transform.x - other.transform.x;
+                    const cdy = car.transform.y - other.transform.y;
+                    const cdist = Math.sqrt(cdx * cdx + cdy * cdy) || 1;
+                    pushX = (cdx / cdist) * 10;
+                    pushY = (cdy / cdist) * 10;
+                    break;
+                }
+            }
+        }
+        
+        if (collisionOccurred) {
+            car.ai.currentSpeed = 0;
+            // Lekki bounce-back (odskok)
+            car.transform.x += pushX;
+            car.transform.y += pushY;
+            car.physics.velX = 0;
+            car.physics.velY = 0;
+        } else {
+            // Ustawienie vel dla MovementSystem
+            car.physics.velX = predVelX;
+            car.physics.velY = predVelY;
+        }
     }
 };
