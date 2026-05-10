@@ -106,7 +106,7 @@ export const CollisionSystem = {
                 };
 
                 if (this.checkAABB(controlled.transform, npcBox)) {
-                    if (Math.abs(controlled.physics.speed) > 20) {
+                    if (Math.abs(controlled.physics.speed) > 10) {
                         const dx = npc.transform.x - controlled.transform.x;
                         const dy = npc.transform.y - controlled.transform.y;
                         const dist = Math.sqrt(dx * dx + dy * dy) || 1;

@@ -57,4 +57,15 @@ describe('PoliceSystem', () => {
         // Angle should be roughly towards player (0 radians)
         expect(police.transform.angle).toBeCloseTo(Math.atan2(0 - police.transform.y, 2000 - police.transform.x));
     });
+    it('should include dt in velocity calculation', () => {
+        EventBus.emit('wanted_level_change', { stars: 2 });
+        PoliceSystem.update(0.1);
+        const police = PoliceSystem.policeCars[0];
+        
+        const dt = 0.5;
+        PoliceSystem.update(dt);
+        
+        const expectedVelX = Math.cos(police.transform.angle) * police.physics.speed * dt;
+        expect(police.physics.velX).toBeCloseTo(expectedVelX);
+    });
 });

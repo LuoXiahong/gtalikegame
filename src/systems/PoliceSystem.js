@@ -58,9 +58,15 @@ export const PoliceSystem = {
         this.policeCars = [];
     },
 
+    cleanUpDestroyedCars() {
+        // Usuwamy z tablicy auta, których nie ma już w World.entities
+        this.policeCars = this.policeCars.filter(car => World.entities.includes(car));
+    },
+
     update(dt) {
         if (!this.isActive) return;
 
+        this.cleanUpDestroyedCars();
         this.spawnPoliceIfNeeded();
 
         const target = VehicleSystem.getControlledEntity() || World.getEntitiesByType('player')[0];
@@ -81,9 +87,9 @@ export const PoliceSystem = {
                 policeCar.physics.speed += policeCar.physics.acceleration * dt;
             }
 
-            // Aplikacja wektora prędkości
-            policeCar.physics.velX = Math.cos(policeCar.transform.angle) * policeCar.physics.speed;
-            policeCar.physics.velY = Math.sin(policeCar.transform.angle) * policeCar.physics.speed;
+            // Aplikacja wektora prędkości (UWAGA: wymagane mnożenie przez dt dla MovementSystem)
+            policeCar.physics.velX = Math.cos(policeCar.transform.angle) * policeCar.physics.speed * dt;
+            policeCar.physics.velY = Math.sin(policeCar.transform.angle) * policeCar.physics.speed * dt;
         });
     }
 };

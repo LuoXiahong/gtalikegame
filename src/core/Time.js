@@ -3,6 +3,7 @@
  */
 export const Time = {
     delta: 0,
+    time: 0,
     lastFrame: performance.now(),
 
     update(currentTime) {
@@ -12,5 +13,7 @@ export const Time = {
 
         // Zabezpieczenie przed zbyt dużym skokiem (np. przy powrocie do zakładki)
         if (this.delta > 0.1) this.delta = 0.1;
+
+        this.time += this.delta;
     }
 };
