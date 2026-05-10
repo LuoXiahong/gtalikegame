@@ -46,9 +46,23 @@ export const Game = {
 
         VehicleSystem.init(p1);
 
-        World.addEntity(new NPC('npc1', 1450, 1550, '#8e44ad'));
-        World.addEntity(new NPC('npc2', 1700, 1400, '#27ae60'));
-        World.addEntity(new NPC('npc3', 1250, 1800, '#c0392b'));
+        // Spawnowanie 10 przechodniów (NPC) na chodnikach wokół miasta
+        const npcConfigs = [
+            { id: 'npc1', x: 1450, y: 1550, color: '#8e44ad' }, // fioletowy
+            { id: 'npc2', x: 1750, y: 1450, color: '#27ae60' }, // zielony
+            { id: 'npc3', x: 1250, y: 1800, color: '#c0392b' }, // czerwony
+            { id: 'npc4', x: 1150, y: 1450, color: '#f1c40f' }, // żółty
+            { id: 'npc5', x: 1450, y: 1150, color: '#e67e22' }, // pomarańczowy
+            { id: 'npc6', x: 1750, y: 1750, color: '#1abc9c' }, // turkusowy
+            { id: 'npc7', x: 1150, y: 1750, color: '#9b59b6' }, // fioletowy (jasny)
+            { id: 'npc8', x: 1450, y: 1850, color: '#3498db' }, // niebieski
+            { id: 'npc9', x: 1850, y: 1450, color: '#e74c3c' }, // czerwony (jasny)
+            { id: 'npc10', x: 950, y: 1450, color: '#2ecc71' } // zielony (jasny)
+        ];
+
+        npcConfigs.forEach(cfg => {
+            World.addEntity(new NPC(cfg.id, cfg.x, cfg.y, cfg.color));
+        });
 
         World.addEntity(new Car('car1', 2050, 1600, '#c0392b'));
 
