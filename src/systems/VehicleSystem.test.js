@@ -1,11 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { VehicleSystem } from './VehicleSystem.js';
 import { EventBus } from '../core/EventBus.js';
+import { InputSystem } from '../input/InputManager.js';
 
 vi.mock('../core/EventBus.js', () => ({
     EventBus: {
         emit: vi.fn(),
         on: vi.fn()
+    }
+}));
+
+vi.mock('../input/InputManager.js', () => ({
+    InputSystem: {
+        resetAll: vi.fn(),
+        keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false }
     }
 }));
 
@@ -26,6 +34,7 @@ describe('VehicleSystem', () => {
             id: 'c1',
             type: 'car',
             transform: { x: 100, y: 100, width: 90, height: 45 },
+            physics: { speed: 10, velX: 10, velY: 10 },
             occupied: false,
             occupantId: null
         };
@@ -46,18 +55,34 @@ describe('VehicleSystem', () => {
         expect(mockPlayer.visible).toBe(false);
         expect(mockPlayer.physics.velX).toBe(0);
         expect(mockPlayer.physics.velY).toBe(0);
+        expect(mockCar.physics.speed).toBe(0);
+        expect(mockCar.physics.velX).toBe(0);
+        expect(mockCar.physics.velY).toBe(0);
+        expect(InputSystem.resetAll).toHaveBeenCalled();
         expect(EventBus.emit).toHaveBeenCalledWith('vehicle_entered', { carId: mockCar.id });
     });
 
     it('should exit vehicle correctly', () => {
         VehicleSystem.init(mockPlayer);
         VehicleSystem.enterVehicle({ player: mockPlayer, car: mockCar });
+        
+        // Ustaw prędkość auta w trakcie sterowania
+        mockCar.physics.speed = 20;
+        mockCar.physics.velX = 15;
+        mockCar.physics.velY = 15;
+
         VehicleSystem.exitVehicle({ player: mockPlayer });
 
         expect(VehicleSystem.getControlledEntity()).toBe(mockPlayer);
         expect(mockCar.occupied).toBe(false);
         expect(mockCar.occupantId).toBe(null);
         expect(mockPlayer.visible).toBe(true);
+        expect(mockCar.physics.speed).toBe(0);
+        expect(mockCar.physics.velX).toBe(0);
+        expect(mockCar.physics.velY).toBe(0);
+        expect(mockPlayer.physics.velX).toBe(0);
+        expect(mockPlayer.physics.velY).toBe(0);
+        expect(InputSystem.resetAll).toHaveBeenCalledTimes(2); // raz przy enter, raz przy exit
         
         // Sprawdź pozycję gracza po wyjściu (obok auta)
         expect(mockPlayer.transform.x).toBe(mockCar.transform.x + mockCar.transform.width / 2 + 30);

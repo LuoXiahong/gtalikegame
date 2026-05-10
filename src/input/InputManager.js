@@ -58,6 +58,15 @@ export const InputSystem = {
         return pressed;
     },
 
+    resetAll() {
+        for (const key in this.keys) {
+            this.keys[key] = false;
+        }
+        this.actionJustPressed = false;
+        this.shootJustPressed = false;
+        this.explodeJustPressed = false;
+    },
+
     bindHUD(elementId, keyName) {
         const btn = document.getElementById(elementId);
         if (!btn) return;
