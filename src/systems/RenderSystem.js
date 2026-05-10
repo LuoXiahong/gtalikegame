@@ -5,6 +5,7 @@
 import { World } from '../world/World.js';
 import { Camera } from '../world/Camera.js';
 import { VehicleSystem } from './VehicleSystem.js';
+import { MissionSystem } from './MissionSystem.js';
 import { TILE_COLORS } from '../world/Tilemap.js';
 
 export const RenderSystem = {
@@ -285,6 +286,34 @@ export const RenderSystem = {
         this.ctx.restore();
     },
 
+    drawMissionObjective() {
+        if (!MissionSystem.targetLocation) return;
+        
+        const loc = MissionSystem.targetLocation;
+        this.ctx.save();
+        
+        // Pulsujący krąg
+        const pulse = Math.sin(Date.now() / 200) * 10;
+        this.ctx.strokeStyle = '#f1c40f';
+        this.ctx.lineWidth = 4;
+        this.ctx.setLineDash([10, 5]);
+        this.ctx.beginPath();
+        this.ctx.arc(loc.x, loc.y, loc.radius + pulse, 0, Math.PI * 2);
+        this.ctx.stroke();
+
+        // Wypełnienie
+        this.ctx.fillStyle = 'rgba(241, 196, 15, 0.2)';
+        this.ctx.fill();
+
+        // Napis
+        this.ctx.fillStyle = '#f1c40f';
+        this.ctx.font = 'bold 20px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('TARGET ZONE', loc.x, loc.y - loc.radius - 20);
+        
+        this.ctx.restore();
+    },
+
     update() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.save();
@@ -294,6 +323,7 @@ export const RenderSystem = {
         this.drawGrid();
         this.drawShadows();
         this.drawEntities();
+        this.drawMissionObjective();
         
         // Debug overlays
         this.drawOriginMarker();

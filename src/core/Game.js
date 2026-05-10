@@ -80,6 +80,7 @@ export const Game = {
             TrafficSystem.update(dt);
             MovementSystem.update(dt);
             AISystem.update(dt);
+            MissionSystem.update(dt);
             InteractionSystem.update();
 
             // 3. Rozwiązywanie kolizji
