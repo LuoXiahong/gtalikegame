@@ -12,8 +12,8 @@ describe('Player', () => {
         
         // Sprawdzenie fizyki
         expect(p.physics).toBeDefined();
-        expect(p.physics.speed).toBe(250);
-        expect(p.physics.friction).toBe(0.6);
+        expect(p.physics.speed).toBe(100);
+        expect(p.physics.friction).toBe(0.5);
         
         // Sprawdzenie visual
         expect(p.visual.color).toBe('#e74c3c');

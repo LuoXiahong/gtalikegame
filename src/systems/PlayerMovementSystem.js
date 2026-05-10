@@ -30,13 +30,13 @@ export const PlayerMovementSystem = {
         // 3. Aplikacja do fizyki (Game-like feel)
         if (entity.physics) {
             if (isMoving) {
-                // Szybsza akceleracja
-                entity.physics.velX += intentX * entity.physics.speed * 4 * dt;
-                entity.physics.velY += intentY * entity.physics.speed * 4 * dt;
+                // Szybsza akceleracja (zbalansowana)
+                entity.physics.velX += intentX * entity.physics.speed * dt;
+                entity.physics.velY += intentY * entity.physics.speed * dt;
             } else {
                 // Dodatkowe, natychmiastowe hamowanie po puszczeniu klawiszy
-                entity.physics.velX *= 0.5;
-                entity.physics.velY *= 0.5;
+                entity.physics.velX *= 0.3;
+                entity.physics.velY *= 0.3;
             }
         }
     }

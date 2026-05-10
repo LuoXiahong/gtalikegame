@@ -25,9 +25,9 @@ describe('PlayerMovementSystem', () => {
 
     it('should apply velocity when UP is pressed', () => {
         InputSystem.keys.up = true;
-        // angle = 0, cos(0)=1. velX += 1 * 100 * 4 * 0.1 = 40
+        // angle = 0, cos(0)=1. velX += 1 * 100 * 0.1 = 10
         PlayerMovementSystem.update(0.1, mockPlayer);
-        expect(mockPlayer.physics.velX).toBe(40);
+        expect(mockPlayer.physics.velX).toBe(10);
     });
 
     it('should change angle when LEFT or RIGHT is pressed', () => {
@@ -48,7 +48,7 @@ describe('PlayerMovementSystem', () => {
         mockPlayer.physics.velX = 20;
         mockPlayer.physics.velY = 20;
         PlayerMovementSystem.update(0.1, mockPlayer);
-        expect(mockPlayer.physics.velX).toBe(10); // 20 * 0.5
-        expect(mockPlayer.physics.velY).toBe(10);
+        expect(mockPlayer.physics.velX).toBe(6); // 20 * 0.3
+        expect(mockPlayer.physics.velY).toBe(6);
     });
 });
