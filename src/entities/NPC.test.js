@@ -15,6 +15,9 @@ describe('NPC', () => {
         
         expect(npc.ai).toBeDefined();
         expect(npc.ai.state).toBe('idle');
-        expect(npc.ai.timer).toBe(0);
+        expect(npc.ai.timer).toBeGreaterThanOrEqual(1);
+        expect(npc.ai.waypoints).toBeDefined();
+        expect(npc.ai.waypoints.length).toBe(3);
+        expect(npc.ai.currentWaypointIndex).toBe(0);
     });
 });

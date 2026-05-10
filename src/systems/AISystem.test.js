@@ -26,7 +26,12 @@ describe('AISystem', () => {
             transform: { x: 0, y: 0, angle: 0 },
             physics: { velX: 0, velY: 0, speed: 50 },
             visual: { walkCycle: 0 },
-            ai: { state: 'idle', timer: 1 }
+            ai: { 
+                state: 'idle', 
+                timer: 1,
+                waypoints: [{ x: 100, y: 0 }, { x: 0, y: 100 }],
+                currentWaypointIndex: 0
+            }
         };
 
         World.getEntitiesByType.mockReturnValue([mockNPC]);
@@ -55,10 +60,25 @@ describe('AISystem', () => {
     it('should change state when timer reaches 0', () => {
         AISystem.update(1.0); // timer becomes 0
         
-        // Since random() is 0.5, it should change to 'walk' (0.5 >= 0.45)
         expect(mockNPC.ai.state).toBe('walk');
-        expect(mockNPC.ai.timer).toBeGreaterThan(0);
         expect(mockNPC.visual.walkCycle).toBeGreaterThan(0);
+        // Sprawdzamy ruch w kierunku aktualnego punktu drogi (100, 0)
+        expect(mockNPC.physics.velX).toBeGreaterThan(0);
+        expect(mockNPC.physics.velY).toBe(0);
+    });
+
+    it('should switch waypoints and enter idle state when reaching target', () => {
+        // Ustawiamy pozycję NPC blisko celu
+        mockNPC.ai.state = 'walk';
+        mockNPC.transform.x = 95; // dystans do (100, 0) wynosi 5 (< 10)
+        mockNPC.transform.y = 0;
+        
+        AISystem.update(0.1);
+        
+        expect(mockNPC.ai.state).toBe('idle');
+        expect(mockNPC.ai.timer).toBeGreaterThan(0);
+        expect(mockNPC.ai.currentWaypointIndex).toBe(1); // przełączył się na drugi punkt drogi
+        expect(mockNPC.physics.velX).toBe(0);
     });
 
     it('should change to flee state on gunshot event within range', () => {

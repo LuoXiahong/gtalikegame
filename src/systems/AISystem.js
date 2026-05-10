@@ -40,34 +40,65 @@ export const AISystem = {
         const npcs = World.getEntitiesByType('npc');
 
         npcs.forEach(npc => {
-            npc.ai.timer -= dt;
+            // Zmniejszamy timer (jeśli jest aktywny)
+            if (npc.ai.timer > 0) {
+                npc.ai.timer -= dt;
+            }
 
+            // Przejścia czasowe w maszynie stanów (FSM)
             if (npc.ai.timer <= 0) {
-                // FSM: Zmiana stanu (powrót do normalności po ucieczce lub zmiana idle/walk)
-                if (Math.random() < 0.45) {
+                if (npc.ai.state === 'idle') {
+                    // Czas na spacer do następnego punktu drogi
+                    npc.ai.state = 'walk';
+                } else if (npc.ai.state === 'flee') {
+                    // Po panice odpoczywa przez chwilę w idle
                     npc.ai.state = 'idle';
                     npc.ai.timer = 1 + Math.random() * 2;
                     npc.physics.velX = 0;
                     npc.physics.velY = 0;
-                } else {
-                    npc.ai.state = 'walk';
-                    npc.transform.angle = Math.random() * Math.PI * 2;
-                    npc.ai.timer = 2 + Math.random() * 3;
                 }
             }
 
-            // Logika ruchu zależna od stanu
+            // Logika ruchu i zachowania
             if (npc.ai.state === 'walk') {
-                npc.physics.velX = Math.cos(npc.transform.angle) * npc.physics.speed * dt;
-                npc.physics.velY = Math.sin(npc.transform.angle) * npc.physics.speed * dt;
-                npc.visual.walkCycle += 10 * dt;
+                if (npc.ai.waypoints && npc.ai.waypoints.length > 0) {
+                    const target = npc.ai.waypoints[npc.ai.currentWaypointIndex];
+                    const dx = target.x - npc.transform.x;
+                    const dy = target.y - npc.transform.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < 10) {
+                        // Dotarliśmy do celu! Odpoczywamy chwilę w idle i przełączamy punkt docelowy
+                        npc.ai.state = 'idle';
+                        npc.ai.timer = 1 + Math.random() * 2;
+                        npc.physics.velX = 0;
+                        npc.physics.velY = 0;
+                        npc.ai.currentWaypointIndex = (npc.ai.currentWaypointIndex + 1) % npc.ai.waypoints.length;
+                    } else {
+                        // Ruch w kierunku celu
+                        npc.transform.angle = Math.atan2(dy, dx);
+                        npc.physics.velX = Math.cos(npc.transform.angle) * npc.physics.speed * dt;
+                        npc.physics.velY = Math.sin(npc.transform.angle) * npc.physics.speed * dt;
+                        npc.visual.walkCycle += 10 * dt;
+                    }
+                } else {
+                    // Rezerwowy mechanizm na wypadek braku zdefiniowanych punktów (ruch losowy)
+                    if (npc.ai.timer <= 0) {
+                        npc.transform.angle = Math.random() * Math.PI * 2;
+                        npc.ai.timer = 2 + Math.random() * 3;
+                    }
+                    npc.physics.velX = Math.cos(npc.transform.angle) * npc.physics.speed * dt;
+                    npc.physics.velY = Math.sin(npc.transform.angle) * npc.physics.speed * dt;
+                    npc.visual.walkCycle += 10 * dt;
+                }
             } else if (npc.ai.state === 'flee') {
-                // Szybszy bieg w stanie flee
+                // Szybsza ucieczka przed zagrożeniem
                 const fleeSpeed = npc.physics.speed * 2.5;
                 npc.physics.velX = Math.cos(npc.transform.angle) * fleeSpeed * dt;
                 npc.physics.velY = Math.sin(npc.transform.angle) * fleeSpeed * dt;
                 npc.visual.walkCycle += 20 * dt;
             } else {
+                // Stan idle (stojący)
                 npc.physics.velX = 0;
                 npc.physics.velY = 0;
                 npc.visual.walkCycle = 0;
