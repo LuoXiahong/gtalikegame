@@ -96,6 +96,65 @@ export const TrafficSystem = {
         World.addEntity(car);
     },
     
+    computeSpeedMult(car) {
+        let speedMult = 1.0;
+        const sensorDist = 180;
+        const minStopDist = 100;
+        
+        // 1. Unikanie innych aut i gracza
+        const others = World.entities.filter(e => e !== car && (e.type === 'car' || e.type === 'player'));
+        for (const other of others) {
+            const odx = other.transform.x - car.transform.x;
+            const ody = other.transform.y - car.transform.y;
+            const distToOther = Math.sqrt(odx * odx + ody * ody);
+            
+            if (distToOther < sensorDist) {
+                const angleToOther = Math.atan2(ody, odx);
+                let diff = angleToOther - car.transform.angle;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                
+                if (Math.abs(diff) < 0.45) { // Stożek widzenia ok 25 stopni (0.45 rad)
+                    if (distToOther <= minStopDist) {
+                        speedMult = 0;
+                    } else {
+                        // Płynny lerp zwalniania
+                        const factor = (distToOther - minStopDist) / (sensorDist - minStopDist);
+                        speedMult = Math.min(speedMult, factor);
+                    }
+                }
+            }
+        }
+        
+        // 2. Unikanie budynków (AABB sampling)
+        if (World.buildings && World.buildings.length > 0) {
+            const cos = Math.cos(car.transform.angle);
+            const sin = Math.sin(car.transform.angle);
+            
+            // Check sample points along the ray in front of the car
+            const sampleDistances = [60, 100, 140, 180];
+            for (const dist of sampleDistances) {
+                const rx = car.transform.x + cos * dist;
+                const ry = car.transform.y + sin * dist;
+                
+                for (const b of World.buildings) {
+                    if (rx >= b.x && rx <= b.x + b.w && ry >= b.y && ry <= b.y + b.h) {
+                        if (dist <= minStopDist) {
+                            speedMult = 0;
+                        } else {
+                            const factor = (dist - minStopDist) / (sensorDist - minStopDist);
+                            speedMult = Math.min(speedMult, factor);
+                        }
+                        break;
+                    }
+                }
+                if (speedMult === 0) break;
+            }
+        }
+        
+        return speedMult;
+    },
+
     updateCar(car, dt) {
         const path = Waypoints.paths[car.ai.pathName];
         const target = path[car.ai.targetIndex];
@@ -117,27 +176,7 @@ export const TrafficSystem = {
         car.transform.angle = angle;
  
         // 2. Hamowanie przed przeszkodą (Fake Raycast)
-        let speedMult = 1.0;
-        const sensorDist = 180;
-        
-        const others = World.entities.filter(e => e !== car && (e.type === 'car' || e.type === 'player'));
-        for (const other of others) {
-            const odx = other.transform.x - car.transform.x;
-            const ody = other.transform.y - car.transform.y;
-            const distToOther = Math.sqrt(odx * odx + ody * ody);
-            
-            if (distToOther < sensorDist) {
-                const angleToOther = Math.atan2(ody, odx);
-                let diff = angleToOther - car.transform.angle;
-                while (diff < -Math.PI) diff += Math.PI * 2;
-                while (diff > Math.PI) diff -= Math.PI * 2;
-                
-                if (Math.abs(diff) < 0.6) { // Stożek widzenia ok 35 stopni
-                    speedMult = 0; 
-                    break;
-                }
-            }
-        }
+        const speedMult = this.computeSpeedMult(car);
         
         // Płynne przyspieszanie/hamowanie
         const targetSpeed = car.ai.maxSpeed * speedMult;

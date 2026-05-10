@@ -18,6 +18,7 @@ vi.mock('../world/World.js', () => ({
 describe('TrafficSystem', () => {
     beforeEach(() => {
         World.entities = [];
+        World.buildings = [];
         vi.clearAllMocks();
     });
 
@@ -170,5 +171,77 @@ describe('TrafficSystem', () => {
         
         // Because of lane offset, the actual car transform angle must be different from the raw angle to target
         expect(car.transform.angle).not.toBe(rawAngle);
+    });
+
+    it('should reduce speed gradually as obstacle approaches (lerp hamowania)', () => {
+        TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.update(0.1);
+        const car = World.getEntitiesByType('car')[0];
+        
+        car.transform.x = 100;
+        car.transform.y = 100;
+        car.transform.angle = 0; // heading east
+        
+        // Obstacle 140px in front (between minStopDist=100 and sensorDist=180)
+        const obs = { type: 'player', transform: { x: 240, y: 100 } };
+        World.entities.push(obs);
+        
+        const speedMult = TrafficSystem.computeSpeedMult(car);
+        expect(speedMult).toBeGreaterThan(0);
+        expect(speedMult).toBeLessThan(1);
+    });
+
+    it('should not react to obstacle at side', () => {
+        TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.update(0.1);
+        const car = World.getEntitiesByType('car')[0];
+        
+        car.transform.x = 100;
+        car.transform.y = 100;
+        car.transform.angle = 0; // heading east
+        
+        // Obstacle at side (90 deg, angleToOther = PI/2)
+        const obs = { type: 'player', transform: { x: 100, y: 150 } };
+        World.entities.push(obs);
+        
+        const speedMult = TrafficSystem.computeSpeedMult(car);
+        expect(speedMult).toBe(1.0);
+    });
+
+    it('should stop when obstacle within 100px ahead', () => {
+        TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.update(0.1);
+        const car = World.getEntitiesByType('car')[0];
+        
+        car.transform.x = 100;
+        car.transform.y = 100;
+        car.transform.angle = 0; // heading east
+        
+        // Obstacle 80px in front (within minStopDist=100)
+        const obs = { type: 'player', transform: { x: 180, y: 100 } };
+        World.entities.push(obs);
+        
+        const speedMult = TrafficSystem.computeSpeedMult(car);
+        expect(speedMult).toBe(0);
+    });
+
+    it('should slow down or stop when approaching a building obstacle', () => {
+        TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.update(0.1);
+        const car = World.getEntitiesByType('car')[0];
+        
+        car.transform.x = 100;
+        car.transform.y = 100;
+        car.transform.angle = 0; // heading east
+        
+        // Building in front
+        World.buildings.push({ x: 200, y: 80, w: 50, h: 40 }); // directly in path of EAST ray
+        
+        const speedMult = TrafficSystem.computeSpeedMult(car);
+        expect(speedMult).toBeLessThan(1.0); // should detect and slow down or stop
     });
 });
