@@ -301,4 +301,48 @@ describe('TrafficSystem', () => {
         // Pushed away from otherCar center at x=120, meaning WEST to < 100
         expect(car.transform.x).toBeLessThan(originalX);
     });
+
+    it('should activate avoidance behavior when approaching another car closely in front', () => {
+        TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.update(0.1);
+        const car = World.getEntitiesByType('car')[0];
+        
+        car.transform.x = 100;
+        car.transform.y = 100;
+        
+        const path = Waypoints.paths[car.ai.pathName];
+        const target = path[car.ai.targetIndex];
+        target.x = 1000;
+        target.y = 100;
+        
+        const otherCar = {
+            type: 'car',
+            transform: { x: 200, y: 105, width: 90, height: 45 }
+        };
+        World.entities.push(otherCar);
+        
+        TrafficSystem.update(0.1);
+        
+        expect(car.ai.avoidTimer).toBe(1.5);
+        expect(car.ai.avoidAngleOffset).not.toBe(0);
+    });
+
+    it('should decrement avoidTimer over updates and clear offset when expired', () => {
+        TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.update(0.1);
+        const car = World.getEntitiesByType('car')[0];
+        
+        car.ai.avoidTimer = 0.2;
+        car.ai.avoidAngleOffset = 0.4;
+        
+        TrafficSystem.update(0.1); // decrements by dt (0.1)
+        expect(car.ai.avoidTimer).toBeCloseTo(0.1);
+        expect(car.ai.avoidAngleOffset).toBe(0.4);
+        
+        TrafficSystem.update(0.1); // decrements to 0
+        expect(car.ai.avoidTimer).toBe(0);
+        expect(car.ai.avoidAngleOffset).toBe(0);
+    });
 });

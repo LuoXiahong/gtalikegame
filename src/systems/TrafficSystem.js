@@ -172,7 +172,47 @@ export const TrafficSystem = {
         const dy = targetY - car.transform.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         
-        const angle = Math.atan2(dy, dx);
+        let angle = Math.atan2(dy, dx);
+        
+        // Zmniejszanie timera unikania
+        if (car.ai.avoidTimer === undefined) car.ai.avoidTimer = 0;
+        if (car.ai.avoidAngleOffset === undefined) car.ai.avoidAngleOffset = 0;
+        
+        if (car.ai.avoidTimer > 0) {
+            car.ai.avoidTimer -= dt;
+            if (car.ai.avoidTimer <= 0) {
+                car.ai.avoidTimer = 0;
+                car.ai.avoidAngleOffset = 0;
+            }
+        }
+        
+        // Jeśli nie unika obecnie, sprawdź czy trzeba zacząć unikać innego auta
+        if (car.ai.avoidTimer === 0) {
+            const others = World.entities.filter(e => e !== car && e.type === 'car');
+            for (const other of others) {
+                const odx = other.transform.x - car.transform.x;
+                const ody = other.transform.y - car.transform.y;
+                const odist = Math.sqrt(odx * odx + ody * ody);
+                
+                if (odist < 140) {
+                    const angleToOther = Math.atan2(ody, odx);
+                    let diff = angleToOther - angle;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    
+                    if (Math.abs(diff) < 1.0) {
+                        car.ai.avoidTimer = 1.5;
+                        car.ai.avoidAngleOffset = diff > 0 ? -0.4 : 0.4;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if (car.ai.avoidTimer > 0) {
+            angle += car.ai.avoidAngleOffset;
+        }
+        
         car.transform.angle = angle;
  
         // 2. Hamowanie przed przeszkodą (Fake Raycast)
