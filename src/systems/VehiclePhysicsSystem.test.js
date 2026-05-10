@@ -83,4 +83,20 @@ describe('VehiclePhysicsSystem', () => {
         // angle += 1 * 2.5 * factor * -1 * 0.1
         expect(mockCar.transform.angle).toBeLessThan(0);
     });
+
+    it('should accelerate slower at higher speeds due to acceleration curve', () => {
+        InputSystem.keys.up = true;
+        
+        // 1. Przyspieszanie od zera
+        mockCar.physics.speed = 0;
+        VehiclePhysicsSystem.update(0.1, mockCar);
+        const accelAtZero = mockCar.physics.speed;
+        
+        // 2. Przyspieszanie od wyższej prędkości
+        mockCar.physics.speed = 300; // Połowa maxSpeed
+        VehiclePhysicsSystem.update(0.1, mockCar);
+        const accelAtHigh = mockCar.physics.speed - 300;
+        
+        expect(accelAtHigh).toBeLessThan(accelAtZero);
+    });
 });

@@ -10,12 +10,12 @@ export class Car extends Entity {
             velX: 0, 
             velY: 0, 
             speed: 0, // Bieżąca prędkość scalarna
-            maxSpeed: 600,
-            acceleration: 400,
-            friction: 1.0, // Fizyczne tarcie (MovementSystem) - wyłączone dla aut
-            rollingResistance: 0.98, // Naturalne zwalnianie auta
-            brakingFriction: 0.92, 
-            steeringPower: 2.5 
+            maxSpeed: 500,         // Bardziej kontrolowalny maxSpeed
+            acceleration: 600,     // Szybsza akceleracja (arcade feel)
+            friction: 1.0,         // Fizyczne tarcie (MovementSystem) - wyłączone dla aut
+            rollingResistance: 0.97, // Szybsze naturalne zwalnianie
+            brakingFriction: 0.90, 
+            steeringPower: 3.0     // Bardziej responsywne sterowanie
         };
         this.visual.color = color;
         this.visual.z = 0.05; 

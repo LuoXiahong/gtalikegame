@@ -14,8 +14,8 @@ describe('Car', () => {
         // Auto ma teraz fizykę arcade (T-101)
         expect(c.physics).not.toBeNull();
         expect(c.physics.speed).toBe(0); // Prędkość początkowa
-        expect(c.physics.maxSpeed).toBe(600);
-        expect(c.physics.rollingResistance).toBe(0.98);
+        expect(c.physics.maxSpeed).toBe(500);
+        expect(c.physics.rollingResistance).toBe(0.97);
         
         // Auto ma warstwę z i flagi zajętości
         expect(c.occupied).toBe(false);

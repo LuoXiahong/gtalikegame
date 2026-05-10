@@ -17,8 +17,10 @@ export const VehiclePhysicsSystem = {
         if (InputSystem.keys.down) driveIntent = -1;
 
         if (driveIntent !== 0) {
-            // Przyspieszanie (z uwzględnieniem kierunku)
-            p.speed += driveIntent * p.acceleration * dt;
+            // Przyspieszanie z nieliniową krzywą (szybszy start, wolniejsze zbliżanie się do maxSpeed)
+            const speedRatio = Math.min(Math.abs(p.speed) / p.maxSpeed, 1.0);
+            const accelCurve = 1.0 - speedRatio * 0.6; // na starcie 100% przyspieszenia, przy maxSpeed 40%
+            p.speed += driveIntent * p.acceleration * accelCurve * dt;
         } else {
             // Naturalne toczenie się (tarcie powietrza/podłoża)
             p.speed *= p.rollingResistance;
