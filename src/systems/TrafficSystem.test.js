@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TrafficSystem } from './TrafficSystem.js';
 import { World } from '../world/World.js';
 import { Entity } from '../entities/Entity.js';
+import { Waypoints } from '../world/Waypoints.js';
 
 vi.mock('../world/World.js', () => ({
     World: {
@@ -137,5 +138,37 @@ describe('TrafficSystem', () => {
         
         TrafficSystem.update(0.1);
         expect(World.getEntitiesByType('car').length).toBe(1);
+    });
+
+    it('should assign a consistent laneOffset to each spawned car', () => {
+        TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.update(0.1);
+        const car = World.getEntitiesByType('car')[0];
+        expect(car.ai.laneOffset).toBeDefined();
+        expect(car.ai.laneOffset).toBeGreaterThanOrEqual(-15);
+        expect(car.ai.laneOffset).toBeLessThanOrEqual(15);
+    });
+
+    it('should use laneOffset in target computation', () => {
+        TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.update(0.1);
+        const car = World.getEntitiesByType('car')[0];
+        
+        // Force laneOffset to a specific non-zero value
+        car.ai.laneOffset = 20;
+        
+        const path = Waypoints.paths[car.ai.pathName];
+        const rawTarget = path[car.ai.targetIndex];
+        
+        // Let's run a single update to update direction/velocity
+        TrafficSystem.update(0.016);
+        
+        // Raw direction angle to target without offset
+        const rawAngle = Math.atan2(rawTarget.y - car.transform.y, rawTarget.x - car.transform.x);
+        
+        // Because of lane offset, the actual car transform angle must be different from the raw angle to target
+        expect(car.transform.angle).not.toBe(rawAngle);
     });
 });

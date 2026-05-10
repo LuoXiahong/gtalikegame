@@ -70,20 +70,26 @@ export const TrafficSystem = {
         
         const path = Waypoints.paths[pathName];
         
-        // Losowy offset boczny (symulacja pasów / nieidealnego toru)
-        const offsetX = (Math.random() - 0.5) * 20;
-        const offsetY = (Math.random() - 0.5) * 20;
+        const nextNode = path[1] || start;
+        const pathAngle = Math.atan2(nextNode.y - start.y, nextNode.x - start.x);
+        const perpAngle = pathAngle + Math.PI / 2;
+        
+        const laneOffset = (Math.random() - 0.5) * 30; // boczny offset (pas ruchu)
+        
+        const spawnX = start.x + Math.cos(perpAngle) * laneOffset;
+        const spawnY = start.y + Math.sin(perpAngle) * laneOffset;
         
         const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
         const color = colors[Math.floor(Math.random() * colors.length)];
         
-        const car = new Car(`traffic_${Date.now()}_${Math.random()}`, start.x + offsetX, start.y + offsetY, color);
+        const car = new Car(`traffic_${Date.now()}_${Math.random()}`, spawnX, spawnY, color);
         car.ai = {
             type: 'traffic',
             pathName: pathName,
             targetIndex: 1,
             maxSpeed: 150 + Math.random() * 100,
-            currentSpeed: 0
+            currentSpeed: 0,
+            laneOffset: laneOffset
         };
         // Wyłączamy domyślne tarcie fizyki, AI steruje bezpośrednio
         car.physics.friction = 1.0; 
@@ -94,13 +100,22 @@ export const TrafficSystem = {
         const path = Waypoints.paths[car.ai.pathName];
         const target = path[car.ai.targetIndex];
         
-        const dx = target.x - car.transform.x;
-        const dy = target.y - car.transform.y;
+        // Oblicz boczny offset dla targetu
+        const prevIndex = Math.max(0, car.ai.targetIndex - 1);
+        const prevNode = path[prevIndex];
+        const segmentAngle = Math.atan2(target.y - prevNode.y, target.x - prevNode.x);
+        const perpAngle = segmentAngle + Math.PI / 2;
+        
+        const targetX = target.x + Math.cos(perpAngle) * (car.ai.laneOffset || 0);
+        const targetY = target.y + Math.sin(perpAngle) * (car.ai.laneOffset || 0);
+        
+        const dx = targetX - car.transform.x;
+        const dy = targetY - car.transform.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         
         const angle = Math.atan2(dy, dx);
         car.transform.angle = angle;
-
+ 
         // 2. Hamowanie przed przeszkodą (Fake Raycast)
         let speedMult = 1.0;
         const sensorDist = 180;
