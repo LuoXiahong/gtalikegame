@@ -7,6 +7,7 @@ vi.mock('../world/World.js', () => ({
     World: {
         entities: [],
         addEntity: vi.fn(e => World.entities.push(e)),
+        removeEntity: vi.fn(id => { World.entities = World.entities.filter(e => e.id !== id); }),
         getEntitiesByType: vi.fn(type => World.entities.filter(e => e.type === type)),
         width: 3000,
         height: 3000
@@ -93,5 +94,48 @@ describe('TrafficSystem', () => {
         const car = World.getEntitiesByType('car')[0];
         const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
         expect(colors).toContain(car.visual.color);
+    });
+
+    it('should remove car when farther than despawnRadius from player', () => {
+        TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.despawnRadius = 100; // Small despawn radius
+        
+        const player = { type: 'player', transform: { x: 100, y: 100 } };
+        World.entities.push(player);
+        
+        TrafficSystem.update(0.1); // Spawns a car
+        const car = World.getEntitiesByType('car')[0];
+        
+        // Place car 200px away (outside 100px despawnRadius)
+        car.transform.x = 300;
+        car.transform.y = 100;
+        
+        const originalCarId = car.id;
+        TrafficSystem.update(0.1); // This should trigger despawn
+        
+        const remainingCars = World.getEntitiesByType('car');
+        const originalCarExists = remainingCars.some(c => c.id === originalCarId);
+        expect(originalCarExists).toBe(false);
+    });
+
+    it('should NOT remove occupied car even outside despawnRadius', () => {
+        TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.despawnRadius = 100;
+        
+        const player = { type: 'player', transform: { x: 100, y: 100 } };
+        World.entities.push(player);
+        
+        TrafficSystem.update(0.1);
+        const car = World.getEntitiesByType('car')[0];
+        
+        // Make car occupied
+        car.occupied = true;
+        car.transform.x = 300;
+        car.transform.y = 100;
+        
+        TrafficSystem.update(0.1);
+        expect(World.getEntitiesByType('car').length).toBe(1);
     });
 });

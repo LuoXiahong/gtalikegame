@@ -9,16 +9,32 @@ import { Car } from '../entities/Car.js';
 export const TrafficSystem = {
     maxCars: 8,
     spawnRadius: 900,
+    despawnRadius: 1200,
     
     update(dt) {
         const trafficCars = World.getEntitiesByType('car').filter(c => c.ai && c.ai.type === 'traffic');
+        const player = World.getEntitiesByType('player')[0];
+        
+        // Despawn far cars
+        trafficCars.forEach(car => {
+            if (player && !car.occupied) {
+                const dx = car.transform.x - player.transform.x;
+                const dy = car.transform.y - player.transform.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > this.despawnRadius) {
+                    World.removeEntity(car.id);
+                }
+            }
+        });
+        
+        const remainingCars = World.getEntitiesByType('car').filter(c => c.ai && c.ai.type === 'traffic');
         
         // 3. Spawn / Despawn
-        if (trafficCars.length < this.maxCars) {
+        if (remainingCars.length < this.maxCars) {
             this.spawnRandomCar();
         }
         
-        trafficCars.forEach(car => this.updateCar(car, dt));
+        remainingCars.forEach(car => this.updateCar(car, dt));
     },
     
     spawnRandomCar() {
