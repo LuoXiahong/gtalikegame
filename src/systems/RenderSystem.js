@@ -244,6 +244,47 @@ export const RenderSystem = {
         }
     },
 
+    drawDebugHitboxes() {
+        this.ctx.lineWidth = 1;
+        
+        // Budynki (top-left)
+        this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+        World.buildings.forEach(b => {
+            this.ctx.strokeRect(b.x, b.y, b.w, b.h);
+        });
+
+        // Encje (center-based)
+        const entities = [
+            ...World.getEntitiesByType('player'), 
+            ...World.getEntitiesByType('npc'), 
+            ...World.getEntitiesByType('car'),
+            ...World.getEntitiesByType('police')
+        ];
+        entities.forEach(ent => {
+            const t = ent.transform;
+            this.ctx.strokeStyle = ent.type === 'player' ? '#ff0000' : '#00ff00';
+            this.ctx.strokeRect(t.x - t.width / 2, t.y - t.height / 2, t.width, t.height);
+        });
+    },
+
+    drawOriginMarker() {
+        this.ctx.save();
+        this.ctx.strokeStyle = '#f1c40f';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        // Krzyż na (0,0)
+        this.ctx.moveTo(-20, 0);
+        this.ctx.lineTo(20, 0);
+        this.ctx.moveTo(0, -20);
+        this.ctx.lineTo(0, 20);
+        this.ctx.stroke();
+        
+        this.ctx.fillStyle = '#f1c40f';
+        this.ctx.font = 'bold 12px Arial';
+        this.ctx.fillText('ORIGIN (0,0)', 5, -5);
+        this.ctx.restore();
+    },
+
     update() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.save();
@@ -253,6 +294,11 @@ export const RenderSystem = {
         this.drawGrid();
         this.drawShadows();
         this.drawEntities();
+        
+        // Debug overlays
+        this.drawOriginMarker();
+        this.drawDebugHitboxes();
+
         this.ctx.restore();
     }
 };
