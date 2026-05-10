@@ -38,6 +38,7 @@ export const Game = {
         MissionSystem.init();
         WantedSystem.init();
         PoliceSystem.init();
+        AISystem.init();
 
         // Inicjalizacja instancji
         const p1 = new Player(1000, 1500);

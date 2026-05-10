@@ -2,11 +2,15 @@
  * ZARZĄDZANIE WEJŚCIEM (Input System)
  */
 export const InputSystem = {
-    keys: { up: false, down: false, left: false, right: false, action: false },
+    keys: { up: false, down: false, left: false, right: false, action: false, shoot: false },
     actionJustPressed: false,
+    shootJustPressed: false,
 
     init() {
-        window.addEventListener("keydown", (e) => this.setKey(e.code, true));
+        window.addEventListener("keydown", (e) => {
+            if (e.code === "Space" || e.key === " ") e.preventDefault();
+            this.setKey(e.code, true);
+        });
         window.addEventListener("keyup", (e) => this.setKey(e.code, false));
 
         this.bindHUD('btnUp', 'up');
@@ -25,11 +29,21 @@ export const InputSystem = {
             if (state && !this.keys.action) this.actionJustPressed = true;
             this.keys.action = state;
         }
+        if (code === "Space") {
+            if (state && !this.keys.shoot) this.shootJustPressed = true;
+            this.keys.shoot = state;
+        }
     },
 
     consumeAction() {
         const pressed = this.actionJustPressed;
         this.actionJustPressed = false;
+        return pressed;
+    },
+
+    consumeShoot() {
+        const pressed = this.shootJustPressed;
+        this.shootJustPressed = false;
         return pressed;
     },
 
@@ -41,6 +55,7 @@ export const InputSystem = {
             e.preventDefault();
             if (!this.keys[keyName]) {
                 if (keyName === 'action') this.actionJustPressed = true;
+                if (keyName === 'shoot') this.shootJustPressed = true;
             }
             this.keys[keyName] = true;
         });

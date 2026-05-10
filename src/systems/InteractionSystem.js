@@ -13,9 +13,16 @@ export const InteractionSystem = {
         const p = players[0];
 
         const isActionPressed = InputSystem.consumeAction();
+        const isShootPressed = InputSystem.consumeShoot();
         const controlled = VehicleSystem.getControlledEntity();
 
-        // 1. Jeśli jesteśmy w aucie, sprawdź tylko wyjście
+        // 1. Strzelanie (tylko pieszo na razie dla prostoty)
+        if (controlled && controlled.type === 'player' && isShootPressed) {
+            EventBus.emit('gunshot', { x: p.transform.x, y: p.transform.y });
+            EventBus.emit('audio_play', 'gunshot');
+        }
+
+        // 2. Jeśli jesteśmy w aucie, sprawdź tylko wyjście
         if (controlled && controlled.type === 'car') {
             if (isActionPressed) {
                 EventBus.emit('exit_vehicle', { player: p });
