@@ -86,7 +86,7 @@ export const Game = {
             CollisionSystem.update();
 
             // 4. Aktualizacja punktu widzenia
-            if (controlled) Camera.follow(controlled);
+            if (controlled) Camera.follow(controlled, dt);
         }
 
         // 5. Renderowanie stanu końcowego na klatkę (zawsze, dla efektów tła)

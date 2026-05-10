@@ -8,10 +8,17 @@ export const Camera = {
     width: 800,
     height: 600,
 
-    follow(entity) {
+    follow(entity, dt) {
         if (entity && entity.transform) {
-            this.x = this.width / 2 - entity.transform.x;
-            this.y = this.height / 2 - entity.transform.y;
+            const targetX = this.width / 2 - entity.transform.x;
+            const targetY = this.height / 2 - entity.transform.y;
+
+            // Prędkość wygładzania - im wyższa, tym szybciej kamera nadąża
+            const smoothing = 6.0; 
+            
+            // Liniowa interpolacja (lerp) pozycji kamery
+            this.x += (targetX - this.x) * Math.min(1, smoothing * dt);
+            this.y += (targetY - this.y) * Math.min(1, smoothing * dt);
         }
     }
 };
