@@ -1,0 +1,18 @@
+{
+  "name": "game-engine",
+  "version": "1.0.0",
+  "description": "ECS-lite based game engine",
+  "type": "module",
+  "scripts": {
+    "dev": "vite src",
+    "build": "vite build src",
+    "preview": "vite preview src",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1",
+    "vite": "^8.0.11",
+    "vitest": "^4.1.5"
+  }
+}
