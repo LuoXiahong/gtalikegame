@@ -8,6 +8,7 @@ import { Car } from '../entities/Car.js';
 
 export const TrafficSystem = {
     maxCars: 8,
+    spawnRadius: 900,
     
     update(dt) {
         const trafficCars = World.getEntitiesByType('car').filter(c => c.ai && c.ai.type === 'traffic');
@@ -22,15 +23,45 @@ export const TrafficSystem = {
     
     spawnRandomCar() {
         const pathNames = Object.keys(Waypoints.paths);
-        const pathName = pathNames[Math.floor(Math.random() * pathNames.length)];
+        const player = World.getEntitiesByType('player')[0];
+        
+        let pathName = null;
+        let start = null;
+        
+        // Spróbuj znaleźć punkt startowy poza spawnRadius od gracza
+        const shuffledPathNames = [...pathNames].sort(() => Math.random() - 0.5);
+        for (const tempPathName of shuffledPathNames) {
+            const tempPath = Waypoints.paths[tempPathName];
+            const tempStart = tempPath[0];
+            
+            if (player) {
+                const dx = tempStart.x - player.transform.x;
+                const dy = tempStart.y - player.transform.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist >= this.spawnRadius) {
+                    pathName = tempPathName;
+                    start = tempStart;
+                    break;
+                }
+            } else {
+                pathName = tempPathName;
+                start = tempStart;
+                break;
+            }
+        }
+        
+        if (!pathName) return; // Wszystkie ścieżki za blisko gracza
+        
         const path = Waypoints.paths[pathName];
         
-        const start = path[0];
         // Losowy offset boczny (symulacja pasów / nieidealnego toru)
         const offsetX = (Math.random() - 0.5) * 20;
         const offsetY = (Math.random() - 0.5) * 20;
         
-        const car = new Car(`traffic_${Date.now()}_${Math.random()}`, start.x + offsetX, start.y + offsetY, '#f39c12');
+        const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        
+        const car = new Car(`traffic_${Date.now()}_${Math.random()}`, start.x + offsetX, start.y + offsetY, color);
         car.ai = {
             type: 'traffic',
             pathName: pathName,

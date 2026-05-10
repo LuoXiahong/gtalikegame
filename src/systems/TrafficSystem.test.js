@@ -66,4 +66,32 @@ describe('TrafficSystem', () => {
         
         expect(car.ai.currentSpeed).toBeLessThan(1);
     });
+
+    it('should spawn car only if start point is outside player radius', () => {
+        TrafficSystem.maxCars = 1;
+        const originalRadius = TrafficSystem.spawnRadius;
+        TrafficSystem.spawnRadius = 99999; // make sure everything is within spawn radius
+        
+        const player = { type: 'player', transform: { x: 1500, y: 1500 } };
+        World.entities.push(player);
+        
+        TrafficSystem.update(0.1);
+        expect(World.getEntitiesByType('car').length).toBe(0);
+        
+        // Restore/lower radius
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.update(0.1);
+        expect(World.getEntitiesByType('car').length).toBe(1);
+        
+        TrafficSystem.spawnRadius = originalRadius;
+    });
+
+    it('should spawn car with one of the predefined colors', () => {
+        TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.update(0.1);
+        const car = World.getEntitiesByType('car')[0];
+        const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
+        expect(colors).toContain(car.visual.color);
+    });
 });
