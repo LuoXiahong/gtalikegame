@@ -21,6 +21,7 @@ describe('VehiclePhysicsSystem', () => {
                 acceleration: 400,
                 rollingResistance: 0.98,
                 brakingFriction: 0.92,
+                brakeForce: 800,
                 steeringPower: 2.5,
                 velX: 0,
                 velY: 0
@@ -64,8 +65,15 @@ describe('VehiclePhysicsSystem', () => {
         mockCar.physics.speed = 100;
         InputSystem.keys.down = true;
         VehiclePhysicsSystem.update(0.1, mockCar);
-        // speed = (100 - 40) * 0.92 = 55.2
-        expect(mockCar.physics.speed).toBeLessThan(90);
+        // speed = 100 - 800 * 0.1 = 20
+        expect(mockCar.physics.speed).toBeCloseTo(20);
+    });
+
+    it('should brake to a full stop when speed is lower than deceleration step', () => {
+        mockCar.physics.speed = 50;
+        InputSystem.keys.down = true;
+        VehiclePhysicsSystem.update(0.1, mockCar); // brakeDecel is 80, so it stops
+        expect(mockCar.physics.speed).toBe(0);
     });
 
     it('should cap max speed', () => {

@@ -15,6 +15,7 @@ export class Car extends Entity {
             friction: 1.0,         // Fizyczne tarcie (MovementSystem) - wyłączone dla aut
             rollingResistance: 0.97, // Szybsze naturalne zwalnianie
             brakingFriction: 0.90, 
+            brakeForce: 800,       // Gwałtowne hamowanie (arcade brake force)
             steeringPower: 3.0     // Bardziej responsywne sterowanie
         };
         this.visual.color = color;

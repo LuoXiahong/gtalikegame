@@ -16,7 +16,18 @@ export const VehiclePhysicsSystem = {
         if (InputSystem.keys.up) driveIntent = 1;
         if (InputSystem.keys.down) driveIntent = -1;
 
-        if (driveIntent !== 0) {
+        // Czy to jest hamowanie? (klawisz przeciwny do kierunku ruchu)
+        const isBraking = (p.speed > 0 && InputSystem.keys.down) || (p.speed < 0 && InputSystem.keys.up);
+
+        if (isBraking) {
+            // Gwałtowne hamowanie w stylu arcade
+            const brakeDecel = (p.brakeForce || 800) * dt;
+            if (Math.abs(p.speed) < brakeDecel) {
+                p.speed = 0;
+            } else {
+                p.speed -= Math.sign(p.speed) * brakeDecel;
+            }
+        } else if (driveIntent !== 0) {
             // Przyspieszanie z nieliniową krzywą (szybszy start, wolniejsze zbliżanie się do maxSpeed)
             const speedRatio = Math.min(Math.abs(p.speed) / p.maxSpeed, 1.0);
             const accelCurve = 1.0 - speedRatio * 0.6; // na starcie 100% przyspieszenia, przy maxSpeed 40%
@@ -24,12 +35,6 @@ export const VehiclePhysicsSystem = {
         } else {
             // Naturalne toczenie się (tarcie powietrza/podłoża)
             p.speed *= p.rollingResistance;
-        }
-
-        // Specyficzna logika hamulca (szybsze zwalnianie)
-        const isBraking = (p.speed > 0 && InputSystem.keys.down) || (p.speed < 0 && InputSystem.keys.up);
-        if (isBraking) {
-            p.speed *= p.brakingFriction;
         }
 
         // Limity prędkości
