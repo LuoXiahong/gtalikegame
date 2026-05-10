@@ -2,10 +2,11 @@
  * ZARZĄDZANIE WEJŚCIEM (Input System)
  */
 export const InputSystem = {
-    keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false },
+    keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false, debugAI: false },
     actionJustPressed: false,
     shootJustPressed: false,
     explodeJustPressed: false,
+    debugAIJustPressed: false,
 
     init() {
         window.addEventListener("keydown", (e) => {
@@ -25,7 +26,11 @@ export const InputSystem = {
         if (code === "ArrowUp" || code === "KeyW") this.keys.up = state;
         if (code === "ArrowDown" || code === "KeyS") this.keys.down = state;
         if (code === "ArrowLeft" || code === "KeyA") this.keys.left = state;
-        if (code === "ArrowRight" || code === "KeyD") this.keys.right = state;
+        if (code === "ArrowRight") this.keys.right = state;
+        if (code === "KeyD") {
+            if (state && !this.keys.right) this.debugAIJustPressed = true;
+            this.keys.right = state;
+        }
         if (code === "KeyF") {
             if (state && !this.keys.action) this.actionJustPressed = true;
             this.keys.action = state;
@@ -38,6 +43,12 @@ export const InputSystem = {
             if (state && !this.keys.explode) this.explodeJustPressed = true;
             this.keys.explode = state;
         }
+    },
+
+    consumeDebugAI() {
+        const pressed = this.debugAIJustPressed;
+        this.debugAIJustPressed = false;
+        return pressed;
     },
 
     consumeAction() {
@@ -65,6 +76,7 @@ export const InputSystem = {
         this.actionJustPressed = false;
         this.shootJustPressed = false;
         this.explodeJustPressed = false;
+        this.debugAIJustPressed = false;
     },
 
     bindHUD(elementId, keyName) {

@@ -11,6 +11,7 @@ import { TILE_COLORS } from '../world/Tilemap.js';
 export const RenderSystem = {
     ctx: null,
     canvas: null,
+    debugAI: false,
 
     init() {
         this.canvas = document.getElementById('gameCanvas');
@@ -314,6 +315,32 @@ export const RenderSystem = {
         this.ctx.restore();
     },
 
+    drawDebugAI() {
+        if (!this.debugAI) return;
+        
+        this.ctx.save();
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = 'bold 12px monospace';
+        this.ctx.textAlign = 'center';
+        
+        // 1. NPC Pedestrians
+        World.getEntitiesByType('npc').forEach(npc => {
+            const t = npc.transform;
+            const state = npc.ai ? npc.ai.state : 'idle';
+            this.ctx.fillText(`AI: ${state}`, t.x, t.y - t.height / 2 - 10);
+        });
+        
+        // 2. Traffic Cars
+        World.getEntitiesByType('car').filter(car => car.ai && car.ai.type === 'traffic').forEach(car => {
+            const t = car.transform;
+            const speed = Math.round(car.ai.currentSpeed || 0);
+            const avoiding = car.ai.avoidTimer > 0 ? ` [avoiding]` : '';
+            this.ctx.fillText(`TRAFFIC: ${speed}px/s${avoiding}`, t.x, t.y - t.height / 2 - 10);
+        });
+        
+        this.ctx.restore();
+    },
+
     update() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.save();
@@ -328,6 +355,7 @@ export const RenderSystem = {
         // Debug overlays
         this.drawOriginMarker();
         this.drawDebugHitboxes();
+        this.drawDebugAI();
 
         this.ctx.restore();
     }

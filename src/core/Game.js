@@ -80,6 +80,9 @@ export const Game = {
         const currentState = GameState.getState();
 
         if (currentState === GAME_STATES.PLAY) {
+            if (InputSystem.consumeDebugAI()) {
+                RenderSystem.debugAI = !RenderSystem.debugAI;
+            }
             const controlled = VehicleSystem.getControlledEntity();
 
             // 1. Zbieranie wejścia i aplikacja intencji ruchu (zależy od typu sterowanej encji)
