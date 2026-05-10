@@ -24,11 +24,32 @@ export const CollisionSystem = {
         // 1. Kolizje sterowanego obiektu z Budynkami
         if (controlled) {
             World.buildings.forEach(b => {
-                if (this.checkAABB(controlled.transform, b)) {
-                    controlled.transform.x -= controlled.physics.velX;
-                    controlled.transform.y -= controlled.physics.velY;
-                    controlled.physics.velX = 0;
-                    controlled.physics.velY = 0;
+                const ent = controlled.transform;
+                const hw = ent.width / 2;
+                const hh = ent.height / 2;
+
+                if (this.checkAABB(ent, b)) {
+                    // Oblicz nakładanie się (overlap) z każdej strony
+                    const overlapLeft = (ent.x + hw) - b.x;
+                    const overlapRight = (b.x + b.w) - (ent.x - hw);
+                    const overlapTop = (ent.y + hh) - b.y;
+                    const overlapBottom = (b.y + b.h) - (ent.y - hh);
+
+                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+                    if (minOverlap === overlapLeft) {
+                        ent.x -= overlapLeft;
+                        if (controlled.physics) controlled.physics.velX = 0;
+                    } else if (minOverlap === overlapRight) {
+                        ent.x += overlapRight;
+                        if (controlled.physics) controlled.physics.velX = 0;
+                    } else if (minOverlap === overlapTop) {
+                        ent.y -= overlapTop;
+                        if (controlled.physics) controlled.physics.velY = 0;
+                    } else if (minOverlap === overlapBottom) {
+                        ent.y += overlapBottom;
+                        if (controlled.physics) controlled.physics.velY = 0;
+                    }
                 }
             });
         }
@@ -36,20 +57,40 @@ export const CollisionSystem = {
         // 2. Kolizje Gracza z Autami (tylko gdy gracz jest pieszo)
         if (controlled && controlled.type === 'player') {
             World.getEntitiesByType('car').forEach(car => {
-                // Jeśli gracz wsiada, nie blokuj go kolizją
                 if (car.occupied) return;
 
-                const carBox = { 
+                const ent = p.transform;
+                const hw = ent.width / 2;
+                const hh = ent.height / 2;
+                
+                const b = { 
                     x: car.transform.x - car.transform.width / 2, 
                     y: car.transform.y - car.transform.height / 2, 
                     w: car.transform.width, 
                     h: car.transform.height 
                 };
-                if (this.checkAABB(p.transform, carBox)) {
-                    p.transform.x -= p.physics.velX;
-                    p.transform.y -= p.physics.velY;
-                    p.physics.velX = 0;
-                    p.physics.velY = 0;
+
+                if (this.checkAABB(ent, b)) {
+                    const overlapLeft = (ent.x + hw) - b.x;
+                    const overlapRight = (b.x + b.w) - (ent.x - hw);
+                    const overlapTop = (ent.y + hh) - b.y;
+                    const overlapBottom = (b.y + b.h) - (ent.y - hh);
+
+                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+                    if (minOverlap === overlapLeft) {
+                        ent.x -= overlapLeft;
+                        p.physics.velX = 0;
+                    } else if (minOverlap === overlapRight) {
+                        ent.x += overlapRight;
+                        p.physics.velX = 0;
+                    } else if (minOverlap === overlapTop) {
+                        ent.y -= overlapTop;
+                        p.physics.velY = 0;
+                    } else if (minOverlap === overlapBottom) {
+                        ent.y += overlapBottom;
+                        p.physics.velY = 0;
+                    }
                 }
             });
         }
