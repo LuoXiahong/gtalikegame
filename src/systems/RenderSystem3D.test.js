@@ -61,10 +61,13 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.scene).toBeDefined();
         expect(RenderSystem3D.camera).toBeDefined();
 
-        // Sprawdzenie czy poprawnie stworzyliśmy GridHelper i Boxy
-        expect(RenderSystem3D.gridHelper).toBeDefined();
-        expect(RenderSystem3D.box1u).toBeDefined();
-        expect(RenderSystem3D.box2u).toBeDefined();
+        // Sprawdzenie czy poprawnie stworzyliśmy podłoża, chodniki, budynki i pasy drogowe
+        expect(RenderSystem3D.groundPlane).toBeDefined();
+        expect(RenderSystem3D.asphaltPlane).toBeDefined();
+        expect(RenderSystem3D.sidewalks.length).toBe(9);
+        expect(RenderSystem3D.buildingZones.length).toBe(9);
+        expect(RenderSystem3D.laneMarkings.length).toBeGreaterThan(0);
+        expect(RenderSystem3D.zebras.length).toBeGreaterThan(0);
         expect(RenderSystem3D.box5u).toBeDefined();
     });
 
@@ -74,7 +77,7 @@ describe('RenderSystem3D', () => {
         RenderSystem3D.update();
 
         // Sprawdzenie czy pozycja boxa 5u uległa zmianie (funkcja ruchu)
-        expect(RenderSystem3D.box5u.position.x).not.toBe(RenderSystem3D.originX + 20);
+        expect(RenderSystem3D.box5u.position.x).not.toBe(RenderSystem3D.originX);
 
         // Renderer powinien wywołać render()
         expect(RenderSystem3D.renderer.render).toHaveBeenCalled();

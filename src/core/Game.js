@@ -46,31 +46,32 @@ export const Game = {
         PoliceSystem.init();
         AISystem.init();
 
-        // Inicjalizacja instancji
-        const p1 = new Player(1000, 1500);
+        // Inicjalizacja instancji (gracz zaczyna na środku pierwszego skrzyżowania)
+        const p1 = new Player(1100, 1100);
         World.addEntity(p1);
 
         VehicleSystem.init(p1);
 
-        // Spawnowanie 10 przechodniów (NPC) na chodnikach wokół miasta
+        // Spawnowanie 10 przechodniów (NPC) na chodnikach wokół bloków miasta 3x3
         const npcConfigs = [
-            { id: 'npc1', x: 1450, y: 1550, color: '#8e44ad' }, // fioletowy
-            { id: 'npc2', x: 1750, y: 1450, color: '#27ae60' }, // zielony
-            { id: 'npc3', x: 1250, y: 1800, color: '#c0392b' }, // czerwony
-            { id: 'npc4', x: 1150, y: 1450, color: '#f1c40f' }, // żółty
-            { id: 'npc5', x: 1450, y: 1150, color: '#e67e22' }, // pomarańczowy
-            { id: 'npc6', x: 1750, y: 1750, color: '#1abc9c' }, // turkusowy
-            { id: 'npc7', x: 1150, y: 1750, color: '#9b59b6' }, // fioletowy (jasny)
-            { id: 'npc8', x: 1450, y: 1850, color: '#3498db' }, // niebieski
-            { id: 'npc9', x: 1850, y: 1450, color: '#e74c3c' }, // czerwony (jasny)
-            { id: 'npc10', x: 950, y: 1450, color: '#2ecc71' } // zielony (jasny)
+            { id: 'npc1', x: 1000, y: 1000, color: '#8e44ad' }, 
+            { id: 'npc2', x: 1200, y: 1000, color: '#27ae60' }, 
+            { id: 'npc3', x: 1000, y: 1200, color: '#c0392b' }, 
+            { id: 'npc4', x: 1200, y: 1200, color: '#f1c40f' }, 
+            { id: 'npc5', x: 1700, y: 1000, color: '#e67e22' }, 
+            { id: 'npc6', x: 1900, y: 1000, color: '#1abc9c' }, 
+            { id: 'npc7', x: 1000, y: 1700, color: '#9b59b6' }, 
+            { id: 'npc8', x: 1200, y: 1700, color: '#3498db' }, 
+            { id: 'npc9', x: 1700, y: 1700, color: '#e74c3c' }, 
+            { id: 'npc10', x: 1900, y: 1700, color: '#2ecc71' }
         ];
 
         npcConfigs.forEach(cfg => {
             World.addEntity(new NPC(cfg.id, cfg.x, cfg.y, cfg.color));
         });
 
-        World.addEntity(new Car('car1', 2050, 1600, '#c0392b'));
+        // Samochód zaparkowany na pionowej drodze niedaleko gracza
+        World.addEntity(new Car('car1', 1100, 1300, '#c0392b'));
 
         // Start w MENU
         GameState.setState(GAME_STATES.MENU);

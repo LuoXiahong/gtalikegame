@@ -4,6 +4,7 @@
  */
 import { Tilemap } from './Tilemap.js';
 import { Decals } from './Decals.js';
+import { WorldGrid } from './WorldGrid.js';
 
 export const World = {
     width: 3000,
@@ -21,12 +22,22 @@ export const World = {
         this.decals = Decals;
         this.decals.init();
 
-        this.buildings = [
-            { x: 1300, y: 1300, w: 200, h: 300, z: 0.4 },
-            { x: 1600, y: 1200, w: 150, h: 150, z: 0.15 },
-            { x: 1200, y: 1700, w: 400, h: 100, z: 0.25 },
-            { x: 1800, y: 1500, w: 200, h: 200, z: 0.6 }
-        ];
+        // Programowe rozmieszczenie 9 budynków w strefach budynków każdego z bloków 3x3
+        this.buildings = [];
+        for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
+            for (let c = 0; c < WorldGrid.GRID_COLS; c++) {
+                const b = WorldGrid.getBlockBounds(r, c);
+                // Zróżnicowane wysokości z: od 0.2 do 0.6 dla ciekawego skyline'u makiety
+                const zHeight = 0.2 + ((r * 3 + c) % 5) * 0.1;
+                this.buildings.push({
+                    x: b.x + 100,
+                    y: b.y + 100,
+                    w: 300,
+                    h: 300,
+                    z: zHeight
+                });
+            }
+        }
     },
 
     addEntity(entity) {
