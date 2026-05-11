@@ -95,14 +95,14 @@ export const RenderSync3D = {
         if (ent.type === 'player') {
             // Korpus (niebieski kubik)
             const bodyGeom = new THREE.BoxGeometry(16, 26, 10);
-            const bodyMat = new THREE.MeshBasicMaterial({ color: 0x2980b9 });
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2980b9, roughness: 0.7, metalness: 0.1 });
             const body = new THREE.Mesh(bodyGeom, bodyMat);
             body.position.y = 13; // Pivot na spodzie
             group.add(body);
 
             // Głowa
             const headGeom = new THREE.SphereGeometry(6, 8, 8);
-            const headMat = new THREE.MeshBasicMaterial({ color: 0xf1c27d });
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xf1c27d, roughness: 0.8, metalness: 0.0 });
             const head = new THREE.Mesh(headGeom, headMat);
             head.position.y = 29;
             group.add(head);
@@ -111,14 +111,14 @@ export const RenderSync3D = {
             // NPC: Unikalny kolor ubrania
             const color = ent.visual?.color ? parseInt(ent.visual.color.replace('#', '0x')) : 0x8e44ad;
             const bodyGeom = new THREE.BoxGeometry(10, 20, 8);
-            const bodyMat = new THREE.MeshBasicMaterial({ color: color });
+            const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.7, metalness: 0.1 });
             const body = new THREE.Mesh(bodyGeom, bodyMat);
             body.position.y = 10;
             group.add(body);
 
             // Głowa
             const headGeom = new THREE.SphereGeometry(4, 8, 8);
-            const headMat = new THREE.MeshBasicMaterial({ color: 0xf1c27d });
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xf1c27d, roughness: 0.8, metalness: 0.0 });
             const head = new THREE.Mesh(headGeom, headMat);
             head.position.y = 22;
             group.add(head);
@@ -131,21 +131,21 @@ export const RenderSync3D = {
 
             // Dolne podwozie
             const lowerGeom = new THREE.BoxGeometry(w, 12, h);
-            const lowerMat = new THREE.MeshBasicMaterial({ color: color });
+            const lowerMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4, metalness: 0.3 });
             const lower = new THREE.Mesh(lowerGeom, lowerMat);
             lower.position.y = 10;
             group.add(lower);
 
             // Kabina
             const upperGeom = new THREE.BoxGeometry(w * 0.8, 8, h * 0.5);
-            const upperMat = new THREE.MeshBasicMaterial({ color: 0x333333 });
+            const upperMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.3, metalness: 0.5 });
             const upper = new THREE.Mesh(upperGeom, upperMat);
             upper.position.set(0, 20, -h * 0.1);
             group.add(upper);
 
             // Koła
             const wheelGeom = new THREE.BoxGeometry(8, 8, 12);
-            const wheelMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0.0 });
             
             const offsets = [
                 { x: -w/2, z: -h/3 },
@@ -160,6 +160,14 @@ export const RenderSync3D = {
                 group.add(wheel);
             });
         }
+
+        // Automatyczne włączenie cieni rzucanych i przyjmowanych dla wszystkich części modelu (T-701)
+        group.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
 
         return group;
     },

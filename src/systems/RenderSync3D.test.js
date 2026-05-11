@@ -90,6 +90,17 @@ describe('RenderSync3D', () => {
         expect(carMesh.position.x).toBe(500);
         expect(carMesh.position.z).toBe(600);
         expect(carMesh.rotation.y).toBe(0.5);
+
+        // Weryfikacja cieniowania i użycia MeshStandardMaterial
+        [playerMesh, npcMesh, carMesh].forEach(meshGroup => {
+            meshGroup.traverse(child => {
+                if (child.isMesh) {
+                    expect(child.material instanceof THREE.MeshStandardMaterial).toBe(true);
+                    expect(child.castShadow).toBe(true);
+                    expect(child.receiveShadow).toBe(true);
+                }
+            });
+        });
     });
 
     it('should correctly remove and dispose meshes of despawned entities', () => {

@@ -50,6 +50,8 @@ export const RenderSystem3D = {
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         this.renderer.setSize(width, height, false);
         this.renderer.setClearColor(0x000000, 1.0);
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         // 2. Inicjalizacja Sceny
         this.scene = new THREE.Scene();
@@ -70,6 +72,9 @@ export const RenderSystem3D = {
         this.camera.zoom = 1.0;
         this.camera.updateProjectionMatrix();
 
+        // 3B. Setup oświetlenia i cieni (T-701)
+        this.setupLighting();
+
         // 4. Obsługa zdarzenia zmiany rozmiaru okna (resize)
         window.addEventListener('resize', () => {
             const w = parent.clientWidth || 800;
@@ -89,7 +94,7 @@ export const RenderSystem3D = {
         
         // A. Podłoże trawy (cały świat 3000x3000px)
         const groundGeom = new THREE.PlaneGeometry(3000, 3000);
-        const groundMat = new THREE.MeshBasicMaterial({ color: 0x27ae60 }); // Zielona trawa
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.9, metalness: 0.0 }); // Zielona trawa
         this.groundPlane = new THREE.Mesh(groundGeom, groundMat);
         this.groundPlane.rotation.x = -Math.PI / 2;
         this.groundPlane.position.set(1500, -0.05, 1500);
@@ -99,7 +104,7 @@ export const RenderSystem3D = {
         // B. Podłoże asfaltowe (miejski obszar wewnątrz paddingu, kolor ciemnoszary #222)
         const asphaltSize = 3000 - 2 * WorldGrid.PADDING;
         const asphaltGeom = new THREE.PlaneGeometry(asphaltSize, asphaltSize);
-        const asphaltMat = new THREE.MeshBasicMaterial({ color: 0x222222 }); // Ciemny asfalt drogowy
+        const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9, metalness: 0.0 }); // Ciemny asfalt drogowy
         this.asphaltPlane = new THREE.Mesh(asphaltGeom, asphaltMat);
         this.asphaltPlane.rotation.x = -Math.PI / 2;
         this.asphaltPlane.position.set(1500, -0.01, 1500);
@@ -112,8 +117,8 @@ export const RenderSystem3D = {
         this.buildings = []; // Lista budynków 3D
         const shops = []; // Kolekcja sklepów do celów generowania billboardów
         
-        const sidewalkMat = new THREE.MeshBasicMaterial({ color: 0x95a5a6 }); // Jaśniejszy beton chodnikowy (#95a5a6)
-        const buildingZoneMat = new THREE.MeshBasicMaterial({ color: 0x7f8c8d }); // Ciemniejszy beton strefy budynków (#7f8c8d)
+        const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x95a5a6, roughness: 0.8, metalness: 0.0 }); // Jaśniejszy beton chodnikowy (#95a5a6)
+        const buildingZoneMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.8, metalness: 0.0 }); // Ciemniejszy beton strefy budynków (#7f8c8d)
         
         for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
             for (let c = 0; c < WorldGrid.GRID_COLS; c++) {
@@ -311,7 +316,7 @@ export const RenderSystem3D = {
 
             // Baza wieżowca
             const baseGeom = new THREE.BoxGeometry(width, baseHeight, depth);
-            const baseMat = new THREE.MeshBasicMaterial({ color: 0x2d3436 }); // Ciemny szary
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x2d3436, roughness: 0.7, metalness: 0.15 }); // Ciemny szary
             const base = new THREE.Mesh(baseGeom, baseMat);
             base.position.y = baseHeight / 2;
             base.castShadow = true;
@@ -320,7 +325,7 @@ export const RenderSystem3D = {
 
             // Wyższa, węższa część (setback)
             const topGeom = new THREE.BoxGeometry(width * 0.75, topHeight, depth * 0.75);
-            const topMat = new THREE.MeshBasicMaterial({ color: 0x353b48 });
+            const topMat = new THREE.MeshStandardMaterial({ color: 0x353b48, roughness: 0.7, metalness: 0.15 });
             const topMesh = new THREE.Mesh(topGeom, topMat);
             topMesh.position.y = baseHeight + topHeight / 2;
             topMesh.castShadow = true;
@@ -345,7 +350,7 @@ export const RenderSystem3D = {
         } else if (type === 'residential') {
             // Blok mieszkalny (prostopadłościan o jasnoszarym/beżowym odcieniu)
             const bodyGeom = new THREE.BoxGeometry(width, height, depth);
-            const bodyMat = new THREE.MeshBasicMaterial({ color: 0xb2bec3 }); // Średni szary
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xb2bec3, roughness: 0.8, metalness: 0.1 }); // Średni szary
             const body = new THREE.Mesh(bodyGeom, bodyMat);
             body.position.y = height / 2;
             body.castShadow = true;
@@ -361,7 +366,7 @@ export const RenderSystem3D = {
         } else if (type === 'shop') {
             // Niski sklep (szeroki i płaski, ciepły kolor)
             const bodyGeom = new THREE.BoxGeometry(width, height, depth);
-            const bodyMat = new THREE.MeshBasicMaterial({ color: 0xf5cd79 }); // Ciepły piaskowy/żółty
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf5cd79, roughness: 0.8, metalness: 0.1 }); // Ciepły piaskowy/żółty
             const body = new THREE.Mesh(bodyGeom, bodyMat);
             body.position.y = height / 2;
             body.castShadow = true;
@@ -399,7 +404,7 @@ export const RenderSystem3D = {
 
         // Liczba urządzeń na dachu: od 1 do 3
         const count = Math.floor(Math.random() * 3) + 1;
-        const hvacMat = new THREE.MeshBasicMaterial({ color: 0x7f8c8d }); // Metaliczny szary
+        const hvacMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.5, metalness: 0.6 }); // Metaliczny szary
         const hvacEdgeMat = new THREE.LineBasicMaterial({ color: 0x2c3e50 });
 
         for (let i = 0; i < count; i++) {
@@ -438,7 +443,7 @@ export const RenderSystem3D = {
         
         // Stelaż (2 cienkie słupki)
         const legGeom = new THREE.BoxGeometry(2, 20, 2);
-        const legMat = new THREE.MeshBasicMaterial({ color: 0x555555 });
+        const legMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.7, metalness: 0.5 });
         const legEdgeMat = new THREE.LineBasicMaterial({ color: 0x111111 });
 
         const leftLeg = new THREE.Mesh(legGeom, legMat);
@@ -462,7 +467,7 @@ export const RenderSystem3D = {
 
         // Tablica
         const boardGeom = new THREE.BoxGeometry(50, 25, 3);
-        const boardMat = new THREE.MeshBasicMaterial({ color: 0x2c3e50 });
+        const boardMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.8, metalness: 0.1 });
         const board = new THREE.Mesh(boardGeom, boardMat);
         board.position.set(0, 25, 0);
         board.castShadow = true;
@@ -478,8 +483,10 @@ export const RenderSystem3D = {
         const posterGeom = new THREE.PlaneGeometry(46, 21);
         const posterColors = [0xe74c3c, 0x9b59b6, 0xf1c40f, 0xe67e22, 0x1abc9c, 0xe84393];
         const randomColor = posterColors[Math.floor(Math.random() * posterColors.length)];
-        const posterMat = new THREE.MeshBasicMaterial({ 
+        const posterMat = new THREE.MeshStandardMaterial({ 
             color: randomColor,
+            roughness: 0.8,
+            metalness: 0.0,
             side: THREE.DoubleSide
         });
         
@@ -522,9 +529,9 @@ export const RenderSystem3D = {
         ];
         const leafColor = greenShades[Math.floor(Math.random() * greenShades.length)];
 
-        const trunkMat = new THREE.MeshBasicMaterial({ color: 0x795548 }); // Brąz
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x795548, roughness: 0.9, metalness: 0.0 }); // Brąz
         const trunkEdgeMat = new THREE.LineBasicMaterial({ color: 0x3d271d });
-        const leafMat = new THREE.MeshBasicMaterial({ color: leafColor });
+        const leafMat = new THREE.MeshStandardMaterial({ color: leafColor, roughness: 0.8, metalness: 0.0 });
         const leafEdgeMat = new THREE.LineBasicMaterial({ color: 0x145a32 });
 
         if (sizeType === 'shrub') {
@@ -596,6 +603,40 @@ export const RenderSystem3D = {
         this.scene.add(group);
         this.trees.push(group);
         return group;
+    },
+
+    /**
+     * Konfiguruje oświetlenie makiety, w tym słońce i miękkie cienie (T-701)
+     */
+    setupLighting() {
+        // 1. Światło otoczenia (Ambient) - rozjaśnia cienie, by nie były czarnymi plamami
+        const ambient = new THREE.AmbientLight(0x404060, 0.45);
+        this.scene.add(ambient);
+
+        // 2. Światło kierunkowe (Słońce) - ciepłe białe światło pod kątem dla długich cieni
+        const sun = new THREE.DirectionalLight(0xfff5e6, 1.5);
+        sun.position.set(600, 1000, 300);
+        
+        // Cel słońca skierowany na środek gridu (1500, 1500)
+        sun.target.position.set(1500, 0, 1500);
+        this.scene.add(sun.target);
+
+        // Włączenie cieni
+        sun.castShadow = true;
+        sun.shadow.bias = -0.0005; // Przeciwdziałanie prążkom (shadow acne)
+        sun.shadow.mapSize.width = 2048;
+        sun.shadow.mapSize.height = 2048;
+
+        // Zakres kamery cienia - pokrycie całego miasta
+        const d = 1600;
+        sun.shadow.camera.left = -d;
+        sun.shadow.camera.right = d;
+        sun.shadow.camera.top = d;
+        sun.shadow.camera.bottom = -d;
+        sun.shadow.camera.near = 100;
+        sun.shadow.camera.far = 3000;
+
+        this.scene.add(sun);
     },
 
     update() {
