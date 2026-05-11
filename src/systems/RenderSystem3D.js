@@ -104,6 +104,7 @@ export const RenderSystem3D = {
         // C. Budowa 9 bloków (podniesiony chodnik na 0.05u + wyższa strefa zabudowy na 0.07u)
         this.sidewalks = [];
         this.buildingZones = [];
+        this.buildings = []; // Lista budynków 3D
         
         const sidewalkMat = new THREE.MeshBasicMaterial({ color: 0x95a5a6 }); // Jaśniejszy beton chodnikowy (#95a5a6)
         const buildingZoneMat = new THREE.MeshBasicMaterial({ color: 0x7f8c8d }); // Ciemniejszy beton strefy budynków (#7f8c8d)
@@ -127,6 +128,24 @@ export const RenderSystem3D = {
                 bzMesh.position.set(posX, 0.06, posZ);
                 this.scene.add(bzMesh);
                 this.buildingZones.push(bzMesh);
+
+                // 3. Generowanie proceduralnych budynków na platformie (strefie)
+                const pattern = (r + c) % 3;
+                if (pattern === 0) {
+                    // Wieżowiec na środku + 2 małe sklepy po przekątnej
+                    this.createBuilding('skyscraper', posX, posZ, 380, 120, 120);
+                    this.createBuilding('shop', posX - 80, posZ - 80, 50, 80, 80);
+                    this.createBuilding('shop', posX + 80, posZ + 80, 50, 80, 80);
+                } else if (pattern === 1) {
+                    // Dwa bloki mieszkalne ułożone obok siebie
+                    this.createBuilding('residential', posX - 60, posZ, 180, 120, 200);
+                    this.createBuilding('residential', posX + 60, posZ + 50, 140, 100, 100);
+                } else {
+                    // Jeden blok mieszkalny + 2 sklepy
+                    this.createBuilding('residential', posX, posZ - 50, 200, 180, 120);
+                    this.createBuilding('shop', posX - 80, posZ + 80, 60, 80, 80);
+                    this.createBuilding('shop', posX + 80, posZ + 80, 45, 80, 80);
+                }
             }
         }
 
@@ -218,6 +237,75 @@ export const RenderSystem3D = {
                 this.zebras.push(mesh);
             });
         }
+    },
+
+    /**
+     * Tworzy budynek określonego typu o zadanych wymiarach i pozycjonuje go na Y=0
+     */
+    createBuilding(type, x, z, height, width, depth) {
+        const group = new THREE.Group();
+        group.position.set(x, 0, z);
+
+        if (type === 'skyscraper') {
+            const baseHeight = height * 0.75;
+            const topHeight = height * 0.25;
+
+            // Baza wieżowca
+            const baseGeom = new THREE.BoxGeometry(width, baseHeight, depth);
+            const baseMat = new THREE.MeshBasicMaterial({ color: 0x2d3436 }); // Ciemny szary
+            const base = new THREE.Mesh(baseGeom, baseMat);
+            base.position.y = baseHeight / 2;
+            group.add(base);
+
+            // Wyższa, węższa część (setback)
+            const topGeom = new THREE.BoxGeometry(width * 0.75, topHeight, depth * 0.75);
+            const topMat = new THREE.MeshBasicMaterial({ color: 0x353b48 });
+            const topMesh = new THREE.Mesh(topGeom, topMat);
+            topMesh.position.y = baseHeight + topHeight / 2;
+            group.add(topMesh);
+
+            // Obrysy krawędzi dla kontrastu bez oświetlenia
+            const edgesBase = new THREE.EdgesGeometry(baseGeom);
+            const lineBase = new THREE.LineSegments(edgesBase, new THREE.LineBasicMaterial({ color: 0x111111 }));
+            lineBase.position.y = baseHeight / 2;
+            group.add(lineBase);
+
+            const edgesTop = new THREE.EdgesGeometry(topGeom);
+            const lineTop = new THREE.LineSegments(edgesTop, new THREE.LineBasicMaterial({ color: 0x111111 }));
+            lineTop.position.y = baseHeight + topHeight / 2;
+            group.add(lineTop);
+
+        } else if (type === 'residential') {
+            // Blok mieszkalny (prostopadłościan o jasnoszarym/beżowym odcieniu)
+            const bodyGeom = new THREE.BoxGeometry(width, height, depth);
+            const bodyMat = new THREE.MeshBasicMaterial({ color: 0xb2bec3 }); // Średni szary
+            const body = new THREE.Mesh(bodyGeom, bodyMat);
+            body.position.y = height / 2;
+            group.add(body);
+
+            // Krawędzie
+            const edges = new THREE.EdgesGeometry(bodyGeom);
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x222222 }));
+            line.position.y = height / 2;
+            group.add(line);
+
+        } else if (type === 'shop') {
+            // Niski sklep (szeroki i płaski, ciepły kolor)
+            const bodyGeom = new THREE.BoxGeometry(width, height, depth);
+            const bodyMat = new THREE.MeshBasicMaterial({ color: 0xf5cd79 }); // Ciepły piaskowy/żółty
+            const body = new THREE.Mesh(bodyGeom, bodyMat);
+            body.position.y = height / 2;
+            group.add(body);
+
+            // Krawędzie
+            const edges = new THREE.EdgesGeometry(bodyGeom);
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x444444 }));
+            line.position.y = height / 2;
+            group.add(line);
+        }
+
+        this.scene.add(group);
+        this.buildings.push(group);
     },
 
     update() {

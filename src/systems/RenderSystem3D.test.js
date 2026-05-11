@@ -66,6 +66,7 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.asphaltPlane).toBeDefined();
         expect(RenderSystem3D.sidewalks.length).toBe(9);
         expect(RenderSystem3D.buildingZones.length).toBe(9);
+        expect(RenderSystem3D.buildings.length).toBe(24); // Zweryfikowana ilość budynków z klastrów
         expect(RenderSystem3D.laneMarkings.length).toBeGreaterThan(0);
         expect(RenderSystem3D.zebras.length).toBeGreaterThan(0);
         expect(RenderSystem3D.box5u).toBeDefined();
@@ -81,5 +82,20 @@ describe('RenderSystem3D', () => {
 
         // Renderer powinien wywołać render()
         expect(RenderSystem3D.renderer.render).toHaveBeenCalled();
+    });
+
+    it('should create custom building types via createBuilding', () => {
+        RenderSystem3D.init();
+        const initialCount = RenderSystem3D.buildings.length;
+        
+        RenderSystem3D.createBuilding('skyscraper', 200, 200, 400, 100, 100);
+        expect(RenderSystem3D.buildings.length).toBe(initialCount + 1);
+        
+        const newBuilding = RenderSystem3D.buildings[RenderSystem3D.buildings.length - 1];
+        expect(newBuilding.position.x).toBe(200);
+        expect(newBuilding.position.z).toBe(200);
+        
+        // Skyscraper powinien posiadać obiekty składowe (bazę i top setback)
+        expect(newBuilding.children.length).toBeGreaterThan(1);
     });
 });
