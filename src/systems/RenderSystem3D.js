@@ -10,6 +10,7 @@
 import * as THREE from 'three';
 import { World } from '../world/World.js';
 import { WorldGrid } from '../world/WorldGrid.js';
+import { RenderSync3D } from './RenderSync3D.js';
 
 export const RenderSystem3D = {
     renderer: null,
@@ -248,7 +249,10 @@ export const RenderSystem3D = {
         
         this.camera.lookAt(focusX, 0, focusZ);
 
-        // 4. Render klatki
+        // 4. Synchronizacja modeli 3D z logiką 2D
+        RenderSync3D.update(this.scene);
+
+        // 5. Render klatki
         this.renderer.render(this.scene, this.camera);
     }
 };
