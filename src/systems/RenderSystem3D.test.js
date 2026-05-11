@@ -70,6 +70,11 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.laneMarkings.length).toBeGreaterThan(0);
         expect(RenderSystem3D.zebras.length).toBeGreaterThan(0);
         expect(RenderSystem3D.box5u).toBeDefined();
+
+        // Sprawdzenie poprawności generowania rekwizytów środowiskowych
+        expect(RenderSystem3D.trees.length).toBeGreaterThanOrEqual(18);
+        expect(RenderSystem3D.trees.length).toBeLessThanOrEqual(25);
+        expect(RenderSystem3D.billboards.length).toBe(2);
     });
 
     it('should handle update cycles and sync camera', () => {
@@ -97,5 +102,25 @@ describe('RenderSystem3D', () => {
         
         // Skyscraper powinien posiadać obiekty składowe (bazę i top setback)
         expect(newBuilding.children.length).toBeGreaterThan(1);
+    });
+
+    it('should create trees and billboards with shadow options', () => {
+        RenderSystem3D.init();
+
+        const tree = RenderSystem3D.createTree('shrub', 100, 100);
+        expect(tree).toBeDefined();
+        expect(tree.position.x).toBe(100);
+        expect(tree.position.z).toBe(100);
+        
+        // Drzewo powinno mieć elementy rzucające i przyjmujące cienie
+        const trunkMesh = tree.children.find(c => c.geometry && c.geometry.type === 'CylinderGeometry');
+        expect(trunkMesh).toBeDefined();
+        expect(trunkMesh.castShadow).toBe(true);
+        expect(trunkMesh.receiveShadow).toBe(true);
+
+        const leafMesh = tree.children.find(c => c.geometry && c.geometry.type === 'SphereGeometry');
+        expect(leafMesh).toBeDefined();
+        expect(leafMesh.castShadow).toBe(true);
+        expect(leafMesh.receiveShadow).toBe(true);
     });
 });
