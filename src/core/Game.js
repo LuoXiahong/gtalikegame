@@ -16,6 +16,7 @@ import { VehicleSystem } from '../systems/VehicleSystem.js';
 import { TrafficSystem } from '../systems/TrafficSystem.js';
 import { CollisionSystem } from '../world/CollisionSystem.js';
 import { RenderSystem } from '../systems/RenderSystem.js';
+import { RenderSystem3D } from '../systems/RenderSystem3D.js';
 import { AudioSystem } from '../systems/AudioSystem.js';
 import { MissionSystem } from '../systems/MissionSystem.js';
 import { WantedSystem } from '../systems/WantedSystem.js';
@@ -29,11 +30,14 @@ import { GameState, GAME_STATES } from './GameState.js';
 import { MenuScreen } from '../ui/MenuScreen.js';
 
 export const Game = {
+    is3D: false,
+
     init() {
         World.init();
         InputSystem.init();
         Camera.init();
         RenderSystem.init();
+        RenderSystem3D.init();
         AudioSystem.init();
         UISystem.init();
         MenuScreen.init();
@@ -111,8 +115,25 @@ export const Game = {
             if (controlled) Camera.follow(controlled, dt);
         }
 
+        if (InputSystem.consumeViewToggle()) {
+            this.is3D = !this.is3D;
+            const canvas2D = document.getElementById('gameCanvas');
+            const canvas3D = document.getElementById('gameCanvas3D');
+            if (this.is3D) {
+                if (canvas2D) canvas2D.style.display = 'none';
+                if (canvas3D) canvas3D.style.display = 'block';
+            } else {
+                if (canvas2D) canvas2D.style.display = 'block';
+                if (canvas3D) canvas3D.style.display = 'none';
+            }
+        }
+
         // 5. Renderowanie stanu końcowego na klatkę (zawsze, dla efektów tła)
-        RenderSystem.update();
+        if (this.is3D) {
+            RenderSystem3D.update();
+        } else {
+            RenderSystem.update();
+        }
 
         requestAnimationFrame((ts) => this.loop(ts));
     }

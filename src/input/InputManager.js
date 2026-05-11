@@ -2,11 +2,12 @@
  * ZARZĄDZANIE WEJŚCIEM (Input System)
  */
 export const InputSystem = {
-    keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false, debugAI: false },
+    keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false, debugAI: false, viewToggle: false },
     actionJustPressed: false,
     shootJustPressed: false,
     explodeJustPressed: false,
     debugAIJustPressed: false,
+    viewToggleJustPressed: false,
 
     init() {
         window.addEventListener("keydown", (e) => {
@@ -43,6 +44,10 @@ export const InputSystem = {
             if (state && !this.keys.explode) this.explodeJustPressed = true;
             this.keys.explode = state;
         }
+        if (code === "KeyV") {
+            if (state && !this.keys.viewToggle) this.viewToggleJustPressed = true;
+            this.keys.viewToggle = state;
+        }
     },
 
     consumeDebugAI() {
@@ -69,6 +74,12 @@ export const InputSystem = {
         return pressed;
     },
 
+    consumeViewToggle() {
+        const pressed = this.viewToggleJustPressed;
+        this.viewToggleJustPressed = false;
+        return pressed;
+    },
+
     resetAll() {
         for (const key in this.keys) {
             this.keys[key] = false;
@@ -77,6 +88,7 @@ export const InputSystem = {
         this.shootJustPressed = false;
         this.explodeJustPressed = false;
         this.debugAIJustPressed = false;
+        this.viewToggleJustPressed = false;
     },
 
     bindHUD(elementId, keyName) {

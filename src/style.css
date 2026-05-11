@@ -26,6 +26,10 @@ canvas {
     display: block;
 }
 
+#gameCanvas3D {
+    background-color: #000000;
+}
+
 #mobileHUD {
     position: absolute;
     bottom: 20px;
