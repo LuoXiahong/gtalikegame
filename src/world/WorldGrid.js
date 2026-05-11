@@ -1,19 +1,19 @@
 /**
- * METRYKI ŚWIATA: WorldGrid
- * Definiuje strukturę siatki miejskiej 3x3 dla gry (9 bloków, ulice i marginesy).
+ * WORLD METRICS: WorldGrid
+ * Defines the structure of the 3x3 city grid layout (9 blocks, streets, and padding margins).
  */
 
 export const WorldGrid = {
-    BLOCK_SIZE: 500,      // Rozmiar boku pojedynczego bloku (500u = 5 kafelków)
-    STREET_WIDTH: 200,    // Szerokość ulicy rozdzielającej bloki (200u = 2 kafelki)
-    GRID_COLS: 3,         // Siatka 3x3 bloków
+    BLOCK_SIZE: 500,      // Dimension of a single block side (500px = 5 tiles)
+    STREET_WIDTH: 200,    // Width of streets separating blocks (200px = 2 tiles)
+    GRID_COLS: 3,         // 3x3 layout
     GRID_ROWS: 3,
-    PADDING: 500,         // Zewnętrzny margines/trawa (500u = 5 kafelków)
+    PADDING: 500,         // Outer grass padding boundary (500px = 5 tiles)
 
     /**
-     * Zwraca pozycję i wymiary dla bloku o indeksie [row, col]
-     * @param {number} row - indeks wiersza bloku (0-2)
-     * @param {number} col - indeks kolumny bloku (0-2)
+     * Returns bounds for the city block at the specified [row, col] indices
+     * @param {number} row - Row index (0-2)
+     * @param {number} col - Column index (0-2)
      * @returns {{x: number, y: number, w: number, h: number}|null}
      */
     getBlockBounds(row, col) {
@@ -31,21 +31,21 @@ export const WorldGrid = {
     },
 
     /**
-     * Zwraca środki wszystkich ulic (pionowych/poziomych) w grze.
+     * Returns center coordinates for all street axes (both vertical and horizontal)
      * @returns {number[]}
      */
     getStreetCenters() {
         return [
-            this.PADDING + this.BLOCK_SIZE + this.STREET_WIDTH / 2, // Pierwsza ulica (1100)
-            this.PADDING + 2 * this.BLOCK_SIZE + 1.5 * this.STREET_WIDTH // Druga ulica (1800)
+            this.PADDING + this.BLOCK_SIZE + this.STREET_WIDTH / 2, // First street center (1100)
+            this.PADDING + 2 * this.BLOCK_SIZE + 1.5 * this.STREET_WIDTH // Second street center (1800)
         ];
     },
 
     /**
-     * Sprawdza, czy dany punkt w układzie 2D leży na terenie bloku miejskiego
-     * @param {number} x - współrzędna X
-     * @param {number} y - współrzędna Y
-     * @returns {boolean} - true, jeśli punkt leży na bloku (strefa budynku/chodnika)
+     * Checks if a 2D point lies within any urban city block bounds (sidewalk/building zone)
+     * @param {number} x - coordinate X
+     * @param {number} y - coordinate Y
+     * @returns {boolean} - true if point is on a block
      */
     isPointInAnyBlock(x, y) {
         for (let r = 0; r < this.GRID_ROWS; r++) {

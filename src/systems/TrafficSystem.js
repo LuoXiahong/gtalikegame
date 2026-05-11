@@ -1,6 +1,6 @@
 /**
- * SYSTEM: TrafficSystem
- * Zarządza ruchem ulicznym (autami AI).
+ * TRAFFIC SYSTEM (TrafficSystem)
+ * Spawns and manages autonomous AI vehicles driving along streets waypoints.
  */
 import { World } from '../world/World.js';
 import { Waypoints } from '../world/Waypoints.js';
@@ -15,7 +15,7 @@ export const TrafficSystem = {
         const trafficCars = World.getEntitiesByType('car').filter(c => c.ai && c.ai.type === 'traffic');
         const player = World.getEntitiesByType('player')[0];
         
-        // Despawn far cars
+        // Despawn vehicles too far from player
         trafficCars.forEach(car => {
             if (player && !car.occupied) {
                 const dx = car.transform.x - player.transform.x;
@@ -29,7 +29,7 @@ export const TrafficSystem = {
         
         const remainingCars = World.getEntitiesByType('car').filter(c => c.ai && c.ai.type === 'traffic');
         
-        // 3. Spawn / Despawn
+        // Spawn fresh vehicles if below limit
         if (remainingCars.length < this.maxCars) {
             this.spawnRandomCar();
         }
@@ -44,7 +44,7 @@ export const TrafficSystem = {
         let pathName = null;
         let start = null;
         
-        // Spróbuj znaleźć punkt startowy poza spawnRadius od gracza
+        // Find starting node further than spawnRadius from player
         const shuffledPathNames = [...pathNames].sort(() => Math.random() - 0.5);
         for (const tempPathName of shuffledPathNames) {
             const tempPath = Waypoints.paths[tempPathName];
@@ -66,15 +66,14 @@ export const TrafficSystem = {
             }
         }
         
-        if (!pathName) return; // Wszystkie ścieżki za blisko gracza
+        if (!pathName) return; // All paths too close to player
         
         const path = Waypoints.paths[pathName];
-        
         const nextNode = path[1] || start;
         const pathAngle = Math.atan2(nextNode.y - start.y, nextNode.x - start.x);
         const perpAngle = pathAngle + Math.PI / 2;
         
-        const laneOffset = (Math.random() - 0.5) * 30; // boczny offset (pas ruchu)
+        const laneOffset = (Math.random() - 0.5) * 30; // Lane positioning offset
         
         const spawnX = start.x + Math.cos(perpAngle) * laneOffset;
         const spawnY = start.y + Math.sin(perpAngle) * laneOffset;
@@ -91,7 +90,7 @@ export const TrafficSystem = {
             currentSpeed: 0,
             laneOffset: laneOffset
         };
-        // Wyłączamy domyślne tarcie fizyki, AI steruje bezpośrednio
+        // Disable physical friction for traffic AI, steering directly
         car.physics.friction = 1.0; 
         World.addEntity(car);
     },
@@ -101,7 +100,7 @@ export const TrafficSystem = {
         const sensorDist = 180;
         const minStopDist = 100;
         
-        // 1. Unikanie innych aut i gracza
+        // 1. Avoid other vehicles and the player
         const others = World.entities.filter(e => e !== car && (e.type === 'car' || e.type === 'player'));
         for (const other of others) {
             const odx = other.transform.x - car.transform.x;
@@ -114,11 +113,11 @@ export const TrafficSystem = {
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
                 
-                if (Math.abs(diff) < 0.45) { // Stożek widzenia ok 25 stopni (0.45 rad)
+                if (Math.abs(diff) < 0.45) { // 25-degree vision cone
                     if (distToOther <= minStopDist) {
                         speedMult = 0;
                     } else {
-                        // Płynny lerp zwalniania
+                        // Smoothly decelerate
                         const factor = (distToOther - minStopDist) / (sensorDist - minStopDist);
                         speedMult = Math.min(speedMult, factor);
                     }
@@ -126,12 +125,11 @@ export const TrafficSystem = {
             }
         }
         
-        // 2. Unikanie budynków (AABB sampling)
+        // 2. Avoid buildings (AABB ray casting approximation)
         if (World.buildings && World.buildings.length > 0) {
             const cos = Math.cos(car.transform.angle);
             const sin = Math.sin(car.transform.angle);
             
-            // Check sample points along the ray in front of the car
             const sampleDistances = [60, 100, 140, 180];
             for (const dist of sampleDistances) {
                 const rx = car.transform.x + cos * dist;
@@ -159,7 +157,7 @@ export const TrafficSystem = {
         const path = Waypoints.paths[car.ai.pathName];
         const target = path[car.ai.targetIndex];
         
-        // Oblicz boczny offset dla targetu
+        // Calculate lane lateral offset for target waypoint
         const prevIndex = Math.max(0, car.ai.targetIndex - 1);
         const prevNode = path[prevIndex];
         const segmentAngle = Math.atan2(target.y - prevNode.y, target.x - prevNode.x);
@@ -174,7 +172,7 @@ export const TrafficSystem = {
         
         let angle = Math.atan2(dy, dx);
         
-        // Zmniejszanie timera unikania
+        // Manage collision avoidance timer
         if (car.ai.avoidTimer === undefined) car.ai.avoidTimer = 0;
         if (car.ai.avoidAngleOffset === undefined) car.ai.avoidAngleOffset = 0;
         
@@ -186,7 +184,7 @@ export const TrafficSystem = {
             }
         }
         
-        // Jeśli nie unika obecnie, sprawdź czy trzeba zacząć unikać innego auta
+        // Check if avoidance trigger is needed
         if (car.ai.avoidTimer === 0) {
             const others = World.entities.filter(e => e !== car && e.type === 'car');
             for (const other of others) {
@@ -214,15 +212,14 @@ export const TrafficSystem = {
         }
         
         car.transform.angle = angle;
- 
-        // 2. Hamowanie przed przeszkodą (Fake Raycast)
+  
+        // Decelerate/Stop on obstacle detection
         const speedMult = this.computeSpeedMult(car);
         
-        // Płynne przyspieszanie/hamowanie
         const targetSpeed = car.ai.maxSpeed * speedMult;
         car.ai.currentSpeed += (targetSpeed - car.ai.currentSpeed) * 0.1;
         
-        // 3. Sprawdź ewentualną kolizję na przewidywanej pozycji
+        // Predictive collision safety checks
         const predVelX = Math.cos(angle) * car.ai.currentSpeed * dt;
         const predVelY = Math.sin(angle) * car.ai.currentSpeed * dt;
         const nextX = car.transform.x + predVelX;
@@ -235,7 +232,7 @@ export const TrafficSystem = {
         let pushX = 0;
         let pushY = 0;
         
-        // A. Kolizje z Budynkami
+        // A. Building collisions
         if (World.buildings && World.buildings.length > 0) {
             for (const b of World.buildings) {
                 if (nextX - hw < b.x + b.w &&
@@ -256,7 +253,7 @@ export const TrafficSystem = {
             }
         }
         
-        // B. Kolizje z innymi autami / graczem
+        // B. Vehicle/Player collisions
         if (!collisionOccurred) {
             const others = World.entities.filter(e => e !== car && (e.type === 'car' || e.type === 'player'));
             for (const other of others) {
@@ -281,13 +278,12 @@ export const TrafficSystem = {
         
         if (collisionOccurred) {
             car.ai.currentSpeed = 0;
-            // Lekki bounce-back (odskok)
+            // Elastic fallback push
             car.transform.x += pushX;
             car.transform.y += pushY;
             car.physics.velX = 0;
             car.physics.velY = 0;
         } else {
-            // Ustawienie vel dla MovementSystem
             car.physics.velX = predVelX;
             car.physics.velY = predVelY;
         }

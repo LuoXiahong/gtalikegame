@@ -1,6 +1,6 @@
 /**
- * CORE: Game - Orkiestrator gry
- * Inicjalizuje systemy i uruchamia główną pętlę.
+ * CORE: Game - Engine Orchestrator
+ * Initializes systems, handles entity creation, and runs the main game loop.
  */
 import { Time } from './Time.js';
 import { EventBus } from './EventBus.js';
@@ -46,13 +46,13 @@ export const Game = {
         PoliceSystem.init();
         AISystem.init();
 
-        // Inicjalizacja instancji (gracz zaczyna na środku pierwszego skrzyżowania)
+        // Spawn player at start intersection
         const p1 = new Player(1100, 1100);
         World.addEntity(p1);
 
         VehicleSystem.init(p1);
 
-        // Spawnowanie 10 przechodniów (NPC) na chodnikach wokół bloków miasta 3x3
+        // Spawn 10 starting NPCs on sidewalks around the 3x3 grid
         const npcConfigs = [
             { id: 'npc1', x: 1000, y: 1000, color: '#8e44ad' }, 
             { id: 'npc2', x: 1200, y: 1000, color: '#27ae60' }, 
@@ -70,10 +70,10 @@ export const Game = {
             World.addEntity(new NPC(cfg.id, cfg.x, cfg.y, cfg.color));
         });
 
-        // Samochód zaparkowany na pionowej drodze niedaleko gracza
+        // Spawn starting parked vehicle near the player
         World.addEntity(new Car('car1', 1100, 1300, '#c0392b'));
 
-        // Start w MENU
+        // Start in MENU state
         GameState.setState(GAME_STATES.MENU);
 
         requestAnimationFrame((ts) => this.loop(ts));
@@ -90,7 +90,7 @@ export const Game = {
             }
             const controlled = VehicleSystem.getControlledEntity();
 
-            // 1. Zbieranie wejścia i aplikacja intencji ruchu (zależy od typu sterowanej encji)
+            // 1. Process inputs and determine movement intentions
             if (controlled) {
                 if (controlled.type === 'player') {
                     PlayerMovementSystem.update(dt, controlled);
@@ -100,7 +100,7 @@ export const Game = {
                 }
             }
 
-            // 2. Aktualizacja systemów logiki i fizyki podstawowej
+            // 2. Update logic systems
             WantedSystem.update(dt);
             PoliceSystem.update(dt);
             TrafficSystem.update(dt);
@@ -109,13 +109,14 @@ export const Game = {
             MissionSystem.update(dt);
             InteractionSystem.update();
 
-            // 3. Rozwiązywanie kolizji
+            // 3. Resolve collisions
             CollisionSystem.update();
 
-            // 4. Aktualizacja punktu widzenia
+            // 4. Update camera follow
             if (controlled) Camera.follow(controlled, dt);
         }
 
+        // Toggle 2D vs 3D camera modes
         if (InputSystem.consumeViewToggle()) {
             this.is3D = !this.is3D;
             const canvas2D = document.getElementById('gameCanvas');
@@ -129,7 +130,7 @@ export const Game = {
             }
         }
 
-        // 5. Renderowanie stanu końcowego na klatkę (zawsze, dla efektów tła)
+        // 5. Render active system
         if (this.is3D) {
             RenderSystem3D.update();
         } else {

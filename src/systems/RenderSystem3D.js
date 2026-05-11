@@ -1,11 +1,11 @@
 /**
- * SYSTEM RENDERINGU 3D (RenderSystem3D)
- * Odpowiedzialny za wyświetlanie świata gry w trójwymiarze przy użyciu Three.js.
+ * 3D RENDERING SYSTEM (RenderSystem3D)
+ * Responsible for rendering the game world in 3D using Three.js.
  * 
- * KONWENCJA MAPOWANIA WSPÓŁRZĘDNYCH:
+ * COORDINATE MAPPING CONVENTION:
  * world2D.x → world3D.x
- * world2D.y → world3D.z (oś głębokości)
- * Oś world3D.y odpowiada wysokości w pionie.
+ * world2D.y → world3D.z (depth axis)
+ * world3D.y represents vertical height.
  */
 import * as THREE from 'three';
 import { World } from '../world/World.js';
@@ -19,7 +19,7 @@ export const RenderSystem3D = {
     scene: null,
     camera: null,
     
-    // Elementy środowiska 3D
+    // 3D environment elements
     groundPlane: null,
     asphaltPlane: null,
     sidewalks: [],
@@ -30,18 +30,18 @@ export const RenderSystem3D = {
     laneMarkings: [],
     zebras: [],
     
-    // Tekstura radialnego cienia kontaktowego (T-702)
+    // Contact shadow texture (T-702)
     contactShadowTexture: null,
     
-    // Sześcian walidacji ruchu i skali
+    // Movement and scale validation cube
     box5u: null,
     
-    // Punkt początkowy odniesienia (gracz zaczyna na skrzyżowaniu x:1100, y:1100)
+    // Reference origin (matches start intersection)
     originX: 1100,
     originZ: 1100,
 
     /**
-     * Tworzy teksturę kołowego cienia kontaktowego przy użyciu Canvas (T-702)
+     * Creates a circular contact shadow texture using Canvas
      */
     createContactShadowTexture() {
         const canvas = document.createElement('canvas');
@@ -49,7 +49,7 @@ export const RenderSystem3D = {
         canvas.height = 64;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-            // Zwróć pustą teksturę dla środowisk testowych bez pełnego wsparcia dla Canvas (np. JSDOM)
+            // Return empty texture for headless environments (like JSDOM)
             return new THREE.Texture();
         }
         const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -59,40 +59,36 @@ export const RenderSystem3D = {
         grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, 64, 64);
-        const texture = new THREE.CanvasTexture(canvas);
-        return texture;
+        return new THREE.CanvasTexture(canvas);
     },
 
     init() {
         const canvas = document.getElementById('gameCanvas3D');
         if (!canvas) {
-            console.error('Nie znaleziono elementu #gameCanvas3D!');
+            console.error('gameCanvas3D element not found!');
             return;
         }
 
-        // Inicjalizacja proceduralnych tekstur fasad (T-604)
         FacadeGenerator.init();
-
-        // Inicjalizacja cienia kontaktowego (T-702)
         this.contactShadowTexture = this.createContactShadowTexture();
 
         const parent = canvas.parentElement;
         const width = parent.clientWidth || 800;
         const height = parent.clientHeight || 600;
 
-        // 1. Inicjalizacja WebGLRenderer (renderowanie czarnej sceny na start)
+        // 1. Initialize WebGLRenderer
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         this.renderer.setSize(width, height, false);
         this.renderer.setClearColor(0x000000, 1.0);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-        // 2. Inicjalizacja Sceny
+        // 2. Initialize Scene
         this.scene = new THREE.Scene();
 
-        // 3. Konfiguracja OrthographicCamera (Brak perspektywy)
+        // 3. Configure OrthographicCamera (isometric view)
         const aspect = width / height;
-        const viewSize = 60; // Zmniejszony zasięg widzenia izometrycznego ze względu na skalę (600 -> 60)
+        const viewSize = 60; // Scale adjusted isometric view size
         
         this.camera = new THREE.OrthographicCamera(
             -viewSize * aspect / 2, // left
@@ -106,13 +102,12 @@ export const RenderSystem3D = {
         this.camera.zoom = 1.0;
         this.camera.updateProjectionMatrix();
 
-        // Współczynnik skali (T-602A)
         const SF = WorldMetrics.SCALE_FACTOR;
 
-        // 3B. Setup oświetlenia i cieni (T-701)
+        // 3B. Setup lighting and shadows
         this.setupLighting();
 
-        // 4. Obsługa zdarzenia zmiany rozmiaru okna (resize)
+        // 4. Handle resize event
         window.addEventListener('resize', () => {
             const w = parent.clientWidth || 800;
             const h = parent.clientHeight || 600;
@@ -127,35 +122,35 @@ export const RenderSystem3D = {
             this.camera.updateProjectionMatrix();
         });
 
-        // 5. Budowa makiety środowiska na bazie WorldGrid
+        // 5. Build environment on WorldGrid
         
-        // A. Podłoże trawy (cały świat 3000x3000px -> 300x300m)
+        // A. Grass ground plane (3000x3000px -> 300x300m)
         const groundGeom = new THREE.PlaneGeometry(3000 * SF, 3000 * SF);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.9, metalness: 0.0 }); // Zielona trawa
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.9, metalness: 0.0 });
         this.groundPlane = new THREE.Mesh(groundGeom, groundMat);
         this.groundPlane.rotation.x = -Math.PI / 2;
         this.groundPlane.position.set(1500 * SF, -0.005, 1500 * SF);
         this.groundPlane.receiveShadow = true;
         this.scene.add(this.groundPlane);
 
-        // B. Podłoże asfaltowe (miejski obszar wewnątrz paddingu, kolor ciemnoszary #222)
+        // B. Asphalt ground plane
         const asphaltSize = 3000 - 2 * WorldGrid.PADDING;
         const asphaltGeom = new THREE.PlaneGeometry(asphaltSize * SF, asphaltSize * SF);
-        const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9, metalness: 0.0 }); // Ciemny asfalt drogowy
+        const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9, metalness: 0.0 });
         this.asphaltPlane = new THREE.Mesh(asphaltGeom, asphaltMat);
         this.asphaltPlane.rotation.x = -Math.PI / 2;
         this.asphaltPlane.position.set(1500 * SF, -0.001, 1500 * SF);
         this.asphaltPlane.receiveShadow = true;
         this.scene.add(this.asphaltPlane);
 
-        // C. Budowa 9 bloków (podniesiony chodnik na 0.15m + wyższa strefa zabudowy na 0.20m)
+        // C. Build 9 blocks (sidewalk + building zones)
         this.sidewalks = [];
         this.buildingZones = [];
-        this.buildings = []; // Lista budynków 3D
-        const shops = []; // Kolekcja sklepów do celów generowania billboardów
+        this.buildings = [];
+        const shops = [];
         
-        const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x95a5a6, roughness: 0.8, metalness: 0.0 }); // Jaśniejszy beton chodnikowy (#95a5a6)
-        const buildingZoneMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.8, metalness: 0.0 }); // Ciemniejszy beton strefy budynków (#7f8c8d)
+        const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x95a5a6, roughness: 0.8, metalness: 0.0 });
+        const buildingZoneMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.8, metalness: 0.0 });
         
         for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
             for (let c = 0; c < WorldGrid.GRID_COLS; c++) {
@@ -163,7 +158,7 @@ export const RenderSystem3D = {
                 const posX = (b.x + b.w / 2) * SF;
                 const posZ = (b.y + b.h / 2) * SF;
                 
-                // 1. Podstawa chodnika (50m x 50m x 0.15m)
+                // 1. Sidewalk base
                 const swGeom = new THREE.BoxGeometry(b.w * SF, WorldMetrics.SIDEWALK_HEIGHT, b.h * SF);
                 const swMesh = new THREE.Mesh(swGeom, sidewalkMat);
                 swMesh.position.set(posX, WorldMetrics.SIDEWALK_HEIGHT / 2, posZ);
@@ -171,7 +166,7 @@ export const RenderSystem3D = {
                 this.scene.add(swMesh);
                 this.sidewalks.push(swMesh);
                 
-                // 2. Podniesiona strefa budynku (30m x 30m x 0.05m, wysokość sumaryczna 0.20m)
+                // 2. Building zone platform
                 const bzGeom = new THREE.BoxGeometry(300 * SF, 0.05, 300 * SF);
                 const bzMesh = new THREE.Mesh(bzGeom, buildingZoneMat);
                 bzMesh.position.set(posX, WorldMetrics.SIDEWALK_HEIGHT + 0.025, posZ);
@@ -179,21 +174,18 @@ export const RenderSystem3D = {
                 this.scene.add(bzMesh);
                 this.buildingZones.push(bzMesh);
 
-                // 3. Generowanie proceduralnych budynków na platformie (strefie)
+                // 3. Generate procedural buildings
                 const pattern = (r + c) % 3;
                 if (pattern === 0) {
-                    // Wieżowiec na środku + 2 małe sklepy po przekątnej
                     this.createBuilding('skyscraper', posX, posZ, 380 * SF, 120 * SF, 120 * SF);
                     const s1 = this.createBuilding('shop', posX - 80 * SF, posZ - 80 * SF, 50 * SF, 80 * SF, 80 * SF);
                     const s2 = this.createBuilding('shop', posX + 80 * SF, posZ + 80 * SF, 50 * SF, 80 * SF, 80 * SF);
                     shops.push({ group: s1, w: 80 * SF, d: 80 * SF, h: 50 * SF });
                     shops.push({ group: s2, w: 80 * SF, d: 80 * SF, h: 50 * SF });
                 } else if (pattern === 1) {
-                    // Dwa bloki mieszkalne ułożone obok siebie
                     this.createBuilding('residential', posX - 60 * SF, posZ, 180 * SF, 120 * SF, 200 * SF);
                     this.createBuilding('residential', posX + 60 * SF, posZ + 50 * SF, 140 * SF, 100 * SF, 100 * SF);
                 } else {
-                    // Jeden blok mieszkalny + 2 sklepy
                     this.createBuilding('residential', posX, posZ - 50 * SF, 200 * SF, 180 * SF, 120 * SF);
                     const s1 = this.createBuilding('shop', posX - 80 * SF, posZ + 80 * SF, 60 * SF, 80 * SF, 80 * SF);
                     const s2 = this.createBuilding('shop', posX + 80 * SF, posZ + 80 * SF, 45 * SF, 80 * SF, 80 * SF);
@@ -203,37 +195,34 @@ export const RenderSystem3D = {
             }
         }
 
-        // D. Generowanie linii przerywanych (Lane Markings) na środkach jezdni
+        // D. Generate lane markings
         this.laneMarkings = [];
-        const roads = WorldGrid.getStreetCenters(); // [1100, 1800]
+        const roads = WorldGrid.getStreetCenters();
         
-        // Pionowe linie jezdni (dzielone przez skrzyżowania)
         roads.forEach(rx => {
             this.createDashedLine(rx * SF, 500 * SF, rx * SF, 1000 * SF, true);
             this.createDashedLine(rx * SF, 1200 * SF, rx * SF, 1700 * SF, true);
             this.createDashedLine(rx * SF, 1900 * SF, rx * SF, 2400 * SF, true);
         });
         
-        // Poziome linie jezdni (dzielone przez skrzyżowania)
         roads.forEach(rz => {
             this.createDashedLine(500 * SF, rz * SF, 1000 * SF, rz * SF, false);
             this.createDashedLine(1200 * SF, rz * SF, 1700 * SF, rz * SF, false);
             this.createDashedLine(1900 * SF, rz * SF, 2400 * SF, rz * SF, false);
         });
 
-        // E. Generowanie przejść dla pieszych (Zebras) na wlotach skrzyżowań
+        // E. Generate pedestrian zebra crossings
         this.zebras = [];
         roads.forEach(cx => {
             roads.forEach(cz => {
-                // Cztery zebry wokół każdego skrzyżowania (Północ, Południe, Zachód, Wschód)
-                this.createZebra(cx * SF, (cz - 110) * SF, true);  // Północ (droga pionowa)
-                this.createZebra(cx * SF, (cz + 110) * SF, true);  // Południe (droga pionowa)
-                this.createZebra((cx - 110) * SF, cz * SF, false); // Zachód (droga pozioma)
-                this.createZebra((cx + 110) * SF, cz * SF, false); // Wschód (droga pozioma)
+                this.createZebra(cx * SF, (cz - 110) * SF, true);  // North
+                this.createZebra(cx * SF, (cz + 110) * SF, true);  // South
+                this.createZebra((cx - 110) * SF, cz * SF, false); // West
+                this.createZebra((cx + 110) * SF, cz * SF, false); // East
             });
         });
 
-        // F. Generowanie drzew na chodnikach wokół bloków (dokładnie 18-25 sztuk)
+        // F. Generate trees on sidewalks
         this.trees = [];
         const treePositions = [];
         const treeOffsets = [
@@ -243,7 +232,6 @@ export const RenderSystem3D = {
             { x: 0, z: -200 },    { x: 0, z: 200 }
         ];
 
-        // Zbieramy wszystkie potencjalne wolne pozycje na chodnikach
         for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
             for (let c = 0; c < WorldGrid.GRID_COLS; c++) {
                 const b = WorldGrid.getBlockBounds(r, c);
@@ -259,16 +247,16 @@ export const RenderSystem3D = {
             }
         }
 
-        // Tasujemy pozycje i wybieramy losowo stałą liczbę drzew
+        // Shuffle tree positions and choose a count between 18 and 25
         treePositions.sort(() => Math.random() - 0.5);
-        const totalTreesCount = Math.floor(Math.random() * 8) + 18; // Od 18 do 25 drzew
+        const totalTreesCount = Math.floor(Math.random() * 8) + 18;
         for (let i = 0; i < Math.min(totalTreesCount, treePositions.length); i++) {
             const pos = treePositions[i];
             const sizeType = Math.random() < 0.3 ? 'shrub' : 'tree';
             this.createTree(sizeType, pos.x, pos.z);
         }
 
-        // G. Generowanie billboardów na dachach sklepów (dokładnie 2 sztuki w całym mieście)
+        // G. Generate billboards on shop roofs
         this.billboards = [];
         if (shops.length >= 2) {
             shops.sort(() => Math.random() - 0.5);
@@ -276,7 +264,7 @@ export const RenderSystem3D = {
             this.addBillboard(shops[1].group, shops[1].w, shops[1].d, shops[1].h);
         }
 
-        // 6. Testowy sześcian (1.5m x 1.5m x 1.5m) do walidacji ruchu i osi (kolor czerwony)
+        // 6. Test movement & scale validation cube
         const geom5u = new THREE.BoxGeometry(1.5, 1.5, 1.5);
         const mat5u = new THREE.MeshBasicMaterial({ color: 0xe74c3c });
         this.box5u = new THREE.Mesh(geom5u, mat5u);
@@ -284,13 +272,10 @@ export const RenderSystem3D = {
         this.scene.add(this.box5u);
     },
 
-    /**
-     * Tworzy linię przerywaną na zadanym odcinku jezdni
-     */
     createDashedLine(xStart, zStart, xEnd, zEnd, isVertical) {
         const SF = WorldMetrics.SCALE_FACTOR;
-        const dashLength = 15 * SF; // 1.5m
-        const dashGap = 15 * SF;    // 1.5m
+        const dashLength = 15 * SF;
+        const dashGap = 15 * SF;
         const step = dashLength + dashGap;
         
         const geom = new THREE.BoxGeometry(isVertical ? 0.2 : dashLength, 0.005, isVertical ? dashLength : 0.2);
@@ -303,23 +288,19 @@ export const RenderSystem3D = {
             const mesh = new THREE.Mesh(geom, mat);
             const posX = isVertical ? xStart : pos;
             const posZ = isVertical ? pos : zStart;
-            mesh.position.set(posX, 0.003, posZ); // Lekko ponad asfaltem
+            mesh.position.set(posX, 0.003, posZ);
             this.scene.add(mesh);
             this.laneMarkings.push(mesh);
         }
     },
 
-    /**
-     * Tworzy przejście dla pieszych (zebra) ułożone w poprzek kierunku wchodzenia pieszych
-     */
     createZebra(cx, cz, isVerticalRoad) {
         const SF = WorldMetrics.SCALE_FACTOR;
         const stripeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        const stripeOffsets = [-60 * SF, -30 * SF, 0, 30 * SF, 60 * SF]; // [-6m, -3m, 0m, 3m, 6m]
+        const stripeOffsets = [-60 * SF, -30 * SF, 0, 30 * SF, 60 * SF];
         
         if (isVerticalRoad) {
-            // Zebra na drodze pionowej (pieszy idzie poziomo X, pasy są ułożone pionowo Z)
-            const stripeGeom = new THREE.BoxGeometry(0.4, 0.005, 2.0); // 0.4m x 2.0m
+            const stripeGeom = new THREE.BoxGeometry(0.4, 0.005, 2.0);
             stripeOffsets.forEach(dx => {
                 const mesh = new THREE.Mesh(stripeGeom, stripeMat);
                 mesh.position.set(cx + dx, 0.003, cz);
@@ -327,8 +308,7 @@ export const RenderSystem3D = {
                 this.zebras.push(mesh);
             });
         } else {
-            // Zebra na drodze poziomej (pieszy idzie pionowo Z, pasy są ułożone poziomo X)
-            const stripeGeom = new THREE.BoxGeometry(2.0, 0.005, 0.4); // 2.0m x 0.4m
+            const stripeGeom = new THREE.BoxGeometry(2.0, 0.005, 0.4);
             stripeOffsets.forEach(dz => {
                 const mesh = new THREE.Mesh(stripeGeom, stripeMat);
                 mesh.position.set(cx, 0.003, cz + dz);
@@ -338,9 +318,6 @@ export const RenderSystem3D = {
         }
     },
 
-    /**
-     * Tworzy budynek określonego typu o zadanych wymiarach i pozycjonuje go na Y=0
-     */
     createBuilding(type, x, z, height, width, depth) {
         const group = new THREE.Group();
         group.position.set(x, 0, z);
@@ -349,8 +326,7 @@ export const RenderSystem3D = {
         let roofWidth = width;
         let roofDepth = depth;
 
-        // Fałszywy cień kontaktowy pod budynkiem (T-702)
-        // Rozmiar cienia jest o 15% większy niż obrys podstawy budynku
+        // Circular contact shadow under building (T-702)
         const shadowGeom = new THREE.PlaneGeometry(width * 1.15, depth * 1.15);
         const shadowMat = new THREE.MeshBasicMaterial({
             color: 0x000000,
@@ -361,7 +337,6 @@ export const RenderSystem3D = {
         });
         const shadowMesh = new THREE.Mesh(shadowGeom, shadowMat);
         shadowMesh.rotation.x = -Math.PI / 2;
-        // Umieszczamy cień tuż nad chodnikiem (Y = 0.15 + 0.005)
         shadowMesh.position.set(0, WorldMetrics.SIDEWALK_HEIGHT + 0.005, 0);
         group.add(shadowMesh);
 
@@ -369,7 +344,7 @@ export const RenderSystem3D = {
             const baseHeight = height * 0.75;
             const topHeight = height * 0.25;
 
-            // Baza wieżowca z teksturą proceduralną
+            // Skyscraper base with procedural texture
             const baseGeom = new THREE.BoxGeometry(width, baseHeight, depth);
             const baseMats = this.getBuildingMaterials('skyscraper', width, baseHeight, depth, 0x2d3436);
             const base = new THREE.Mesh(baseGeom, baseMats);
@@ -378,7 +353,7 @@ export const RenderSystem3D = {
             base.receiveShadow = true;
             group.add(base);
 
-            // Wyższa, węższa część (setback) z osobnym zestawem materiałów/tekstur
+            // Narrow top section (setback)
             const topGeom = new THREE.BoxGeometry(width * 0.75, topHeight, depth * 0.75);
             const topMats = this.getBuildingMaterials('skyscraper', width * 0.75, topHeight, depth * 0.75, 0x353b48);
             const topMesh = new THREE.Mesh(topGeom, topMats);
@@ -387,7 +362,7 @@ export const RenderSystem3D = {
             topMesh.receiveShadow = true;
             group.add(topMesh);
 
-            // Obrysy krawędzi dla kontrastu bez oświetlenia
+            // Edge outlines for better visibility/contrast
             const edgesBase = new THREE.EdgesGeometry(baseGeom);
             const lineBase = new THREE.LineSegments(edgesBase, new THREE.LineBasicMaterial({ color: 0x111111 }));
             lineBase.position.y = baseHeight / 2;
@@ -403,7 +378,7 @@ export const RenderSystem3D = {
             roofY = height;
 
         } else if (type === 'residential') {
-            // Blok mieszkalny z regularną siatką okien
+            // Residential block with regular window grid
             const bodyGeom = new THREE.BoxGeometry(width, height, depth);
             const bodyMats = this.getBuildingMaterials('residential', width, height, depth, 0xb2bec3);
             const body = new THREE.Mesh(bodyGeom, bodyMats);
@@ -412,14 +387,13 @@ export const RenderSystem3D = {
             body.receiveShadow = true;
             group.add(body);
 
-            // Krawędzie
             const edges = new THREE.EdgesGeometry(bodyGeom);
             const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x222222 }));
             line.position.y = height / 2;
             group.add(line);
 
         } else if (type === 'shop') {
-            // Niski sklep (duże witryny na parterze i wejścia od frontu/tyłu, mniejsze na bokach)
+            // Low retail shop (storefront window facades on ground floor)
             const bodyGeom = new THREE.BoxGeometry(width, height, depth);
             const bodyMats = this.getBuildingMaterials('shop', width, height, depth, 0xf5cd79);
             const body = new THREE.Mesh(bodyGeom, bodyMats);
@@ -428,14 +402,13 @@ export const RenderSystem3D = {
             body.receiveShadow = true;
             group.add(body);
 
-            // Krawędzie
             const edges = new THREE.EdgesGeometry(bodyGeom);
             const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x444444 }));
             line.position.y = height / 2;
             group.add(line);
         }
 
-        // Proceduralne HVAC na dachu (prawdopodobieństwo 40%)
+        // 40% chance of procedural roof HVAC units
         this.addHVACUnits(group, roofWidth, roofDepth, roofY);
 
         this.scene.add(group);
@@ -443,9 +416,6 @@ export const RenderSystem3D = {
         return group;
     },
 
-    /**
-     * Zwraca zestaw 6 materiałów (dla każdej ściany BoxGeometry) z odpowiednio powielonymi teksturami fasad.
-     */
     getBuildingMaterials(type, width, height, depth, baseColor) {
         const topMat = new THREE.MeshStandardMaterial({
             color: baseColor,
@@ -473,9 +443,6 @@ export const RenderSystem3D = {
         return [topMat, topMat, topMat, bottomMat, topMat, topMat];
     },
 
-    /**
-     * Tworzy unikalny materiał dla konkretnej ściany o zadanych wymiarach z powtarzaniem tekstury
-     */
     createFaceMaterial(textureType, faceWidth, faceHeight, baseColor) {
         const originalTexture = FacadeGenerator.textures.get(textureType);
         if (!originalTexture) {
@@ -483,12 +450,11 @@ export const RenderSystem3D = {
         }
         const texture = originalTexture.clone();
         
-        // Zapewniamy, że w pionie dla shop_front/shop_side repeat wynosi dokładnie 1, aby pasowało do wysokości parteru
         const repeatY = (textureType === 'shop_front' || textureType === 'shop_side') ? 1 : faceHeight / 5.0;
         texture.repeat.set(faceWidth / 5.0, repeatY);
         
         const color = new THREE.Color(baseColor);
-        const tint = 0.95 + Math.random() * 0.1; // Subtelna wariacja odcienia, by budynki nie były identyczne
+        const tint = 0.95 + Math.random() * 0.1; // Subtle variations for organic diversity
         color.multiplyScalar(tint);
 
         return new THREE.MeshStandardMaterial({
@@ -499,23 +465,17 @@ export const RenderSystem3D = {
         });
     },
 
-    /**
-     * Dodaje proceduralne urządzenia HVAC na dachu budynku
-     */
     addHVACUnits(group, roofWidth, roofDepth, roofY) {
-        // Prawdopodobieństwo 40%
         if (Math.random() > 0.4) return;
 
-        // Rozmiary urządzeń HVAC (przeskalowane 10-krotnie)
         const sizes = [
             { w: 1.5, h: 0.8, d: 1.2 },
             { w: 1.0, h: 0.6, d: 1.0 },
             { w: 2.2, h: 1.0, d: 1.6 }
         ];
 
-        // Liczba urządzeń na dachu: od 1 do 3
         const count = Math.floor(Math.random() * 3) + 1;
-        const hvacMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.5, metalness: 0.6 }); // Metaliczny szary
+        const hvacMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.5, metalness: 0.6 });
         const hvacEdgeMat = new THREE.LineBasicMaterial({ color: 0x2c3e50 });
 
         for (let i = 0; i < count; i++) {
@@ -525,7 +485,6 @@ export const RenderSystem3D = {
             mesh.castShadow = true;
             mesh.receiveShadow = true;
 
-            // Losowe pozycjonowanie na dachu z marginesem bezpieczeństwa
             const marginX = roofWidth * 0.15 + size.w / 2;
             const marginZ = roofDepth * 0.15 + size.d / 2;
             
@@ -538,7 +497,6 @@ export const RenderSystem3D = {
             mesh.position.set(rx, roofY + size.h / 2, rz);
             group.add(mesh);
 
-            // Krawędzie skrzynki HVAC
             const edges = new THREE.EdgesGeometry(geom);
             const line = new THREE.LineSegments(edges, hvacEdgeMat);
             line.position.copy(mesh.position);
@@ -546,25 +504,22 @@ export const RenderSystem3D = {
         }
     },
 
-    /**
-     * Dodaje billboard reklamowy na dachu niskiego budynku
-     */
     addBillboard(group, roofWidth, roofDepth, roofY) {
         const billboardGroup = new THREE.Group();
         
-        // Stelaż (2 cienkie słupki)
-        const legGeom = new THREE.BoxGeometry(0.2, 2.0, 0.2); // 0.2m x 2.0m x 0.2m
+        // Frame legs
+        const legGeom = new THREE.BoxGeometry(0.2, 2.0, 0.2);
         const legMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.7, metalness: 0.5 });
         const legEdgeMat = new THREE.LineBasicMaterial({ color: 0x111111 });
 
         const leftLeg = new THREE.Mesh(legGeom, legMat);
-        leftLeg.position.set(-1.5, 1.0, 0); // -1.5m, 1.0m, 0m
+        leftLeg.position.set(-1.5, 1.0, 0);
         leftLeg.castShadow = true;
         leftLeg.receiveShadow = true;
         billboardGroup.add(leftLeg);
 
         const rightLeg = new THREE.Mesh(legGeom, legMat);
-        rightLeg.position.set(1.5, 1.0, 0); // 1.5m, 1.0m, 0m
+        rightLeg.position.set(1.5, 1.0, 0);
         rightLeg.castShadow = true;
         rightLeg.receiveShadow = true;
         billboardGroup.add(rightLeg);
@@ -576,11 +531,11 @@ export const RenderSystem3D = {
             billboardGroup.add(line);
         });
 
-        // Tablica
-        const boardGeom = new THREE.BoxGeometry(5.0, 2.5, 0.3); // 5.0m x 2.5m x 0.3m
+        // Board panel
+        const boardGeom = new THREE.BoxGeometry(5.0, 2.5, 0.3);
         const boardMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.8, metalness: 0.1 });
         const board = new THREE.Mesh(boardGeom, boardMat);
-        board.position.set(0, 2.5, 0); // 2.5m
+        board.position.set(0, 2.5, 0);
         board.castShadow = true;
         board.receiveShadow = true;
         billboardGroup.add(board);
@@ -590,8 +545,8 @@ export const RenderSystem3D = {
         boardLine.position.copy(board.position);
         billboardGroup.add(boardLine);
 
-        // Kolorowy plakat (cienka płaszczyzna)
-        const posterGeom = new THREE.PlaneGeometry(4.6, 2.1); // 4.6m x 2.1m
+        // Poster sheet
+        const posterGeom = new THREE.PlaneGeometry(4.6, 2.1);
         const posterColors = [0xe74c3c, 0x9b59b6, 0xf1c40f, 0xe67e22, 0x1abc9c, 0xe84393];
         const randomColor = posterColors[Math.floor(Math.random() * posterColors.length)];
         const posterMat = new THREE.MeshStandardMaterial({ 
@@ -602,7 +557,7 @@ export const RenderSystem3D = {
         });
         
         const poster = new THREE.Mesh(posterGeom, posterMat);
-        poster.position.set(0, 2.5, 0.16); // 0.16m
+        poster.position.set(0, 2.5, 0.16);
         poster.castShadow = true;
         poster.receiveShadow = true;
         billboardGroup.add(poster);
@@ -612,10 +567,9 @@ export const RenderSystem3D = {
         posterLine.position.copy(poster.position);
         billboardGroup.add(posterLine);
 
-        // Pozycja na dachu
         billboardGroup.position.set(0, roofY, 0);
 
-        // Losowy obrót prostopadły do krawędzi budynku (0, 90, 180, 270 stopni)
+        // Random rotation aligned to building boundaries
         const rotations = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
         billboardGroup.rotation.y = rotations[Math.floor(Math.random() * rotations.length)];
 
@@ -623,30 +577,21 @@ export const RenderSystem3D = {
         this.billboards.push(billboardGroup);
     },
 
-    /**
-     * Tworzy i dodaje drzewo na chodniku
-     */
     createTree(sizeType, x, z) {
         const group = new THREE.Group();
-        group.position.set(x, WorldMetrics.SIDEWALK_HEIGHT, z); // Wysokość chodnika (0.15)
+        group.position.set(x, WorldMetrics.SIDEWALK_HEIGHT, z);
 
         const greenShades = [
-            0x2ecc71, // Jasnozielony
-            0x27ae60, // Średni zielony
-            0x1abc9c, // Turkusowy zielony
-            0x16a085, // Morski zielony
-            0x1e824c, // Ciemnozielony leśny
-            0x2d5a27  // Butelkowa zieleń
+            0x2ecc71, 0x27ae60, 0x1abc9c, 0x16a085, 0x1e824c, 0x2d5a27
         ];
         const leafColor = greenShades[Math.floor(Math.random() * greenShades.length)];
 
-        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x795548, roughness: 0.9, metalness: 0.0 }); // Brąz
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x795548, roughness: 0.9, metalness: 0.0 });
         const trunkEdgeMat = new THREE.LineBasicMaterial({ color: 0x3d271d });
         const leafMat = new THREE.MeshStandardMaterial({ color: leafColor, roughness: 0.8, metalness: 0.0 });
         const leafEdgeMat = new THREE.LineBasicMaterial({ color: 0x145a32 });
 
         if (sizeType === 'shrub') {
-            // Niski krzew (przeskalowany 10-krotnie)
             const trunkGeom = new THREE.CylinderGeometry(0.15, 0.15, 0.6, 5);
             const trunk = new THREE.Mesh(trunkGeom, trunkMat);
             trunk.position.y = 0.3;
@@ -671,7 +616,6 @@ export const RenderSystem3D = {
             leafLine.position.copy(leaf.position);
             group.add(leafLine);
         } else {
-            // Średnie drzewo (przeskalowane 10-krotnie)
             const trunkGeom = new THREE.CylinderGeometry(0.2, 0.2, 1.6, 6);
             const trunk = new THREE.Mesh(trunkGeom, trunkMat);
             trunk.position.y = 0.8;
@@ -684,7 +628,7 @@ export const RenderSystem3D = {
             trunkLine.position.copy(trunk.position);
             group.add(trunkLine);
 
-            // Dolna korona
+            // Lower foliage
             const leafGeom1 = new THREE.SphereGeometry(1.4, 8, 8);
             const leaf1 = new THREE.Mesh(leafGeom1, leafMat);
             leaf1.position.y = 2.0;
@@ -697,7 +641,7 @@ export const RenderSystem3D = {
             leafLine1.position.copy(leaf1.position);
             group.add(leafLine1);
 
-            // Górna korona
+            // Upper foliage
             const leafGeom2 = new THREE.SphereGeometry(1.0, 8, 8);
             const leaf2 = new THREE.Mesh(leafGeom2, leafMat);
             leaf2.position.y = 2.8;
@@ -716,31 +660,25 @@ export const RenderSystem3D = {
         return group;
     },
 
-    /**
-     * Konfiguruje oświetlenie makiety, w tym słońce i miękkie cienie (T-701)
-     */
     setupLighting() {
         const SF = WorldMetrics.SCALE_FACTOR;
 
-        // 1. Światło otoczenia (Ambient) - rozjaśnia cienie, by nie były czarnymi plamami
+        // 1. Ambient lighting to soften shadows
         const ambient = new THREE.AmbientLight(0x404060, 0.45);
         this.scene.add(ambient);
 
-        // 2. Światło kierunkowe (Słońce) - ciepłe białe światło pod kątem dla długich cieni
+        // 2. Directional light simulating the sun
         const sun = new THREE.DirectionalLight(0xfff5e6, 1.5);
-        sun.position.set(600 * SF, 1000 * SF, 300 * SF); // (60m, 100m, 30m)
+        sun.position.set(600 * SF, 1000 * SF, 300 * SF);
         
-        // Cel słońca skierowany na środek gridu (150m, 150m)
         sun.target.position.set(1500 * SF, 0, 1500 * SF);
         this.scene.add(sun.target);
 
-        // Włączenie cieni
         sun.castShadow = true;
-        sun.shadow.bias = -0.0005; // Przeciwdziałanie prążkom (shadow acne)
+        sun.shadow.bias = -0.0005;
         sun.shadow.mapSize.width = 2048;
         sun.shadow.mapSize.height = 2048;
 
-        // Zakres kamery cienia - pokrycie całego miasta (zmniejszone z 1600 do 160m)
         const d = 1600 * SF;
         sun.shadow.camera.left = -d;
         sun.shadow.camera.right = d;
@@ -757,12 +695,12 @@ export const RenderSystem3D = {
 
         const SF = WorldMetrics.SCALE_FACTOR;
 
-        // 1. Walidacja konwencji - płynny ruch czerwonego sześcianu wzdłuż ulicy (oś X)
+        // Validation - smooth red cube movement on X-axis
         const time = Date.now() * 0.001;
         this.box5u.position.x = (1500 + Math.sin(time) * 1000) * SF;
         this.box5u.position.z = 1100 * SF;
 
-        // 2. Pobranie pozycji śledzonej encji (gracza lub pojazdu)
+        // Track focus target (Player or active vehicle)
         const player = World.getEntitiesByType('player')[0];
         let focusX = this.originX;
         let focusZ = this.originZ;
@@ -772,14 +710,13 @@ export const RenderSystem3D = {
             focusZ = player.transform.y;
         }
 
-        // Skalowanie pozycji kamery do przestrzeni 3D
         const sFocusX = focusX * SF;
         const sFocusZ = focusZ * SF;
 
-        // 3. Pozycjonowanie kamery izometrycznej
+        // Isometric camera alignment
         const tiltAngle = 35.264 * Math.PI / 180;
         const yawAngle = 45 * Math.PI / 180;
-        const distance = 1200 * SF; // Zmniejszony dystans kamery z 1200 do 120m
+        const distance = 1200 * SF;
 
         this.camera.position.x = sFocusX + Math.cos(yawAngle) * Math.cos(tiltAngle) * distance;
         this.camera.position.y = Math.sin(tiltAngle) * distance;
@@ -787,10 +724,7 @@ export const RenderSystem3D = {
         
         this.camera.lookAt(sFocusX, 0, sFocusZ);
 
-        // 4. Synchronizacja modeli 3D z logiką 2D
         RenderSync3D.update(this.scene);
-
-        // 5. Render klatki
         this.renderer.render(this.scene, this.camera);
     }
 };

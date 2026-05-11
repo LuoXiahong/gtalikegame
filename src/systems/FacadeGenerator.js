@@ -1,6 +1,6 @@
 /**
- * SYSTEM PROCEDURALNYCH ELEWACJI (FacadeGenerator)
- * Generuje tekstury elewacji dla budynków przy użyciu Canvas2D i THREE.CanvasTexture.
+ * PROCEDURAL FACADE GENERATOR SYSTEM (FacadeGenerator)
+ * Generates procedural facade textures for buildings using Canvas2D and THREE.CanvasTexture.
  */
 import * as THREE from 'three';
 
@@ -44,11 +44,10 @@ export const FacadeGenerator = {
         const W = 256;
         const H = 256;
 
-        // Tło elewacji (jasnoszary/beżowy)
         ctx.fillStyle = '#b2bec3';
         ctx.fillRect(0, 0, W, H);
 
-        // Siatka okien
+        // Window grid parameters
         const windowW = 20;
         const windowH = 30;
         const startX = 20;
@@ -58,18 +57,18 @@ export const FacadeGenerator = {
 
         for (let y = startY; y < H; y += stepY) {
             for (let x = startX; x < W; x += stepX) {
-                // Rysuj okno
+                // Draw window glass
                 ctx.fillStyle = '#2c3e50';
                 ctx.fillRect(x, y, windowW, windowH);
 
-                // Bevel/Ramka okna
+                // Window frame bevel
                 ctx.strokeStyle = '#dfe6e9';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(x, y, windowW, windowH);
 
-                // Lived-in look: 15% szansy na zapalone światło (żółte)
+                // Lived-in look: 15% chance of light on (warm yellow)
                 if (Math.random() < 0.15) {
-                    ctx.fillStyle = '#fed330'; // Ciepły żółty
+                    ctx.fillStyle = '#fed330';
                     ctx.fillRect(x + 2, y + 2, windowW - 4, windowH - 4);
                 }
             }
@@ -80,37 +79,36 @@ export const FacadeGenerator = {
         const W = 256;
         const H = 256;
 
-        // Tło wieżowca (bardzo ciemny szary/metal)
         ctx.fillStyle = '#2d3436';
         ctx.fillRect(0, 0, W, H);
 
-        // Pionowe pasy szkła (nowoczesna elewacja kurtynowa)
+        // Modern curtain-wall vertical stripes
         const stripeW = 12;
         const stepX = 20;
 
         for (let x = 8; x < W; x += stepX) {
-            ctx.fillStyle = '#1b2a4a'; // Głęboki granat/szkło
+            ctx.fillStyle = '#1b2a4a'; // Deep navy glass
             ctx.fillRect(x, 0, stripeW, H);
 
-            // Podziałki poziome okien wieżowca
+            // Horizontal floor divisions
             ctx.fillStyle = '#34495e';
             for (let y = 0; y < H; y += 40) {
                 ctx.fillRect(x, y, stripeW, 2);
             }
 
-            // Kilka losowych refleksów świetlnych w pionowych oknach
+            // Random reflections & illuminated offices
             for (let y = 15; y < H; y += 40) {
                 if (Math.random() < 0.2) {
-                    ctx.fillStyle = '#fed330'; // Zapalone światło w biurze
+                    ctx.fillStyle = '#fed330'; // Office light
                     ctx.fillRect(x + 1, y, stripeW - 2, 10);
                 } else if (Math.random() < 0.3) {
-                    ctx.fillStyle = '#45aaf2'; // Odbicie nieba
+                    ctx.fillStyle = '#45aaf2'; // Sky reflection
                     ctx.fillRect(x + 1, y, stripeW - 2, 12);
                 }
             }
         }
 
-        // Skośny refleks świetlny na całej elewacji (imitacja odbicia słońca w szklanej fasadzie)
+        // Fake glass sheen / gradient diagonal reflections
         ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
         ctx.beginPath();
         ctx.moveTo(0, 40);
@@ -133,24 +131,21 @@ export const FacadeGenerator = {
         const W = 256;
         const H = 256;
 
-        // 1. Tło elewacji (ciepły piaskowy kolor pasujący do shop w RenderSystem3D)
         ctx.fillStyle = '#f5cd79';
         ctx.fillRect(0, 0, W, H);
 
-        // 2. Piętro górne: Regularne mniejsze okna biurowe
+        // Upper floors: Office windows
         const windowW = 18;
         const windowH = 26;
         for (let y = 20; y < 140; y += 50) {
             for (let x = 20; x < W; x += 40) {
-                ctx.fillStyle = '#4b6584'; // Ciemne szkło
+                ctx.fillStyle = '#4b6584';
                 ctx.fillRect(x, y, windowW, windowH);
 
-                // Ramka
                 ctx.strokeStyle = '#f1f2f6';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(x, y, windowW, windowH);
 
-                // Efekt życia
                 if (Math.random() < 0.15) {
                     ctx.fillStyle = '#fed330';
                     ctx.fillRect(x + 2, y + 2, windowW - 4, windowH - 4);
@@ -158,41 +153,36 @@ export const FacadeGenerator = {
             }
         }
 
-        // 3. Pas rozdzielający (Gzyms / Markiza)
-        // Czerwona markiza
+        // Storefront awning (striped retro style)
         const awningY = 150;
         const awningH = 15;
-        ctx.fillStyle = '#eb4d4b'; // Czerwony
+        ctx.fillStyle = '#eb4d4b';
         ctx.fillRect(5, awningY, W - 10, awningH);
 
-        // Paski na markizie dla stylu retro makiety
         ctx.fillStyle = '#ffffff';
         for (let x = 10; x < W - 10; x += 20) {
             ctx.fillRect(x, awningY, 10, awningH);
         }
 
-        // Ciemny cień pod markizą
+        // Awning dropshadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.fillRect(0, awningY + awningH, W, 4);
 
-        // 4. Parter: Witryny sklepowe
+        // Ground floor: Storefront display windows
         const groundY = 175;
         const groundH = 81;
 
-        // Bardzo ciemne szkło dla kontrastu
         for (let x = 12; x < W; x += 80) {
-            // Szyba witryny
             const glassW = 68;
             const glassH = groundH - 12;
             ctx.fillStyle = '#1e272e';
             ctx.fillRect(x, groundY, glassW, glassH);
 
-            // Podziałki metalowe (szprosy)
             ctx.strokeStyle = '#718093';
             ctx.lineWidth = 2;
             ctx.strokeRect(x, groundY, glassW, glassH);
 
-            // Środek (symulacja oświetlonego wnętrza sklepu na spodzie witryny)
+            // Illuminated interior glow
             const grad = ctx.createLinearGradient(0, groundY + 20, 0, groundY + glassH);
             grad.addColorStop(0, 'rgba(0,0,0,0)');
             grad.addColorStop(1, 'rgba(255,255,255,0.15)');
@@ -205,11 +195,10 @@ export const FacadeGenerator = {
         const W = 256;
         const H = 256;
 
-        // Tło elewacji (boki sklepu - bez wielkich witryn, ale ten sam piaskowy kolor)
         ctx.fillStyle = '#f5cd79';
         ctx.fillRect(0, 0, W, H);
 
-        // Regularne okna biurowe na całej wysokości bocznej ściany
+        // Regular upper-floor windows on shop sides
         const windowW = 18;
         const windowH = 26;
         for (let y = 20; y < H - 40; y += 50) {

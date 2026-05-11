@@ -1,6 +1,6 @@
 /**
- * System renderowania (RenderSystem)
- * Tylko: sortowanie, rysowanie
+ * 2D RENDERING SYSTEM (RenderSystem)
+ * Responsible for sorting, layers, frustum culling, and drawing in 2D mode.
  */
 import { World } from '../world/World.js';
 import { Camera } from '../world/Camera.js';
@@ -23,7 +23,7 @@ export const RenderSystem = {
 
         const ts = World.tilemap.tileSize;
         
-        // Frustum culling: oblicz widoczne kafelki
+        // Frustum culling: calculate visible tiles bounds
         const startCol = Math.max(0, Math.floor(-Camera.x / ts));
         const endCol = Math.min(World.tilemap.cols - 1, Math.floor((-Camera.x + this.canvas.width) / ts));
         const startRow = Math.max(0, Math.floor(-Camera.y / ts));
@@ -43,7 +43,6 @@ export const RenderSystem = {
         this.ctx.fillStyle = 'rgba(255,255,255,0.3)';
         World.decals.items.forEach(d => {
             if (d.type === 'crosswalk') {
-                // Rysowanie pasów przejścia
                 const stripes = d.w > d.h ? 6 : 1;
                 const stripeW = d.w > d.h ? d.w / 11 : d.w;
                 const stripeH = d.w > d.h ? d.h : d.h / 11;
@@ -65,7 +64,7 @@ export const RenderSystem = {
         this.ctx.fillStyle = 'rgba(0,0,0,0.15)';
         const shadowOffset = 30;
         World.buildings.forEach(b => {
-            // Prosty cień poligonowy
+            // Flat polygon drop shadows
             this.ctx.fillRect(b.x + shadowOffset, b.y + shadowOffset, b.w, b.h);
         });
     },
@@ -101,7 +100,7 @@ export const RenderSystem = {
             return distB - distA;
         });
 
-        // 1. Rzutowanie brył 3D
+        // 1. 3D projection calculations
         renderables.forEach(item => {
             const project = (px, py) => {
                 const dx = px - player.transform.x;
@@ -112,7 +111,6 @@ export const RenderSystem = {
             let p1, p2, p3, p4;
 
             if (item.type === 'car') {
-                // Dla aut x,y to środek, uwzględniamy angle
                 const cos = Math.cos(item.angle);
                 const sin = Math.sin(item.angle);
                 const getRotated = (lx, ly) => ({
@@ -125,12 +123,11 @@ export const RenderSystem = {
                 p1 = getRotated(-hw, -hh); p2 = getRotated(hw, -hh);
                 p3 = getRotated(hw, hh); p4 = getRotated(-hw, hh);
 
-                // Rysowanie kół (pod autem)
+                // Draw wheels under the chassis
                 this.ctx.save();
                 this.ctx.translate(item.x, item.y);
                 this.ctx.rotate(item.angle);
                 this.ctx.fillStyle = '#222';
-                // Koła
                 const wheelW = 18; const wheelH = 8;
                 this.ctx.fillRect(-hw + 10, -hh - 4, wheelW, wheelH);
                 this.ctx.fillRect(hw - 28, -hh - 4, wheelW, wheelH);
@@ -138,7 +135,6 @@ export const RenderSystem = {
                 this.ctx.fillRect(hw - 28, hh - 4, wheelW, wheelH);
                 this.ctx.restore();
             } else {
-                // Dla budynków x,y to top-left
                 p1 = { x: item.x, y: item.y }; p2 = { x: item.x + item.w, y: item.y };
                 p3 = { x: item.x + item.w, y: item.y + item.h }; p4 = { x: item.x, y: item.y + item.h };
             }
@@ -146,36 +142,35 @@ export const RenderSystem = {
             const r1 = project(p1.x, p1.y); const r2 = project(p2.x, p2.y);
             const r3 = project(p3.x, p3.y); const r4 = project(p4.x, p4.y);
 
-            // Ściany boczne (rzutowanie 3D)
             const color = item.type === 'building' ? '#636e72' : item.color;
             
-            // Ściana 1 (lewa/góra)
+            // Wall 1 (left/top)
             this.ctx.fillStyle = item.type === 'building' ? '#636e72' : color;
             this.ctx.beginPath(); this.ctx.moveTo(p1.x, p1.y); this.ctx.lineTo(p2.x, p2.y); this.ctx.lineTo(r2.x, r2.y); this.ctx.lineTo(r1.x, r1.y); this.ctx.fill();
             if (item.type === 'car') { this.ctx.fillStyle = 'rgba(0,0,0,0.2)'; this.ctx.fill(); }
 
-            // Ściana 2 (prawa)
+            // Wall 2 (right)
             this.ctx.fillStyle = item.type === 'building' ? '#2d3436' : color;
             this.ctx.beginPath(); this.ctx.moveTo(p2.x, p2.y); this.ctx.lineTo(p3.x, p3.y); this.ctx.lineTo(r3.x, r3.y); this.ctx.lineTo(r2.x, r2.y); this.ctx.fill();
             if (item.type === 'car') { this.ctx.fillStyle = 'rgba(0,0,0,0.4)'; this.ctx.fill(); }
 
-            // Ściana 3 (dół)
+            // Wall 3 (bottom)
             this.ctx.fillStyle = item.type === 'building' ? '#b2bec3' : color;
             this.ctx.beginPath(); this.ctx.moveTo(p3.x, p3.y); this.ctx.lineTo(p4.x, p4.y); this.ctx.lineTo(r4.x, r4.y); this.ctx.lineTo(r3.x, r3.y); this.ctx.fill();
             if (item.type === 'car') { this.ctx.fillStyle = 'rgba(0,0,0,0.1)'; this.ctx.fill(); }
 
-            // Ściana 4 (lewa)
+            // Wall 4 (left)
             this.ctx.fillStyle = item.type === 'building' ? '#555' : color;
             this.ctx.beginPath(); this.ctx.moveTo(p4.x, p4.y); this.ctx.lineTo(p1.x, p1.y); this.ctx.lineTo(r1.x, r1.y); this.ctx.lineTo(r4.x, r4.y); this.ctx.fill();
             if (item.type === 'car') { this.ctx.fillStyle = 'rgba(0,0,0,0.3)'; this.ctx.fill(); }
 
-            // Dach
+            // Roof
             this.ctx.fillStyle = item.type === 'building' ? '#7f8c8d' : color;
             this.ctx.beginPath(); this.ctx.moveTo(r1.x, r1.y); this.ctx.lineTo(r2.x, r2.y); this.ctx.lineTo(r3.x, r3.y); this.ctx.lineTo(r4.x, r4.y); this.ctx.fill();
             this.ctx.strokeStyle = 'rgba(0,0,0,0.5)'; this.ctx.lineWidth = 1; this.ctx.stroke();
         });
 
-        // 2. Rysowanie jednostek płaskich (postacie)
+        // 2. Draw flat entities (NPCs, Player)
         const flatEntities = [...World.getEntitiesByType('npc'), ...World.getEntitiesByType('player')]
             .filter(e => e.visible !== false);
 
@@ -230,7 +225,7 @@ export const RenderSystem = {
             }
         });
 
-        // 3. Highlight sterowanego auta
+        // 3. Highlight active vehicle
         if (controlled && controlled.type === 'car') {
             this.ctx.save();
             this.ctx.strokeStyle = 'rgba(255,255,255,0.5)';
@@ -249,13 +244,13 @@ export const RenderSystem = {
     drawDebugHitboxes() {
         this.ctx.lineWidth = 1;
         
-        // Budynki (top-left)
+        // Buildings (top-left)
         this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
         World.buildings.forEach(b => {
             this.ctx.strokeRect(b.x, b.y, b.w, b.h);
         });
 
-        // Encje (center-based)
+        // Entities (center-based)
         const entities = [
             ...World.getEntitiesByType('player'), 
             ...World.getEntitiesByType('npc'), 
@@ -274,7 +269,7 @@ export const RenderSystem = {
         this.ctx.strokeStyle = '#f1c40f';
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
-        // Krzyż na (0,0)
+        // Crosshair at origin (0,0)
         this.ctx.moveTo(-20, 0);
         this.ctx.lineTo(20, 0);
         this.ctx.moveTo(0, -20);
@@ -293,7 +288,6 @@ export const RenderSystem = {
         const loc = MissionSystem.targetLocation;
         this.ctx.save();
         
-        // Pulsujący krąg
         const pulse = Math.sin(Date.now() / 200) * 10;
         this.ctx.strokeStyle = '#f1c40f';
         this.ctx.lineWidth = 4;
@@ -302,11 +296,9 @@ export const RenderSystem = {
         this.ctx.arc(loc.x, loc.y, loc.radius + pulse, 0, Math.PI * 2);
         this.ctx.stroke();
 
-        // Wypełnienie
         this.ctx.fillStyle = 'rgba(241, 196, 15, 0.2)';
         this.ctx.fill();
 
-        // Napis
         this.ctx.fillStyle = '#f1c40f';
         this.ctx.font = 'bold 20px Arial';
         this.ctx.textAlign = 'center';
@@ -323,14 +315,14 @@ export const RenderSystem = {
         this.ctx.font = 'bold 12px monospace';
         this.ctx.textAlign = 'center';
         
-        // 1. NPC Pedestrians
+        // NPC debug info
         World.getEntitiesByType('npc').forEach(npc => {
             const t = npc.transform;
             const state = npc.ai ? npc.ai.state : 'idle';
             this.ctx.fillText(`AI: ${state}`, t.x, t.y - t.height / 2 - 10);
         });
         
-        // 2. Traffic Cars
+        // Traffic vehicles debug info
         World.getEntitiesByType('car').filter(car => car.ai && car.ai.type === 'traffic').forEach(car => {
             const t = car.transform;
             const speed = Math.round(car.ai.currentSpeed || 0);
