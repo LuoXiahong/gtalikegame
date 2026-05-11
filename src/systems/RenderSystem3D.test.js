@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
 import { RenderSystem3D } from './RenderSystem3D.js';
+import { WorldMetrics } from '../world/WorldMetrics.js';
 
 // Mockowanie Three.js WebGLRenderer, ponieważ JSDOM nie posiada wsparcia dla WebGL
 vi.mock('three', async () => {
@@ -31,6 +32,7 @@ vi.mock('../world/World.js', () => ({
 describe('RenderSystem3D', () => {
     let mockCanvas;
     let mockParent;
+    const SF = WorldMetrics.SCALE_FACTOR;
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -44,7 +46,7 @@ describe('RenderSystem3D', () => {
         mockCanvas = {
             parentElement: mockParent
         };
-
+ 
         // Podpinamy mock pod document.getElementById
         vi.spyOn(document, 'getElementById').mockImplementation((id) => {
             if (id === 'gameCanvas3D') return mockCanvas;
@@ -87,7 +89,7 @@ describe('RenderSystem3D', () => {
         RenderSystem3D.update();
 
         // Sprawdzenie czy pozycja boxa 5u uległa zmianie (funkcja ruchu)
-        expect(RenderSystem3D.box5u.position.x).not.toBe(RenderSystem3D.originX);
+        expect(RenderSystem3D.box5u.position.x).not.toBe(RenderSystem3D.originX * SF);
 
         // Renderer powinien wywołać render()
         expect(RenderSystem3D.renderer.render).toHaveBeenCalled();
@@ -97,21 +99,21 @@ describe('RenderSystem3D', () => {
         RenderSystem3D.init();
         const initialCount = RenderSystem3D.buildings.length;
         
-        RenderSystem3D.createBuilding('skyscraper', 200, 200, 400, 100, 100);
+        RenderSystem3D.createBuilding('skyscraper', 200, 200, 40, 10, 10);
         expect(RenderSystem3D.buildings.length).toBe(initialCount + 1);
         
         const newBuilding = RenderSystem3D.buildings[RenderSystem3D.buildings.length - 1];
         expect(newBuilding.position.x).toBe(200);
         expect(newBuilding.position.z).toBe(200);
         
-        // Skyscraper powinien posiadać obiekty składowe (bazę i top setback)
-        expect(newBuilding.children.length).toBeGreaterThan(1);
+        // Skyscraper powinien posiadać obiekty składowe (cień kontaktowy, bazę i top setback)
+        expect(newBuilding.children.length).toBeGreaterThan(2);
     });
 
     it('should assign materials with map textures to building components', () => {
         RenderSystem3D.init();
         
-        const resBuilding = RenderSystem3D.createBuilding('residential', 300, 300, 200, 100, 100);
+        const resBuilding = RenderSystem3D.createBuilding('residential', 300, 300, 20, 10, 10);
         const mesh = resBuilding.children.find(c => c.isMesh && c.geometry.type === 'BoxGeometry');
         expect(mesh).toBeDefined();
         expect(Array.isArray(mesh.material)).toBe(true);
@@ -133,6 +135,7 @@ describe('RenderSystem3D', () => {
         expect(tree).toBeDefined();
         expect(tree.position.x).toBe(100);
         expect(tree.position.z).toBe(100);
+        expect(tree.position.y).toBeCloseTo(WorldMetrics.SIDEWALK_HEIGHT);
         
         // Drzewo powinno mieć elementy rzucające i przyjmujące cienie
         const trunkMesh = tree.children.find(c => c.geometry && c.geometry.type === 'CylinderGeometry');

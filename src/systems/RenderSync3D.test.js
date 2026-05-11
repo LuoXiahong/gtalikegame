@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { RenderSync3D } from './RenderSync3D.js';
 import { World } from '../world/World.js';
 import { MissionSystem } from './MissionSystem.js';
+import { WorldMetrics } from '../world/WorldMetrics.js';
 
 // Mock World
 vi.mock('../world/World.js', () => ({
@@ -23,6 +24,7 @@ vi.mock('./MissionSystem.js', () => ({
 
 describe('RenderSync3D', () => {
     let mockScene;
+    const SF = WorldMetrics.SCALE_FACTOR;
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -78,17 +80,17 @@ describe('RenderSync3D', () => {
         expect(npcMesh).toBeDefined();
         expect(carMesh).toBeDefined();
 
-        // Sprawdzenie współrzędnych i kątów
-        expect(playerMesh.position.x).toBe(100);
-        expect(playerMesh.position.z).toBe(200);
+        // Sprawdzenie współrzędnych i kątów (scaled)
+        expect(playerMesh.position.x).toBeCloseTo(100 * SF);
+        expect(playerMesh.position.z).toBeCloseTo(200 * SF);
         expect(playerMesh.rotation.y).toBe(-1.5);
 
-        expect(npcMesh.position.x).toBe(300);
-        expect(npcMesh.position.z).toBe(400);
+        expect(npcMesh.position.x).toBeCloseTo(300 * SF);
+        expect(npcMesh.position.z).toBeCloseTo(400 * SF);
         expect(npcMesh.rotation.y).toBeCloseTo(0);
 
-        expect(carMesh.position.x).toBe(500);
-        expect(carMesh.position.z).toBe(600);
+        expect(carMesh.position.x).toBeCloseTo(500 * SF);
+        expect(carMesh.position.z).toBeCloseTo(600 * SF);
         expect(carMesh.rotation.y).toBe(0.5);
 
         // Weryfikacja cieniowania i użycia MeshStandardMaterial
@@ -130,7 +132,7 @@ describe('RenderSync3D', () => {
         RenderSync3D.update(mockScene);
 
         const playerMesh = RenderSync3D.meshes.get('player1');
-        expect(playerMesh.position.y).toBe(5.0); // Powinien być uniesiony o 5u nad asfalt
+        expect(playerMesh.position.y).toBeCloseTo(WorldMetrics.SIDEWALK_HEIGHT); // Powinien być uniesiony o SIDEWALK_HEIGHT nad asfalt
     });
 
     it('should create and update mission target indicator', () => {
@@ -140,8 +142,8 @@ describe('RenderSync3D', () => {
 
         expect(mockScene.add).toHaveBeenCalled();
         expect(RenderSync3D.targetMesh).toBeDefined();
-        expect(RenderSync3D.targetMesh.position.x).toBe(1500);
-        expect(RenderSync3D.targetMesh.position.z).toBe(1500);
+        expect(RenderSync3D.targetMesh.position.x).toBeCloseTo(1500 * SF);
+        expect(RenderSync3D.targetMesh.position.z).toBeCloseTo(1500 * SF);
 
         // Usuń cel
         MissionSystem.targetLocation = null;
