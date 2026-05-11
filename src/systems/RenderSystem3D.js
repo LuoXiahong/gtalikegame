@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { World } from '../world/World.js';
 import { WorldGrid } from '../world/WorldGrid.js';
 import { RenderSync3D } from './RenderSync3D.js';
+import { FacadeGenerator } from './FacadeGenerator.js';
 
 export const RenderSystem3D = {
     renderer: null,
@@ -41,6 +42,9 @@ export const RenderSystem3D = {
             console.error('Nie znaleziono elementu #gameCanvas3D!');
             return;
         }
+
+        // Inicjalizacja proceduralnych tekstur fasad (T-604)
+        FacadeGenerator.init();
 
         const parent = canvas.parentElement;
         const width = parent.clientWidth || 800;
@@ -314,19 +318,19 @@ export const RenderSystem3D = {
             const baseHeight = height * 0.75;
             const topHeight = height * 0.25;
 
-            // Baza wieżowca
+            // Baza wieżowca z teksturą proceduralną
             const baseGeom = new THREE.BoxGeometry(width, baseHeight, depth);
-            const baseMat = new THREE.MeshStandardMaterial({ color: 0x2d3436, roughness: 0.7, metalness: 0.15 }); // Ciemny szary
-            const base = new THREE.Mesh(baseGeom, baseMat);
+            const baseMats = this.getBuildingMaterials('skyscraper', width, baseHeight, depth, 0x2d3436);
+            const base = new THREE.Mesh(baseGeom, baseMats);
             base.position.y = baseHeight / 2;
             base.castShadow = true;
             base.receiveShadow = true;
             group.add(base);
 
-            // Wyższa, węższa część (setback)
+            // Wyższa, węższa część (setback) z osobnym zestawem materiałów/tekstur
             const topGeom = new THREE.BoxGeometry(width * 0.75, topHeight, depth * 0.75);
-            const topMat = new THREE.MeshStandardMaterial({ color: 0x353b48, roughness: 0.7, metalness: 0.15 });
-            const topMesh = new THREE.Mesh(topGeom, topMat);
+            const topMats = this.getBuildingMaterials('skyscraper', width * 0.75, topHeight, depth * 0.75, 0x353b48);
+            const topMesh = new THREE.Mesh(topGeom, topMats);
             topMesh.position.y = baseHeight + topHeight / 2;
             topMesh.castShadow = true;
             topMesh.receiveShadow = true;
@@ -348,10 +352,10 @@ export const RenderSystem3D = {
             roofY = height;
 
         } else if (type === 'residential') {
-            // Blok mieszkalny (prostopadłościan o jasnoszarym/beżowym odcieniu)
+            // Blok mieszkalny z regularną siatką okien
             const bodyGeom = new THREE.BoxGeometry(width, height, depth);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xb2bec3, roughness: 0.8, metalness: 0.1 }); // Średni szary
-            const body = new THREE.Mesh(bodyGeom, bodyMat);
+            const bodyMats = this.getBuildingMaterials('residential', width, height, depth, 0xb2bec3);
+            const body = new THREE.Mesh(bodyGeom, bodyMats);
             body.position.y = height / 2;
             body.castShadow = true;
             body.receiveShadow = true;
@@ -364,10 +368,10 @@ export const RenderSystem3D = {
             group.add(line);
 
         } else if (type === 'shop') {
-            // Niski sklep (szeroki i płaski, ciepły kolor)
+            // Niski sklep (duże witryny na parterze i wejścia od frontu/tyłu, mniejsze na bokach)
             const bodyGeom = new THREE.BoxGeometry(width, height, depth);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf5cd79, roughness: 0.8, metalness: 0.1 }); // Ciepły piaskowy/żółty
-            const body = new THREE.Mesh(bodyGeom, bodyMat);
+            const bodyMats = this.getBuildingMaterials('shop', width, height, depth, 0xf5cd79);
+            const body = new THREE.Mesh(bodyGeom, bodyMats);
             body.position.y = height / 2;
             body.castShadow = true;
             body.receiveShadow = true;
@@ -386,6 +390,62 @@ export const RenderSystem3D = {
         this.scene.add(group);
         this.buildings.push(group);
         return group;
+    },
+
+    /**
+     * Zwraca zestaw 6 materiałów (dla każdej ściany BoxGeometry) z odpowiednio powielonymi teksturami fasad.
+     */
+    getBuildingMaterials(type, width, height, depth, baseColor) {
+        const topMat = new THREE.MeshStandardMaterial({
+            color: baseColor,
+            roughness: 0.8,
+            metalness: 0.1
+        });
+        const bottomMat = topMat;
+
+        let matX, matZ;
+
+        if (type === 'skyscraper') {
+            matX = this.createFaceMaterial('skyscraper', depth, height, baseColor);
+            matZ = this.createFaceMaterial('skyscraper', width, height, baseColor);
+            return [matX, matX, topMat, bottomMat, matZ, matZ];
+        } else if (type === 'residential') {
+            matX = this.createFaceMaterial('residential', depth, height, baseColor);
+            matZ = this.createFaceMaterial('residential', width, height, baseColor);
+            return [matX, matX, topMat, bottomMat, matZ, matZ];
+        } else if (type === 'shop') {
+            const matFront = this.createFaceMaterial('shop_front', width, height, baseColor);
+            const matSide = this.createFaceMaterial('shop_side', depth, height, baseColor);
+            return [matSide, matSide, topMat, bottomMat, matFront, matFront];
+        }
+
+        return [topMat, topMat, topMat, bottomMat, topMat, topMat];
+    },
+
+    /**
+     * Tworzy unikalny materiał dla konkretnej ściany o zadanych wymiarach z powtarzaniem tekstury
+     */
+    createFaceMaterial(textureType, faceWidth, faceHeight, baseColor) {
+        const originalTexture = FacadeGenerator.textures.get(textureType);
+        if (!originalTexture) {
+            return new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.8, metalness: 0.1 });
+        }
+        const texture = originalTexture.clone();
+        
+        // Zapewniamy, że w pionie dla shop_front/shop_side repeat wynosi dokładnie 1, aby pasowało do wysokości parteru
+        const repeatY = (textureType === 'shop_front' || textureType === 'shop_side') ? 1 : faceHeight / 50;
+        texture.repeat.set(faceWidth / 50, repeatY);
+        
+        const color = new THREE.Color(baseColor);
+        const tint = 0.95 + Math.random() * 0.1; // Subtelna wariacja odcienia, by budynki nie były identyczne
+        color.multiplyScalar(tint);
+
+        return new THREE.MeshStandardMaterial({
+            map: texture,
+            color: color,
+            roughness: 0.8,
+            metalness: textureType === 'skyscraper' ? 0.25 : 0.1
+        });
     },
 
     /**

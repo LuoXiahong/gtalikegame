@@ -108,6 +108,24 @@ describe('RenderSystem3D', () => {
         expect(newBuilding.children.length).toBeGreaterThan(1);
     });
 
+    it('should assign materials with map textures to building components', () => {
+        RenderSystem3D.init();
+        
+        const resBuilding = RenderSystem3D.createBuilding('residential', 300, 300, 200, 100, 100);
+        const mesh = resBuilding.children.find(c => c.isMesh && c.geometry.type === 'BoxGeometry');
+        expect(mesh).toBeDefined();
+        expect(Array.isArray(mesh.material)).toBe(true);
+        expect(mesh.material.length).toBe(6);
+        
+        // Sprawdź czy boki mają mapę tekstury (proceduralną), a góra/dół mają czysty, jednolity kolor (brak mapy)
+        expect(mesh.material[0].map).toBeDefined(); // Side X+
+        expect(mesh.material[1].map).toBeDefined(); // Side X-
+        expect(mesh.material[2].map).toBeNull();    // Top (Roof)
+        expect(mesh.material[3].map).toBeNull();    // Bottom (Ground)
+        expect(mesh.material[4].map).toBeDefined(); // Side Z+
+        expect(mesh.material[5].map).toBeDefined(); // Side Z-
+    });
+
     it('should create trees and billboards with shadow options', () => {
         RenderSystem3D.init();
 
