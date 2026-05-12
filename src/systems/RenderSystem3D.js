@@ -24,7 +24,7 @@ const TiltShiftShader = {
         'tDiffuse': { value: null },
         'blur': { value: 0.004 },       // Maksymalny poziom rozmycia
         'focus': { value: 0.5 },        // Pionowy punkt skupienia (odpowiada środkowi rzutni z graczem)
-        'falloff': { value: 0.12 }       // Szerokość ostrego paska wokół punktu skupienia
+        'falloff': { value: 0.28 }       // Szerokość ostrego paska wokół punktu skupienia
     },
     vertexShader: `
         varying vec2 vUv;
@@ -45,7 +45,7 @@ const TiltShiftShader = {
             float dist = abs(vUv.y - focus);
             
             // Oblicz siłę rozmycia na podstawie odległości i gwałtowności spadku ostrości (falloff)
-            float blurAmount = smoothstep(falloff, falloff + 0.18, dist) * blur;
+            float blurAmount = smoothstep(falloff, falloff + 0.15, dist) * blur;
             
             // 9-punktowy diagonalny blur z bezpiecznym mapowaniem UV (zapobiega czarnym krawędziom)
             vec4 sum = vec4(0.0);
