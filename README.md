@@ -1,6 +1,11 @@
 # GTA JS (ECS-lite) 🚗💥
 
+[![GitHub Pages Deployment](https://github.com/LuoXiahong/gtalikegame/actions/workflows/deploy.yml/badge.svg)](https://github.com/LuoXiahong/gtalikegame/actions/workflows/deploy.yml)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Play_Now!-brightgreen?style=flat-square&logo=gamepad)](https://luoxiahong.github.io/gtalikegame/)
+
 A lightweight, high-performance, and responsive GTA-like game engine written in modern JavaScript, utilizing an **ECS-lite (Entity-Component-System)** architecture.
+
+🎮 **[Play the Live Demo](https://luoxiahong.github.io/gtalikegame/)**
 
 The project relies on "Low effort / High impact" philosophy (clever PS2-style tricks over heavy simulation) to construct a living city simulation, featuring both a classic 2D canvas top-down mode and a modern 3D rendering mode utilizing Three.js.
 
