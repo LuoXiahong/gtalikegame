@@ -12,6 +12,7 @@ import { World } from '../world/World.js';
 import { WorldGrid } from '../world/WorldGrid.js';
 import { RenderSync3D } from './RenderSync3D.js';
 import { FacadeGenerator } from './FacadeGenerator.js';
+import { RoadTextureGenerator } from './RoadTextureGenerator.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 
 export const RenderSystem3D = {
@@ -70,6 +71,8 @@ export const RenderSystem3D = {
         }
 
         FacadeGenerator.init();
+        RoadTextureGenerator.init();
+        this.createdIntersections = new Set();
         this.contactShadowTexture = this.createContactShadowTexture();
 
         const parent = canvas.parentElement;
@@ -275,48 +278,67 @@ export const RenderSystem3D = {
 
     createDashedLine(xStart, zStart, xEnd, zEnd, isVertical) {
         const SF = WorldMetrics.SCALE_FACTOR;
-        const dashLength = 15 * SF;
-        const dashGap = 15 * SF;
-        const step = dashLength + dashGap;
-        
-        const geom = new THREE.BoxGeometry(isVertical ? 0.2 : dashLength, 0.005, isVertical ? dashLength : 0.2);
-        const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        
-        const start = isVertical ? zStart : xStart;
-        const end = isVertical ? zEnd : xEnd;
-        
-        for (let pos = start + dashGap; pos < end - dashGap; pos += step) {
-            const mesh = new THREE.Mesh(geom, mat);
-            const posX = isVertical ? xStart : pos;
-            const posZ = isVertical ? pos : zStart;
-            mesh.position.set(posX, 0.003, posZ);
-            this.scene.add(mesh);
-            this.laneMarkings.push(mesh);
+        const width = WorldGrid.STREET_WIDTH * SF;
+        const length = Math.abs(isVertical ? (zEnd - zStart) : (xEnd - xStart));
+
+        const geom = new THREE.PlaneGeometry(width, length);
+        const texture = RoadTextureGenerator.getTexture('straight');
+        const mat = new THREE.MeshStandardMaterial({
+            map: texture,
+            roughness: 0.9,
+            metalness: 0.0
+        });
+
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.rotation.x = -Math.PI / 2;
+
+        const posX = isVertical ? xStart : (xStart + xEnd) / 2;
+        const posZ = isVertical ? (zStart + zEnd) / 2 : zStart;
+
+        mesh.position.set(posX, 0.002, posZ);
+
+        if (!isVertical) {
+            mesh.rotation.z = Math.PI / 2;
         }
+
+        mesh.receiveShadow = true;
+        this.scene.add(mesh);
+        this.laneMarkings.push(mesh);
     },
 
     createZebra(cx, cz, isVerticalRoad) {
         const SF = WorldMetrics.SCALE_FACTOR;
-        const stripeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        const stripeOffsets = [-60 * SF, -30 * SF, 0, 30 * SF, 60 * SF];
         
-        if (isVerticalRoad) {
-            const stripeGeom = new THREE.BoxGeometry(0.4, 0.005, 2.0);
-            stripeOffsets.forEach(dx => {
-                const mesh = new THREE.Mesh(stripeGeom, stripeMat);
-                mesh.position.set(cx + dx, 0.003, cz);
-                this.scene.add(mesh);
-                this.zebras.push(mesh);
-            });
-        } else {
-            const stripeGeom = new THREE.BoxGeometry(2.0, 0.005, 0.4);
-            stripeOffsets.forEach(dz => {
-                const mesh = new THREE.Mesh(stripeGeom, stripeMat);
-                mesh.position.set(cx, 0.003, cz + dz);
-                this.scene.add(mesh);
-                this.zebras.push(mesh);
-            });
+        // Find nearest intersection center among (110, 110), (110, 180), (180, 110), (180, 180)
+        const targetX = Math.abs(cx - 110) < Math.abs(cx - 180) ? 110 : 180;
+        const targetZ = Math.abs(cz - 110) < Math.abs(cz - 180) ? 110 : 180;
+        
+        const key = `${targetX},${targetZ}`;
+        if (!this.createdIntersections) {
+            this.createdIntersections = new Set();
         }
+        
+        if (this.createdIntersections.has(key)) {
+            return;
+        }
+        this.createdIntersections.add(key);
+
+        const width = WorldGrid.STREET_WIDTH * SF;
+        const geom = new THREE.PlaneGeometry(width, width);
+        const texture = RoadTextureGenerator.getTexture('intersection');
+        const mat = new THREE.MeshStandardMaterial({
+            map: texture,
+            roughness: 0.9,
+            metalness: 0.0
+        });
+
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.position.set(targetX, 0.002, targetZ);
+        mesh.receiveShadow = true;
+
+        this.scene.add(mesh);
+        this.zebras.push(mesh);
     },
 
     createBuilding(type, x, z, height, width, depth) {
