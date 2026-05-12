@@ -111,8 +111,8 @@ describe('RenderSystem3D', () => {
 
         // Sprawdzenie mgły i post-processingu (T-704)
         expect(RenderSystem3D.scene.fog).toBeDefined();
-        expect(RenderSystem3D.scene.fog.near).toBe(130);
-        expect(RenderSystem3D.scene.fog.far).toBe(220);
+        expect(RenderSystem3D.scene.fog.near).toBe(200);
+        expect(RenderSystem3D.scene.fog.far).toBe(350);
         expect(RenderSystem3D.composer).toBeDefined();
         expect(RenderSystem3D.tiltShiftPass).toBeDefined();
 

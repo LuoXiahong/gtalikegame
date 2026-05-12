@@ -144,7 +144,7 @@ export const RenderSystem3D = {
         this.scene = new THREE.Scene();
 
         // 2B. Configure linear fog to keep center perfectly bright (T-704)
-        this.scene.fog = new THREE.Fog(clearColor, 130, 220);
+        this.scene.fog = new THREE.Fog(clearColor, 200, 350);
 
         // 3. Configure OrthographicCamera (isometric view)
         const aspect = width / height;
