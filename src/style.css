@@ -42,21 +42,25 @@ canvas {
 }
 
 .hud-btn {
-    background-color: rgba(255, 255, 255, 0.4);
-    border: 2px solid rgba(0, 0, 0, 0.5);
-    border-radius: 10px;
-    font-size: 24px;
+    background-color: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    font-size: 22px;
     font-weight: bold;
     display: flex;
     justify-content: center;
     align-items: center;
     user-select: none;
     cursor: pointer;
-    color: #111;
+    color: #fff;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    transition: background-color 0.15s, transform 0.1s;
 }
 
 .hud-btn:active {
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(255, 255, 255, 0.25);
+    transform: scale(0.95);
 }
 
 #btnUp {
@@ -82,7 +86,8 @@ canvas {
 #btnAction {
     grid-column: 4;
     grid-row: 2 / span 2;
-    background-color: rgba(231, 76, 60, 0.5);
+    background-color: rgba(231, 76, 60, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     color: white;
 }
 

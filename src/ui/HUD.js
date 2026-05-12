@@ -76,14 +76,17 @@ export const UISystem = {
 
     updateDOM() {
         let html = '';
+        const shadowStyle = 'text-shadow: 0 2px 4px rgba(0,0,0,0.85);';
+        const glassStyle = 'background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(4px); box-shadow: 0 4px 6px rgba(0,0,0,0.3);';
+
         if (this.missionText) {
-            html += `<div style="position:absolute; top:40px; left:20px; font-size:22px; font-weight:bold; color:white; text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${this.missionText}</div>`;
+            html += `<div style="position:absolute; top:25px; left:25px; font-size:20px; font-weight:bold; color:white; font-family: system-ui, -apple-system, sans-serif; letter-spacing:0.5px; ${shadowStyle}">${this.missionText}</div>`;
         }
         if (this.currentDialogue) {
-            html += `<div style="position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); font-size:16px; font-weight:bold; color:white; background:rgba(0,0,0,0.7); padding:10px; border-radius:5px;">${this.currentDialogue}</div>`;
+            html += `<div style="position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); font-size:15px; font-weight:500; color:white; font-family: system-ui, -apple-system, sans-serif; ${glassStyle} padding:12px 20px; border-radius:8px; max-width: 80%; text-align: center;">${this.currentDialogue}</div>`;
         }
         if (this.actionHint) {
-            html += `<div style="position:absolute; bottom:20px; right:20px; font-size:14px; color:white; background:rgba(0,0,0,0.5); padding:5px; border-radius:3px;">${this.actionHint}</div>`;
+            html += `<div style="position:absolute; bottom:25px; right:25px; font-size:13px; font-weight:bold; color:white; font-family: system-ui, -apple-system, sans-serif; ${glassStyle} padding:6px 12px; border-radius:6px; letter-spacing:0.5px;">${this.actionHint}</div>`;
         }
         if (this.wantedStars > 0) {
             let starsHtml = '';
@@ -91,12 +94,12 @@ export const UISystem = {
                 starsHtml += i < this.wantedStars ? '★' : '☆';
             }
             const color = this.isBlinking ? '#e74c3c' : '#f1c40f'; // red flash, gold normal
-            html += `<div style="position:absolute; top:20px; right:20px; font-size:32px; letter-spacing:2px; color:${color}; text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; transition: color 0.2s;">${starsHtml}</div>`;
+            html += `<div style="position:absolute; top:20px; right:25px; font-size:30px; letter-spacing:3px; color:${color}; ${shadowStyle} transition: color 0.15s;">${starsHtml}</div>`;
         }
         if (this.showSpeed) {
             // Zamieniamy speed z px/s na fikcyjne km/h (np. 500 maxSpeed -> ~150 km/h)
             const kmh = Math.round(this.speedValue * 0.3);
-            html += `<div id="speedometer" style="position:absolute; bottom:20px; left:20px; font-size:28px; font-weight:bold; color:#2ecc71; font-family:monospace; text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">${kmh} KM/H</div>`;
+            html += `<div id="speedometer" style="position:absolute; bottom:25px; left:25px; font-size:24px; font-weight:bold; color:#2ecc71; font-family: monospace; letter-spacing:1px; ${shadowStyle}">${kmh} KM/H</div>`;
         }
         this.layer.innerHTML = html;
     }
