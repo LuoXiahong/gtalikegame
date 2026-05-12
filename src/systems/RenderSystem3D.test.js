@@ -22,6 +22,48 @@ vi.mock('three', async () => {
     };
 });
 
+// Mockowanie modułów post-processingu Three.js
+vi.mock('three/addons/postprocessing/EffectComposer.js', () => {
+    return {
+        EffectComposer: class {
+            constructor(renderer) {
+                this.renderer = renderer;
+                this.passes = [];
+            }
+            addPass(pass) {
+                this.passes.push(pass);
+            }
+            setSize(w, h) {}
+            render() {
+                if (this.renderer && typeof this.renderer.render === 'function') {
+                    this.renderer.render();
+                }
+            }
+        }
+    };
+});
+
+vi.mock('three/addons/postprocessing/RenderPass.js', () => {
+    return {
+        RenderPass: class {
+            constructor(scene, camera) {
+                this.scene = scene;
+                this.camera = camera;
+            }
+        }
+    };
+});
+
+vi.mock('three/addons/postprocessing/ShaderPass.js', () => {
+    return {
+        ShaderPass: class {
+            constructor(shader) {
+                this.shader = shader;
+            }
+        }
+    };
+});
+
 // Mockowanie World
 vi.mock('../world/World.js', () => ({
     World: {
@@ -66,6 +108,13 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.renderer).toBeDefined();
         expect(RenderSystem3D.scene).toBeDefined();
         expect(RenderSystem3D.camera).toBeDefined();
+
+        // Sprawdzenie mgły i post-processingu (T-704)
+        expect(RenderSystem3D.scene.fog).toBeDefined();
+        expect(RenderSystem3D.scene.fog.near).toBe(130);
+        expect(RenderSystem3D.scene.fog.far).toBe(220);
+        expect(RenderSystem3D.composer).toBeDefined();
+        expect(RenderSystem3D.tiltShiftPass).toBeDefined();
 
         // Sprawdzenie czy poprawnie stworzyliśmy podłoża, chodniki, budynki i pasy drogowe
         expect(RenderSystem3D.groundPlane).toBeDefined();

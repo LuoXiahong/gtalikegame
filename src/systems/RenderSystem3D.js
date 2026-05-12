@@ -8,6 +8,9 @@
  * world3D.y represents vertical height.
  */
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { World } from '../world/World.js';
 import { WorldGrid } from '../world/WorldGrid.js';
 import { RenderSync3D } from './RenderSync3D.js';
@@ -15,10 +18,60 @@ import { FacadeGenerator } from './FacadeGenerator.js';
 import { RoadTextureGenerator } from './RoadTextureGenerator.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 
+const TiltShiftShader = {
+    uniforms: {
+        'tDiffuse': { value: null },
+        'blur': { value: 0.004 },       // Maksymalny poziom rozmycia
+        'focus': { value: 0.5 },        // Pionowy punkt skupienia (odpowiada środkowi rzutni z graczem)
+        'falloff': { value: 0.12 }       // Szerokość ostrego paska wokół punktu skupienia
+    },
+    vertexShader: `
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform float blur;
+        uniform float focus;
+        uniform float falloff;
+        varying vec2 vUv;
+
+        void main() {
+            // Oblicz odległość pionową od punktu skupienia
+            float dist = abs(vUv.y - focus);
+            
+            // Oblicz siłę rozmycia na podstawie odległości i gwałtowności spadku ostrości (falloff)
+            float blurAmount = smoothstep(falloff, falloff + 0.18, dist) * blur;
+            
+            // 9-punktowy diagonalny blur z bezpiecznym mapowaniem UV (zapobiega czarnym krawędziom)
+            vec4 sum = vec4(0.0);
+            
+            #define SAMPLE(offset) texture2D(tDiffuse, clamp(vUv + (offset) * blurAmount, vec2(0.001), vec2(0.999)))
+            
+            sum += SAMPLE(vec2(-4.0, -4.0)) * 0.05;
+            sum += SAMPLE(vec2(-3.0, -3.0)) * 0.09;
+            sum += SAMPLE(vec2(-2.0, -2.0)) * 0.12;
+            sum += SAMPLE(vec2(-1.0, -1.0)) * 0.15;
+            sum += SAMPLE(vec2(0.0, 0.0)) * 0.18;
+            sum += SAMPLE(vec2(1.0, 1.0)) * 0.15;
+            sum += SAMPLE(vec2(2.0, 2.0)) * 0.12;
+            sum += SAMPLE(vec2(3.0, 3.0)) * 0.09;
+            sum += SAMPLE(vec2(4.0, 4.0)) * 0.05;
+            
+            gl_FragColor = sum;
+        }
+    `
+};
+
 export const RenderSystem3D = {
     renderer: null,
     scene: null,
     camera: null,
+    composer: null,
+    tiltShiftPass: null,
     
     // 3D environment elements
     groundPlane: null,
@@ -82,12 +135,16 @@ export const RenderSystem3D = {
         // 1. Initialize WebGLRenderer
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         this.renderer.setSize(width, height, false);
-        this.renderer.setClearColor(0x000000, 1.0);
+        const clearColor = 0x000000;
+        this.renderer.setClearColor(clearColor, 1.0);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         // 2. Initialize Scene
         this.scene = new THREE.Scene();
+
+        // 2B. Configure linear fog to keep center perfectly bright (T-704)
+        this.scene.fog = new THREE.Fog(clearColor, 130, 220);
 
         // 3. Configure OrthographicCamera (isometric view)
         const aspect = width / height;
@@ -105,6 +162,14 @@ export const RenderSystem3D = {
         this.camera.zoom = 1.0;
         this.camera.updateProjectionMatrix();
 
+        // 3C. Configure post-processing with Tilt-Shift (T-704)
+        this.composer = new EffectComposer(this.renderer);
+        const renderPass = new RenderPass(this.scene, this.camera);
+        this.composer.addPass(renderPass);
+        
+        this.tiltShiftPass = new ShaderPass(TiltShiftShader);
+        this.composer.addPass(this.tiltShiftPass);
+
         const SF = WorldMetrics.SCALE_FACTOR;
 
         // 3B. Setup lighting and shadows
@@ -116,6 +181,9 @@ export const RenderSystem3D = {
             const h = parent.clientHeight || 600;
             
             this.renderer.setSize(w, h, false);
+            if (this.composer) {
+                this.composer.setSize(w, h);
+            }
             
             const newAspect = w / h;
             this.camera.left = -viewSize * newAspect / 2;
@@ -802,6 +870,10 @@ export const RenderSystem3D = {
         this.camera.lookAt(sFocusX, 0, sFocusZ);
 
         RenderSync3D.update(this.scene);
-        this.renderer.render(this.scene, this.camera);
+        if (this.composer) {
+            this.composer.render();
+        } else {
+            this.renderer.render(this.scene, this.camera);
+        }
     }
 };
