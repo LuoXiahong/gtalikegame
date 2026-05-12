@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { World } from '../world/World.js';
 import { MissionSystem } from './MissionSystem.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
+import { createNPCModel } from './NPCModelFactory.js';
 
 export const RenderSync3D = {
     meshes: new Map(), // entityId -> THREE.Object3D
@@ -93,7 +94,7 @@ export const RenderSync3D = {
      * Instantiates a 3D visual representation for a given entity based on type
      */
     createEntityMesh(ent) {
-        const group = new THREE.Group();
+        let group = new THREE.Group();
 
         if (ent.type === 'player') {
             const w = WorldMetrics.NPC_WIDTH;
@@ -115,24 +116,7 @@ export const RenderSync3D = {
             group.add(head);
 
         } else if (ent.type === 'npc') {
-            const color = ent.visual?.color ? parseInt(ent.visual.color.replace('#', '0x')) : 0x8e44ad;
-            const w = WorldMetrics.NPC_WIDTH;
-            const h = WorldMetrics.NPC_HEIGHT;
-            const d = WorldMetrics.NPC_DEPTH;
-
-            // Body
-            const bodyGeom = new THREE.BoxGeometry(w, h * 0.75, d);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.7, metalness: 0.1 });
-            const body = new THREE.Mesh(bodyGeom, bodyMat);
-            body.position.y = (h * 0.75) / 2;
-            group.add(body);
-
-            // Head
-            const headGeom = new THREE.SphereGeometry(w * 0.4, 8, 8);
-            const headMat = new THREE.MeshStandardMaterial({ color: 0xf1c27d, roughness: 0.8, metalness: 0.0 });
-            const head = new THREE.Mesh(headGeom, headMat);
-            head.position.y = h * 0.85;
-            group.add(head);
+            group = createNPCModel(ent.visual?.color);
 
         } else if (ent.type === 'car') {
             const color = ent.visual?.color ? parseInt(ent.visual.color.replace('#', '0x')) : 0xc0392b;
