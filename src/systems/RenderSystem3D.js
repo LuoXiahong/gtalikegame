@@ -327,13 +327,13 @@ export const RenderSystem3D = {
         let roofWidth = width;
         let roofDepth = depth;
 
-        // Circular contact shadow under building (T-702)
+        // Circular contact shadow under building (T-702, T-278)
         const shadowGeom = new THREE.PlaneGeometry(width * 1.15, depth * 1.15);
         const shadowMat = new THREE.MeshBasicMaterial({
             color: 0x000000,
             map: this.contactShadowTexture,
             transparent: true,
-            opacity: 0.65,
+            opacity: 0.85,
             depthWrite: false
         });
         const shadowMesh = new THREE.Mesh(shadowGeom, shadowMat);
@@ -672,9 +672,9 @@ export const RenderSystem3D = {
         const hemiLight = new THREE.HemisphereLight(0xa4b3c6, 0x786e64, 0.55);
         this.scene.add(hemiLight);
 
-        // 2. Directional light simulating the sun
-        const sun = new THREE.DirectionalLight(0xfff5e6, 1.5);
-        sun.position.set(600 * SF, 1000 * SF, 300 * SF);
+        // 2. Directional light simulating the sun - lower angle for longer, dramatic shadows (T-278)
+        const sun = new THREE.DirectionalLight(0xfff5e6, 1.55);
+        sun.position.set(600 * SF, 550 * SF, 400 * SF);
         
         sun.target.position.set(1500 * SF, 0, 1500 * SF);
         this.scene.add(sun.target);
