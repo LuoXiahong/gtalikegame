@@ -8,6 +8,7 @@ import { World } from '../world/World.js';
 import { MissionSystem } from './MissionSystem.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { createNPCModel } from './NPCModelFactory.js';
+import { Time } from '../core/Time.js';
 
 export const RenderSync3D = {
     meshes: new Map(), // entityId -> THREE.Object3D
@@ -47,7 +48,17 @@ export const RenderSync3D = {
                     groundY = WorldMetrics.SIDEWALK_HEIGHT;
                 }
             }
-            mesh.position.y = groundY;
+
+            // Kinematyka proceduralna (Procedural Walk Animation) dla aktorów (gracz/NPC) w ruchu
+            let bounceY = 0;
+            if ((ent.type === 'player' || ent.type === 'npc') && ent.physics) {
+                const isMoving = Math.abs(ent.physics.velX) > 0.1 || Math.abs(ent.physics.velY) > 0.1;
+                if (isMoving) {
+                    // Trygonometryczne rytmiczne podskakiwanie o 10 cm imitujące krok
+                    bounceY = Math.abs(Math.sin(Time.time * 10)) * 0.1;
+                }
+            }
+            mesh.position.y = groundY + bounceY;
 
             // Map rotation: 2D rotation -> 3D yaw rotation (Y axis)
             mesh.rotation.y = -ent.transform.angle;
@@ -97,23 +108,8 @@ export const RenderSync3D = {
         let group = new THREE.Group();
 
         if (ent.type === 'player') {
-            const w = WorldMetrics.NPC_WIDTH;
-            const h = WorldMetrics.NPC_HEIGHT;
-            const d = WorldMetrics.NPC_DEPTH;
-
-            // Blue box body with bottom pivot (swapped w and d so player faces forward rather than crab-walking)
-            const bodyGeom = new THREE.BoxGeometry(d, h * 0.75, w);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2980b9, roughness: 0.7, metalness: 0.1 });
-            const body = new THREE.Mesh(bodyGeom, bodyMat);
-            body.position.y = (h * 0.75) / 2;
-            group.add(body);
-
-            // Sphere head
-            const headGeom = new THREE.SphereGeometry(w * 0.4, 8, 8);
-            const headMat = new THREE.MeshStandardMaterial({ color: 0xf1c27d, roughness: 0.8, metalness: 0.0 });
-            const head = new THREE.Mesh(headGeom, headMat);
-            head.position.y = h * 0.85;
-            group.add(head);
+            // Model Gracza o identycznej strukturze (boxy body & head), z unikalnym niebieskawym kolorem ubrania
+            group = createNPCModel(0x2980b9);
 
         } else if (ent.type === 'npc') {
             group = createNPCModel(ent.visual?.color);

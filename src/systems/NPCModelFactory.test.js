@@ -4,33 +4,31 @@ import { createNPCModel, NPC_COLOR_PALETTE } from './NPCModelFactory.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 
 describe('NPCModelFactory', () => {
-    it('should create a THREE.Group with cylinder body and sphere head', () => {
+    it('should create a THREE.Group with boxy torso and boxy head', () => {
         const model = createNPCModel(0x8e44ad);
 
         expect(model).toBeInstanceOf(THREE.Group);
         expect(model.children.length).toBe(2);
 
-        // Verify body (Cylinder)
+        // Verify body (Box)
         const bodyMesh = model.children[0];
         expect(bodyMesh).toBeInstanceOf(THREE.Mesh);
-        expect(bodyMesh.geometry).toBeInstanceOf(THREE.CylinderGeometry);
+        expect(bodyMesh.geometry).toBeInstanceOf(THREE.BoxGeometry);
         expect(bodyMesh.material).toBeInstanceOf(THREE.MeshStandardMaterial);
         expect(bodyMesh.material.color.getHex()).toBe(0x8e44ad);
 
-        // Verify body scale and pivot (base on Y=0)
-        const bodyHeight = WorldMetrics.NPC_HEIGHT * 0.75;
-        expect(bodyMesh.position.y).toBeCloseTo(bodyHeight / 2);
+        // Verify body pivot (base on Y=0, height=1.4)
+        expect(bodyMesh.position.y).toBeCloseTo(0.7);
 
-        // Verify head (Sphere)
+        // Verify head (Box)
         const headMesh = model.children[1];
         expect(headMesh).toBeInstanceOf(THREE.Mesh);
-        expect(headMesh.geometry).toBeInstanceOf(THREE.SphereGeometry);
+        expect(headMesh.geometry).toBeInstanceOf(THREE.BoxGeometry);
         expect(headMesh.material).toBeInstanceOf(THREE.MeshStandardMaterial);
         expect(headMesh.material.color.getHex()).toBe(0xf1c27d); // Skin-tone
 
-        // Verify head position reaches exact NPC_HEIGHT at the top
-        const headRadius = (WorldMetrics.NPC_WIDTH / 3) * 1.1;
-        expect(headMesh.position.y).toBeCloseTo(WorldMetrics.NPC_HEIGHT - headRadius);
+        // Verify head position
+        expect(headMesh.position.y).toBeCloseTo(1.6);
     });
 
     it('should select a random color from the palette if no color is provided', () => {

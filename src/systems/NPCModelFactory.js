@@ -41,37 +41,30 @@ export function createNPCModel(color) {
         finalColor = parseInt(finalColor.replace('#', '0x'), 16);
     }
 
-    const h = WorldMetrics.NPC_HEIGHT || 1.8;
-    const w = WorldMetrics.NPC_WIDTH || 0.6;
-
-    // Body: Capsule (Cylinder as torso/legs)
-    const bodyHeight = h * 0.75; // 1.35m
-    const bodyRadius = w / 3;    // 0.2m (fits nicely inside 0.6m shoulder width)
-    
-    // Cylinder geometry: radiusTop, radiusBottom, height, radialSegments
-    const bodyGeom = new THREE.CylinderGeometry(bodyRadius, bodyRadius, bodyHeight, 8);
+    // Ciało (Torso): Pionowy prostopadłościan o wymiarach: grubość (X) = 0.4m, wysokość (Y) = 1.4m, szerokość ramion (Z) = 0.6m
+    // Pozwala to uniknąć chodu bokiem ("crab-walking"), gdyż przód postaci jest skierowany wzdłuż osi X.
+    const bodyGeom = new THREE.BoxGeometry(0.4, 1.4, 0.6);
     const bodyMat = new THREE.MeshStandardMaterial({
         color: finalColor,
         roughness: 0.7,
         metalness: 0.1
     });
     const body = new THREE.Mesh(bodyGeom, bodyMat);
-    // Align base of cylinder at Y = 0 (cylinder origin is at its center)
-    body.position.y = bodyHeight / 2; // 0.675m
+    // Align base of torso at Y = 0 (origin of BoxGeometry is at center)
+    body.position.y = 0.7; // 1.4 / 2
     group.add(body);
 
-    // Head: Sphere on top of the capsule body
-    const headRadius = bodyRadius * 1.1; // ~0.22m (slightly wider than neck/body)
-    const headGeom = new THREE.SphereGeometry(headRadius, 8, 8);
-    // Standard skin tone/neutral color: 0xf1c27d
+    // Głowa: Sześcian o wymiarach 0.4 x 0.4 x 0.4m osadzona na wysokości Y = 1.6m
+    const headGeom = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+    // Standardowy skórny/neutralny kolor: 0xf1c27d
     const headMat = new THREE.MeshStandardMaterial({
         color: 0xf1c27d,
         roughness: 0.8,
         metalness: 0.0
     });
     const head = new THREE.Mesh(headGeom, headMat);
-    // Position head so top of the head is exactly at Y = NPC_HEIGHT
-    head.position.y = h - headRadius; // 1.8 - 0.22 = 1.58m
+    // Środek głowy na wysokości Y = 1.6m (dolna krawędź głowy na Y = 1.4m, górna na Y = 1.8m)
+    head.position.y = 1.6;
     group.add(head);
 
     return group;

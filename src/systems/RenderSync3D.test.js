@@ -4,6 +4,7 @@ import { RenderSync3D } from './RenderSync3D.js';
 import { World } from '../world/World.js';
 import { MissionSystem } from './MissionSystem.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
+import { Time } from '../core/Time.js';
 
 // Mock World
 vi.mock('../world/World.js', () => ({
@@ -133,6 +134,39 @@ describe('RenderSync3D', () => {
 
         const playerMesh = RenderSync3D.meshes.get('player1');
         expect(playerMesh.position.y).toBeCloseTo(WorldMetrics.SIDEWALK_HEIGHT); // Powinien być uniesiony o SIDEWALK_HEIGHT nad asfalt
+    });
+
+    it('should apply procedural walk bounce animation for moving characters', () => {
+        Time.time = 0.5; // Set game time
+
+        World.entities = [
+            {
+                id: 'player1',
+                type: 'player',
+                transform: { x: 100, y: 200, angle: 0 },
+                physics: { velX: 5.0, velY: 0 }, // Moving!
+                visible: true
+            },
+            {
+                id: 'npc1',
+                type: 'npc',
+                transform: { x: 300, y: 400, angle: 0 },
+                physics: { velX: 0, velY: 0 }, // Standing still!
+                visible: true
+            }
+        ];
+
+        RenderSync3D.update(mockScene);
+
+        const playerMesh = RenderSync3D.meshes.get('player1');
+        const npcMesh = RenderSync3D.meshes.get('npc1');
+
+        // Player is moving, so Y position should be groundY + bounceY
+        const expectedBounce = Math.abs(Math.sin(0.5 * 10)) * 0.1;
+        expect(playerMesh.position.y).toBeCloseTo(expectedBounce);
+
+        // NPC is standing still, so Y position should be exactly groundY (0)
+        expect(npcMesh.position.y).toBeCloseTo(0);
     });
 
     it('should create and update mission target indicator', () => {
