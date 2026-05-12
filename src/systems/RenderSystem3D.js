@@ -663,8 +663,8 @@ export const RenderSystem3D = {
     setupLighting() {
         const SF = WorldMetrics.SCALE_FACTOR;
 
-        // 1. Ambient lighting to soften shadows
-        const ambient = new THREE.AmbientLight(0x404060, 0.45);
+        // 1. Ambient lighting to soften shadows (increased intensity and brightness for clear visibility)
+        const ambient = new THREE.AmbientLight(0x8585a0, 0.85);
         this.scene.add(ambient);
 
         // 2. Directional light simulating the sun

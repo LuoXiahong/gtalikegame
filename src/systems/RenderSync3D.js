@@ -101,8 +101,8 @@ export const RenderSync3D = {
             const h = WorldMetrics.NPC_HEIGHT;
             const d = WorldMetrics.NPC_DEPTH;
 
-            // Blue box body with bottom pivot
-            const bodyGeom = new THREE.BoxGeometry(w, h * 0.75, d);
+            // Blue box body with bottom pivot (swapped w and d so player faces forward rather than crab-walking)
+            const bodyGeom = new THREE.BoxGeometry(d, h * 0.75, w);
             const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2980b9, roughness: 0.7, metalness: 0.1 });
             const body = new THREE.Mesh(bodyGeom, bodyMat);
             body.position.y = (h * 0.75) / 2;
