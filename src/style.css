@@ -30,6 +30,13 @@ canvas {
     background-color: #000000;
 }
 
+#minimap {
+    width: 130px !important;
+    height: 130px !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
 #mobileHUD {
     position: absolute;
     bottom: 20px;

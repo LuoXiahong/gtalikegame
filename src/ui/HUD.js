@@ -6,8 +6,14 @@ import { EventBus } from '../core/EventBus.js';
 
 import { GameState, GAME_STATES } from '../core/GameState.js';
 
+import { World } from '../world/World.js';
+import { Tilemap, TILE_COLORS } from '../world/Tilemap.js';
+import { VehicleSystem } from '../systems/VehicleSystem.js';
+
 export const UISystem = {
     layer: null,
+    minimapCanvas: null,
+    minimapCtx: null,
     currentDialogue: null,
     missionText: '',
     wantedStars: 0,
@@ -17,11 +23,16 @@ export const UISystem = {
 
     init() {
         this.layer = document.getElementById('uiLayer');
+        this.minimapCanvas = document.getElementById('minimap');
+        this.minimapCtx = this.minimapCanvas ? this.minimapCanvas.getContext('2d') : null;
         const mobileHUD = document.getElementById('mobileHUD');
 
         EventBus.on('state_change', ({ to }) => {
             const isPlay = to === GAME_STATES.PLAY;
             this.layer.style.display = isPlay ? 'block' : 'none';
+            if (this.minimapCanvas) {
+                this.minimapCanvas.style.display = isPlay ? 'block' : 'none';
+            }
             if (mobileHUD) mobileHUD.style.display = isPlay ? 'grid' : 'none';
         });
 
@@ -102,5 +113,118 @@ export const UISystem = {
             html += `<div id="speedometer" style="position:absolute; bottom:25px; left:25px; font-size:24px; font-weight:bold; color:#2ecc71; font-family: monospace; letter-spacing:1px; ${shadowStyle}">${kmh} KM/H</div>`;
         }
         this.layer.innerHTML = html;
+    },
+
+    update() {
+        if (GameState.getState() !== GAME_STATES.PLAY) return;
+        if (this.minimapCtx) {
+            this.drawMinimap();
+        }
+    },
+
+    drawMinimap() {
+        const controlled = VehicleSystem.getControlledEntity() || World.getEntitiesByType('player')[0];
+        if (!controlled) return;
+
+        const px = controlled.transform.x;
+        const py = controlled.transform.y;
+        const pAngle = controlled.transform.angle;
+
+        const ctx = this.minimapCtx;
+        const width = this.minimapCanvas.width;
+        const height = this.minimapCanvas.height;
+        const cx = width / 2;
+        const cy = height / 2;
+
+        // 1. Clear minimap canvas
+        ctx.clearRect(0, 0, width, height);
+
+        // 2. Setup map orientation and scale (centered on player, rotates with player direction)
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(-pAngle - Math.PI / 2);
+        ctx.scale(0.22, 0.22); // Scaling factor to translate world units to radar size
+        ctx.translate(-px, -py);
+
+        // 3. Draw surrounding tile grid
+        const startCol = Math.max(0, Math.floor((px - 350) / 100));
+        const endCol = Math.min(Tilemap.cols - 1, Math.floor((px + 350) / 100));
+        const startRow = Math.max(0, Math.floor((py - 350) / 100));
+        const endRow = Math.min(Tilemap.rows - 1, Math.floor((py + 350) / 100));
+
+        for (let r = startRow; r <= endRow; r++) {
+            for (let c = startCol; c <= endCol; c++) {
+                const tileType = Tilemap.data[r][c];
+                ctx.fillStyle = TILE_COLORS[tileType] || '#27ae60';
+                ctx.fillRect(c * 100, r * 100, 100, 100);
+            }
+        }
+
+        // 4. Draw building blocks
+        World.buildings.forEach(b => {
+            ctx.fillStyle = '#1e272e'; // dark building block color
+            ctx.fillRect(b.x, b.y, b.w, b.h);
+            ctx.strokeStyle = '#2f3640'; // roof edge
+            ctx.lineWidth = 12;
+            ctx.strokeRect(b.x, b.y, b.w, b.h);
+        });
+
+        // 5. Draw active traffic cars
+        World.getEntitiesByType('car').forEach(carEntity => {
+            if (carEntity === controlled) return;
+            ctx.save();
+            ctx.translate(carEntity.transform.x, carEntity.transform.y);
+            ctx.rotate(carEntity.transform.angle);
+            ctx.fillStyle = '#e67e22'; // traffic car color
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            ctx.fillRect(-22, -10, 44, 20);
+            ctx.strokeRect(-22, -10, 44, 20);
+            ctx.restore();
+        });
+
+        // 6. Draw police vehicles
+        World.getEntitiesByType('police').forEach(p => {
+            ctx.save();
+            ctx.translate(p.transform.x, p.transform.y);
+            ctx.rotate(p.transform.angle);
+            const blink = Math.floor(Date.now() / 150) % 2 === 0;
+            ctx.fillStyle = blink ? '#2980b9' : '#e74c3c'; // blinking sirens
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            ctx.fillRect(-22, -10, 44, 20);
+            ctx.strokeRect(-22, -10, 44, 20);
+            ctx.restore();
+        });
+
+        // 7. Draw NPCs
+        World.getEntitiesByType('npc').forEach(npc => {
+            ctx.fillStyle = '#fed330'; // yellow NPC dot
+            ctx.beginPath();
+            ctx.arc(npc.transform.x, npc.transform.y, 14, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        ctx.restore();
+
+        // 8. Draw player icon on top of the map (static center pointing straight up)
+        ctx.fillStyle = '#00d2d3'; // sleek cyan indicator
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 12);
+        ctx.lineTo(cx - 8, cy + 9);
+        ctx.lineTo(cx, cy + 5); // inner notch
+        ctx.lineTo(cx + 8, cy + 9);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // 9. Overlay cool glass reflection gloss (static)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 65, 0, Math.PI, true);
+        ctx.closePath();
+        ctx.fill();
     }
 };

@@ -137,6 +137,9 @@ export const Game = {
             RenderSystem.update();
         }
 
+        // 6. Update UI elements (including canvas minimap)
+        UISystem.update();
+
         requestAnimationFrame((ts) => this.loop(ts));
     }
 };
