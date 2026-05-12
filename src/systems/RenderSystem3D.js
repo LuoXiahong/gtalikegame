@@ -503,6 +503,56 @@ export const RenderSystem3D = {
             line.position.copy(mesh.position);
             group.add(line);
         }
+
+        // 35% chance to add a taller architectural element on the roof (chimney or antenna tower) (T-261)
+        if (Math.random() < 0.35) {
+            const isAntenna = Math.random() < 0.5;
+            if (isAntenna) {
+                // Tall antenna/mast
+                const mastGeom = new THREE.CylinderGeometry(0.1, 0.15, 4.0, 4);
+                const mastMat = new THREE.MeshStandardMaterial({ color: 0xdcdde1, metalness: 0.8, roughness: 0.2 });
+                const mast = new THREE.Mesh(mastGeom, mastMat);
+                mast.castShadow = true;
+                mast.receiveShadow = true;
+
+                const rx = (Math.random() - 0.5) * roofWidth * 0.4;
+                const rz = (Math.random() - 0.5) * roofDepth * 0.4;
+                mast.position.set(rx, roofY + 2.0, rz);
+                group.add(mast);
+
+                // Warning beacon on top
+                const beaconGeom = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+                const beaconMat = new THREE.MeshBasicMaterial({ color: 0xff4757 }); // emissive red beacon
+                const beacon = new THREE.Mesh(beaconGeom, beaconMat);
+                beacon.position.set(rx, roofY + 4.125, rz);
+                group.add(beacon);
+            } else {
+                // Concrete service/elevator shaft or chimney
+                const shaftGeom = new THREE.BoxGeometry(2.5, 3.0, 2.5);
+                const shaftMat = new THREE.MeshStandardMaterial({ color: 0x718093, roughness: 0.9, metalness: 0.1 });
+                const shaft = new THREE.Mesh(shaftGeom, shaftMat);
+                shaft.castShadow = true;
+                shaft.receiveShadow = true;
+
+                const rx = (Math.random() - 0.5) * roofWidth * 0.4;
+                const rz = (Math.random() - 0.5) * roofDepth * 0.4;
+                shaft.position.set(rx, roofY + 1.5, rz);
+                group.add(shaft);
+
+                // Shaft door or vents (simple detail box on side)
+                const ventGeom = new THREE.BoxGeometry(0.3, 1.2, 0.8);
+                const ventMat = new THREE.MeshStandardMaterial({ color: 0x2f3640, roughness: 0.5 });
+                const vent = new THREE.Mesh(ventGeom, ventMat);
+                vent.position.set(rx + 1.25, roofY + 1.0, rz);
+                group.add(vent);
+
+                // Outline edges for shaft
+                const edges = new THREE.EdgesGeometry(shaftGeom);
+                const line = new THREE.LineSegments(edges, hvacEdgeMat);
+                line.position.copy(shaft.position);
+                group.add(line);
+            }
+        }
     },
 
     addBillboard(group, roofWidth, roofDepth, roofY) {
