@@ -30,7 +30,7 @@ import { GameState, GAME_STATES } from './GameState.js';
 import { MenuScreen } from '../ui/MenuScreen.js';
 
 export const Game = {
-    is3D: false,
+    is3D: true,
 
     init() {
         World.init();
@@ -38,6 +38,17 @@ export const Game = {
         Camera.init();
         RenderSystem.init();
         RenderSystem3D.init();
+
+        // Sync initial canvas visibility based on default render mode (is3D)
+        const canvas2D = document.getElementById('gameCanvas');
+        const canvas3D = document.getElementById('gameCanvas3D');
+        if (this.is3D) {
+            if (canvas2D) canvas2D.style.display = 'none';
+            if (canvas3D) canvas3D.style.display = 'block';
+        } else {
+            if (canvas2D) canvas2D.style.display = 'block';
+            if (canvas3D) canvas3D.style.display = 'none';
+        }
         AudioSystem.init();
         UISystem.init();
         MenuScreen.init();
