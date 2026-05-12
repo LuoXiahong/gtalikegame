@@ -64,6 +64,14 @@ vi.mock('three/addons/postprocessing/ShaderPass.js', () => {
     };
 });
 
+vi.mock('three/addons/postprocessing/OutputPass.js', () => {
+    return {
+        OutputPass: class {
+            constructor() {}
+        }
+    };
+});
+
 // Mockowanie World
 vi.mock('../world/World.js', () => ({
     World: {

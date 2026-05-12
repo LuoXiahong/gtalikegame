@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { World } from '../world/World.js';
 import { WorldGrid } from '../world/WorldGrid.js';
 import { RenderSync3D } from './RenderSync3D.js';
@@ -169,6 +170,9 @@ export const RenderSystem3D = {
         
         this.tiltShiftPass = new ShaderPass(TiltShiftShader);
         this.composer.addPass(this.tiltShiftPass);
+
+        const outputPass = new OutputPass();
+        this.composer.addPass(outputPass);
 
         const SF = WorldMetrics.SCALE_FACTOR;
 
