@@ -124,19 +124,19 @@ export const RenderSystem3D = {
 
         // 5. Build environment on WorldGrid
         
-        // A. Grass ground plane (3000x3000px -> 300x300m)
+        // A. Grass ground plane (3000x3000px -> 300x300m) - desaturated green (T-276)
         const groundGeom = new THREE.PlaneGeometry(3000 * SF, 3000 * SF);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.9, metalness: 0.0 });
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x42634e, roughness: 0.9, metalness: 0.0 });
         this.groundPlane = new THREE.Mesh(groundGeom, groundMat);
         this.groundPlane.rotation.x = -Math.PI / 2;
         this.groundPlane.position.set(1500 * SF, -0.005, 1500 * SF);
         this.groundPlane.receiveShadow = true;
         this.scene.add(this.groundPlane);
 
-        // B. Asphalt ground plane
+        // B. Asphalt ground plane - darker road color (T-276)
         const asphaltSize = 3000 - 2 * WorldGrid.PADDING;
         const asphaltGeom = new THREE.PlaneGeometry(asphaltSize * SF, asphaltSize * SF);
-        const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9, metalness: 0.0 });
+        const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x18181a, roughness: 0.9, metalness: 0.0 });
         this.asphaltPlane = new THREE.Mesh(asphaltGeom, asphaltMat);
         this.asphaltPlane.rotation.x = -Math.PI / 2;
         this.asphaltPlane.position.set(1500 * SF, -0.001, 1500 * SF);
@@ -149,8 +149,9 @@ export const RenderSystem3D = {
         this.buildings = [];
         const shops = [];
         
-        const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x95a5a6, roughness: 0.8, metalness: 0.0 });
-        const buildingZoneMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.8, metalness: 0.0 });
+        // Sidewalks - chłodniejsze i jaśniejsze, Plots - lekko zabarwione (T-276)
+        const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x9eb1bd, roughness: 0.8, metalness: 0.0 });
+        const buildingZoneMat = new THREE.MeshStandardMaterial({ color: 0x7c8a99, roughness: 0.8, metalness: 0.0 });
         
         for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
             for (let c = 0; c < WorldGrid.GRID_COLS; c++) {
@@ -663,9 +664,13 @@ export const RenderSystem3D = {
     setupLighting() {
         const SF = WorldMetrics.SCALE_FACTOR;
 
-        // 1. Ambient lighting to soften shadows (increased intensity and brightness for clear visibility)
-        const ambient = new THREE.AmbientLight(0x8585a0, 0.85);
+        // 1. Ambient lighting to soften shadows - decreased to let hemisphere light gradient shine (T-276)
+        const ambient = new THREE.AmbientLight(0x8585a0, 0.45);
         this.scene.add(ambient);
+
+        // 1B. HemisphereLight for fake ambient gradient (top: chłodniejszy błękit, bottom: cieplejszy piaskowy) (T-276)
+        const hemiLight = new THREE.HemisphereLight(0xa4b3c6, 0x786e64, 0.55);
+        this.scene.add(hemiLight);
 
         // 2. Directional light simulating the sun
         const sun = new THREE.DirectionalLight(0xfff5e6, 1.5);
