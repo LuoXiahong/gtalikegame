@@ -833,8 +833,8 @@ export const RenderSystem3D = {
 
         sun.castShadow = true;
         sun.shadow.bias = -0.0005;
-        sun.shadow.mapSize.width = 1024;
-        sun.shadow.mapSize.height = 1024;
+        sun.shadow.mapSize.width = 2048;
+        sun.shadow.mapSize.height = 2048;
 
         const d = 1600 * SF;
         sun.shadow.camera.left = -d;

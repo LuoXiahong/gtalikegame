@@ -50,15 +50,18 @@ export const RenderSync3D = {
             }
 
             // Kinematyka proceduralna (Procedural Walk Animation) dla aktorów (gracz/NPC) w ruchu
-            let bounceY = 0;
+            let targetBounce = 0;
             if ((ent.type === 'player' || ent.type === 'npc') && ent.physics) {
                 const isMoving = Math.abs(ent.physics.velX) > 0.1 || Math.abs(ent.physics.velY) > 0.1;
                 if (isMoving) {
-                    // Trygonometryczne rytmiczne podskakiwanie o 10 cm imitujące krok
-                    bounceY = Math.abs(Math.sin(Time.time * 10)) * 0.1;
+                    // Trygonometryczne rytmiczne podskakiwanie imitujące krok (zmniejszone do 2.5cm)
+                    targetBounce = Math.abs(Math.sin(Time.time * 10)) * 0.025;
                 }
             }
-            mesh.position.y = groundY + bounceY;
+            if (!ent.visual) ent.visual = {};
+            if (ent.visual.walkBounce === undefined) ent.visual.walkBounce = 0;
+            ent.visual.walkBounce += (targetBounce - ent.visual.walkBounce) * 0.2;
+            mesh.position.y = groundY + ent.visual.walkBounce;
 
             // Map rotation: 2D rotation -> 3D yaw rotation (Y axis)
             mesh.rotation.y = -ent.transform.angle;
