@@ -134,12 +134,17 @@ export const RenderSystem3D = {
         const height = parent.clientHeight || 600;
 
         // 1. Initialize WebGLRenderer
-        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+        // Device Pixel Ratio mapping for performance
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.setSize(width, height, false);
         const clearColor = 0x000000;
         this.renderer.setClearColor(clearColor, 1.0);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // Optimizations
+        this.renderer.info.autoReset = false;
 
         // 2. Initialize Scene
         this.scene = new THREE.Scene();
@@ -825,8 +830,8 @@ export const RenderSystem3D = {
 
         sun.castShadow = true;
         sun.shadow.bias = -0.0005;
-        sun.shadow.mapSize.width = 2048;
-        sun.shadow.mapSize.height = 2048;
+        sun.shadow.mapSize.width = 1024;
+        sun.shadow.mapSize.height = 1024;
 
         const d = 1600 * SF;
         sun.shadow.camera.left = -d;

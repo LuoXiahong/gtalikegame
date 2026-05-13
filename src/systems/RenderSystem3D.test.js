@@ -13,10 +13,13 @@ vi.mock('three', async () => {
                 this.setSize = vi.fn();
                 this.setClearColor = vi.fn();
                 this.render = vi.fn();
+                this.setPixelRatio = vi.fn();
                 this.shadowMap = {
                     enabled: false,
                     type: 0
                 };
+                this.toneMapping = 0;
+                this.info = { autoReset: true };
             }
         }
     };

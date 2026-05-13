@@ -279,6 +279,7 @@ export const RenderSync3D = {
      * Safely disposes geometry and materials to prevent WebGL memory leaks
      */
     disposeHierarchy(obj) {
+        if (!obj || !obj.traverse) return;
         obj.traverse(child => {
             if (child.geometry) child.geometry.dispose();
             if (child.material) {
