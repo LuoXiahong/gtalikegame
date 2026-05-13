@@ -2,12 +2,13 @@
  * ZARZĄDZANIE WEJŚCIEM (Input System)
  */
 export const InputSystem = {
-    keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false, debugAI: false, viewToggle: false },
+    keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false, debugAI: false, viewToggle: false, zoomToggle: false },
     actionJustPressed: false,
     shootJustPressed: false,
     explodeJustPressed: false,
     debugAIJustPressed: false,
     viewToggleJustPressed: false,
+    zoomToggleJustPressed: false,
 
     init() {
         window.addEventListener("keydown", (e) => {
@@ -48,6 +49,10 @@ export const InputSystem = {
             if (state && !this.keys.viewToggle) this.viewToggleJustPressed = true;
             this.keys.viewToggle = state;
         }
+        if (code === "KeyZ") {
+            if (state && !this.keys.zoomToggle) this.zoomToggleJustPressed = true;
+            this.keys.zoomToggle = state;
+        }
     },
 
     consumeDebugAI() {
@@ -80,6 +85,12 @@ export const InputSystem = {
         return pressed;
     },
 
+    consumeZoomToggle() {
+        const pressed = this.zoomToggleJustPressed;
+        this.zoomToggleJustPressed = false;
+        return pressed;
+    },
+
     resetAll() {
         for (const key in this.keys) {
             this.keys[key] = false;
@@ -89,6 +100,7 @@ export const InputSystem = {
         this.explodeJustPressed = false;
         this.debugAIJustPressed = false;
         this.viewToggleJustPressed = false;
+        this.zoomToggleJustPressed = false;
     },
 
     bindHUD(elementId, keyName) {
