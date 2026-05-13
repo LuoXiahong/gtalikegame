@@ -95,8 +95,12 @@ export const RenderSystem = {
             const ay = a.type === 'car' ? a.y : a.y + a.h / 2;
             const bx = b.type === 'car' ? b.x : b.x + b.w / 2;
             const by = b.type === 'car' ? b.y : b.y + b.h / 2;
-            const distA = Math.pow(ax - player.transform.x, 2) + Math.pow(ay - player.transform.y, 2);
-            const distB = Math.pow(bx - player.transform.x, 2) + Math.pow(by - player.transform.y, 2);
+            const dax = ax - player.transform.x;
+            const day = ay - player.transform.y;
+            const dbx = bx - player.transform.x;
+            const dby = by - player.transform.y;
+            const distA = dax * dax + day * day;
+            const distB = dbx * dbx + dby * dby;
             return distB - distA;
         });
 
