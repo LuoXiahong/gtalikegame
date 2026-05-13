@@ -21,6 +21,7 @@ describe('UISystem XSS Vulnerability Fix', () => {
         vi.stubGlobal('document', {
             getElementById: vi.fn((id) => {
                 if (id === 'uiLayer') return mockUiLayer;
+                if (id === 'minimap') return { getContext: () => ({}), style: {} };
                 return { style: {} };
             })
         });

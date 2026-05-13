@@ -100,24 +100,28 @@ export const TrafficSystem = {
         const sensorDist = 180;
         const minStopDist = 100;
         
+        const sensorDistSq = sensorDist * sensorDist;
+        const minStopDistSq = minStopDist * minStopDist;
+
         // 1. Avoid other vehicles and the player
         const others = World.entities.filter(e => e !== car && (e.type === 'car' || e.type === 'player'));
         for (const other of others) {
             const odx = other.transform.x - car.transform.x;
             const ody = other.transform.y - car.transform.y;
-            const distToOther = Math.sqrt(odx * odx + ody * ody);
+            const distSq = odx * odx + ody * ody;
             
-            if (distToOther < sensorDist) {
+            if (distSq < sensorDistSq) {
                 const angleToOther = Math.atan2(ody, odx);
                 let diff = angleToOther - car.transform.angle;
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
                 
                 if (Math.abs(diff) < 0.45) { // 25-degree vision cone
-                    if (distToOther <= minStopDist) {
+                    if (distSq <= minStopDistSq) {
                         speedMult = 0;
                     } else {
                         // Smoothly decelerate
+                        const distToOther = Math.sqrt(distSq);
                         const factor = (distToOther - minStopDist) / (sensorDist - minStopDist);
                         speedMult = Math.min(speedMult, factor);
                     }
@@ -190,9 +194,9 @@ export const TrafficSystem = {
             for (const other of others) {
                 const odx = other.transform.x - car.transform.x;
                 const ody = other.transform.y - car.transform.y;
-                const odist = Math.sqrt(odx * odx + ody * ody);
+                const odistSq = odx * odx + ody * ody;
                 
-                if (odist < 140) {
+                if (odistSq < 19600) { // 140^2 = 19600
                     const angleToOther = Math.atan2(ody, odx);
                     let diff = angleToOther - angle;
                     while (diff < -Math.PI) diff += Math.PI * 2;

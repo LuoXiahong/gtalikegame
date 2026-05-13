@@ -12,10 +12,12 @@ export const World = {
     tileSize: 100,
     buildings: [],
     entities: [],
+    entitiesByType: {},
     tilemap: null,
     decals: null,
 
     init() {
+        this.entitiesByType = {};
         this.tilemap = Tilemap;
         this.tilemap.init();
 
@@ -42,13 +44,21 @@ export const World = {
 
     addEntity(entity) {
         this.entities.push(entity);
+        if (!this.entitiesByType[entity.type]) {
+            this.entitiesByType[entity.type] = [];
+        }
+        this.entitiesByType[entity.type].push(entity);
     },
 
     removeEntity(id) {
+        const entity = this.entities.find(e => e.id === id);
+        if (entity) {
+            this.entitiesByType[entity.type] = this.entitiesByType[entity.type].filter(e => e.id !== id);
+        }
         this.entities = this.entities.filter(e => e.id !== id);
     },
 
     getEntitiesByType(type) {
-        return this.entities.filter(e => e.type === type);
+        return this.entitiesByType[type] || [];
     }
 };
