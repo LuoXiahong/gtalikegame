@@ -38,41 +38,44 @@ export const Tilemap = {
 
     generateSimpleCity() {
         // Generowanie siatki na podstawie WorldGrid
-        for (let r = 0; r < this.rows; r++) {
-            for (let c = 0; c < this.cols; c++) {
-                const worldX = c * this.tileSize + this.tileSize / 2;
-                const worldY = r * this.tileSize + this.tileSize / 2;
+        // Wypełniamy strefę miejską drogą, ignorując zewnętrzny margines
+        const padding = WorldGrid.PADDING;
+        const startTile = Math.floor(padding / this.tileSize);
+        const endTileCol = Math.floor((3000 - padding) / this.tileSize);
+        const endTileRow = Math.floor((3000 - padding) / this.tileSize);
 
-                // Sprawdzamy czy ten kafelek leży w którymkolwiek bloku
-                let insideBlock = false;
-                for (let br = 0; br < WorldGrid.GRID_ROWS; br++) {
-                    for (let bc = 0; bc < WorldGrid.GRID_COLS; bc++) {
-                        const b = WorldGrid.getBlockBounds(br, bc);
-                        if (worldX >= b.x && worldX < b.x + b.w && worldY >= b.y && worldY < b.y + b.h) {
-                            insideBlock = true;
-                            
-                            // Sprawdzamy czy leży na krawędzi bloku (zewnętrzny pierścień o szerokości 1 kafelka = 100u)
-                            const isBorder = (worldX < b.x + 100) || 
-                                             (worldX >= b.x + b.w - 100) || 
-                                             (worldY < b.y + 100) || 
-                                             (worldY >= b.y + b.h - 100);
-                            
-                            if (isBorder) {
-                                this.setTile(c, r, TILE_TYPES.SIDEWALK);
-                            } else {
-                                this.setTile(c, r, TILE_TYPES.BUILDING_ZONE);
-                            }
-                            break;
+        for (let r = startTile; r < endTileRow; r++) {
+            for (let c = startTile; c < endTileCol; c++) {
+                this.setTile(c, r, TILE_TYPES.ROAD);
+            }
+        }
+
+        // Następnie nadpisujemy bloki odpowiednio chodnikiem i strefami budynków
+        for (let br = 0; br < WorldGrid.GRID_ROWS; br++) {
+            for (let bc = 0; bc < WorldGrid.GRID_COLS; bc++) {
+                const b = WorldGrid.getBlockBounds(br, bc);
+                if (!b) continue;
+
+                const startCol = Math.floor(b.x / this.tileSize);
+                const endCol = Math.floor((b.x + b.w) / this.tileSize);
+                const startRow = Math.floor(b.y / this.tileSize);
+                const endRow = Math.floor((b.y + b.h) / this.tileSize);
+
+                for (let r = startRow; r < endRow; r++) {
+                    for (let c = startCol; c < endCol; c++) {
+                        const worldX = c * this.tileSize + this.tileSize / 2;
+                        const worldY = r * this.tileSize + this.tileSize / 2;
+
+                        const isBorder = (worldX < b.x + 100) ||
+                                         (worldX >= b.x + b.w - 100) ||
+                                         (worldY < b.y + 100) ||
+                                         (worldY >= b.y + b.h - 100);
+
+                        if (isBorder) {
+                            this.setTile(c, r, TILE_TYPES.SIDEWALK);
+                        } else {
+                            this.setTile(c, r, TILE_TYPES.BUILDING_ZONE);
                         }
-                    }
-                    if (insideBlock) break;
-                }
-
-                // Jeśli nie leży w bloku, ale leży wewnątrz miejskiego obszaru (między zewnętrznymi marginesami), jest to ROAD!
-                if (!insideBlock) {
-                    const padding = WorldGrid.PADDING;
-                    if (worldX >= padding && worldX < 3000 - padding && worldY >= padding && worldY < 3000 - padding) {
-                        this.setTile(c, r, TILE_TYPES.ROAD);
                     }
                 }
             }
