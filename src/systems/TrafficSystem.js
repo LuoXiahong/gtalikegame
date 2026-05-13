@@ -102,6 +102,7 @@ export const TrafficSystem = {
         
         const sensorDistSq = sensorDist * sensorDist;
         const minStopDistSq = minStopDist * minStopDist;
+
         
         // 1. Avoid other vehicles and the player
         const others = World.entities.filter(e => e !== car && (e.type === 'car' || e.type === 'player'));
