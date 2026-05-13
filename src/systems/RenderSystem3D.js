@@ -253,18 +253,18 @@ export const RenderSystem3D = {
                 // 3. Generate procedural buildings
                 const pattern = (r + c) % 3;
                 if (pattern === 0) {
-                    this.createBuilding('skyscraper', posX, posZ, 380 * SF, 120 * SF, 120 * SF);
-                    const s1 = this.createBuilding('shop', posX - 80 * SF, posZ - 80 * SF, 50 * SF, 80 * SF, 80 * SF);
-                    const s2 = this.createBuilding('shop', posX + 80 * SF, posZ + 80 * SF, 50 * SF, 80 * SF, 80 * SF);
+                    this.createBuilding({ type: 'skyscraper', x: posX, z: posZ, height: 380 * SF, width: 120 * SF, depth: 120 * SF });
+                    const s1 = this.createBuilding({ type: 'shop', x: posX - 80 * SF, z: posZ - 80 * SF, height: 50 * SF, width: 80 * SF, depth: 80 * SF });
+                    const s2 = this.createBuilding({ type: 'shop', x: posX + 80 * SF, z: posZ + 80 * SF, height: 50 * SF, width: 80 * SF, depth: 80 * SF });
                     shops.push({ group: s1, w: 80 * SF, d: 80 * SF, h: 50 * SF });
                     shops.push({ group: s2, w: 80 * SF, d: 80 * SF, h: 50 * SF });
                 } else if (pattern === 1) {
-                    this.createBuilding('residential', posX - 60 * SF, posZ, 180 * SF, 120 * SF, 200 * SF);
-                    this.createBuilding('residential', posX + 60 * SF, posZ + 50 * SF, 140 * SF, 100 * SF, 100 * SF);
+                    this.createBuilding({ type: 'residential', x: posX - 60 * SF, z: posZ, height: 180 * SF, width: 120 * SF, depth: 200 * SF });
+                    this.createBuilding({ type: 'residential', x: posX + 60 * SF, z: posZ + 50 * SF, height: 140 * SF, width: 100 * SF, depth: 100 * SF });
                 } else {
-                    this.createBuilding('residential', posX, posZ - 50 * SF, 200 * SF, 180 * SF, 120 * SF);
-                    const s1 = this.createBuilding('shop', posX - 80 * SF, posZ + 80 * SF, 60 * SF, 80 * SF, 80 * SF);
-                    const s2 = this.createBuilding('shop', posX + 80 * SF, posZ + 80 * SF, 45 * SF, 80 * SF, 80 * SF);
+                    this.createBuilding({ type: 'residential', x: posX, z: posZ - 50 * SF, height: 200 * SF, width: 180 * SF, depth: 120 * SF });
+                    const s1 = this.createBuilding({ type: 'shop', x: posX - 80 * SF, z: posZ + 80 * SF, height: 60 * SF, width: 80 * SF, depth: 80 * SF });
+                    const s2 = this.createBuilding({ type: 'shop', x: posX + 80 * SF, z: posZ + 80 * SF, height: 45 * SF, width: 80 * SF, depth: 80 * SF });
                     shops.push({ group: s1, w: 80 * SF, d: 80 * SF, h: 60 * SF });
                     shops.push({ group: s2, w: 80 * SF, d: 80 * SF, h: 45 * SF });
                 }
@@ -413,7 +413,8 @@ export const RenderSystem3D = {
         this.zebras.push(mesh);
     },
 
-    createBuilding(type, x, z, height, width, depth) {
+    createBuilding(config) {
+        const { type, x, z, height, width, depth } = config;
         const group = new THREE.Group();
         group.position.set(x, 0, z);
 
