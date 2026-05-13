@@ -159,7 +159,7 @@ describe('RenderSystem3D', () => {
         RenderSystem3D.init();
         const initialCount = RenderSystem3D.buildings.length;
         
-        RenderSystem3D.createBuilding('skyscraper', 200, 200, 40, 10, 10);
+        RenderSystem3D.createBuilding({ type: 'skyscraper', x: 200, z: 200, height: 40, width: 10, depth: 10 });
         expect(RenderSystem3D.buildings.length).toBe(initialCount + 1);
         
         const newBuilding = RenderSystem3D.buildings[RenderSystem3D.buildings.length - 1];
@@ -173,7 +173,7 @@ describe('RenderSystem3D', () => {
     it('should assign materials with map textures to building components', () => {
         RenderSystem3D.init();
         
-        const resBuilding = RenderSystem3D.createBuilding('residential', 300, 300, 20, 10, 10);
+        const resBuilding = RenderSystem3D.createBuilding({ type: 'residential', x: 300, z: 300, height: 20, width: 10, depth: 10 });
         const mesh = resBuilding.children.find(c => c.isMesh && c.geometry.type === 'BoxGeometry');
         expect(mesh).toBeDefined();
         expect(Array.isArray(mesh.material)).toBe(true);
