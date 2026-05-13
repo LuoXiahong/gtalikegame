@@ -56,8 +56,11 @@ export const CollisionSystem = {
 
         // 2. Kolizje Gracza z Autami (tylko gdy gracz jest pieszo)
         if (controlled && controlled.type === 'player') {
-            World.getEntitiesByType('car').forEach(car => {
-                if (car.occupied) return;
+            const cars = World.getEntitiesByType('car');
+            const len = cars.length;
+            for (let i = 0; i < len; i++) {
+                const car = cars[i];
+                if (car.occupied) continue;
 
                 const ent = p.transform;
                 const hw = ent.width / 2;
@@ -92,12 +95,16 @@ export const CollisionSystem = {
                         p.physics.velY = 0;
                     }
                 }
-            });
+            }
         }
 
         // 3. Kolizje sterowanego Auta z NPC
         if (controlled && controlled.type === 'car') {
-            World.getEntitiesByType('npc').forEach(npc => {
+            const npcs = World.getEntitiesByType('npc');
+            const len = npcs.length;
+            for (let i = 0; i < len; i++) {
+                const npc = npcs[i];
+
                 const npcBox = {
                     x: npc.transform.x - npc.transform.width / 2,
                     y: npc.transform.y - npc.transform.height / 2,
@@ -121,7 +128,7 @@ export const CollisionSystem = {
                         EventBus.emit('npc_hit', { npc, car: controlled });
                     }
                 }
-            });
+            }
         }
     }
 };

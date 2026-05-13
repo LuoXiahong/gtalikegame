@@ -8,14 +8,27 @@ describe('PoliceSystem', () => {
     beforeEach(() => {
         EventBus.listeners = {};
         World.entities = [];
-        vi.spyOn(World, 'addEntity').mockImplementation((e) => World.entities.push(e));
+        vi.spyOn(World, 'addEntity').mockImplementation((e) => {
+            World.entities.push(e);
+            if (!World.entitiesByType) World.entitiesByType = {};
+            if (!World.entitiesByType[e.type]) World.entitiesByType[e.type] = [];
+            World.entitiesByType[e.type].push(e);
+        });
         vi.spyOn(World, 'removeEntity').mockImplementation((id) => {
+            const e = World.entities.find(ent => ent.id === id);
             World.entities = World.entities.filter(e => e.id !== id);
+            if (e) {
+                World.entitiesByType[e.type] = World.entitiesByType[e.type].filter(ent => ent.id !== id);
+            }
+        });
+        vi.spyOn(World, 'getEntitiesByType').mockImplementation((type) => {
+            if (!World.entitiesByType) World.entitiesByType = {};
+            return World.entitiesByType[type] || [];
         });
         
         // Mock player target
         const mockPlayer = { type: 'player', transform: { x: 0, y: 0, angle: 0 } };
-        World.entities.push(mockPlayer);
+        World.addEntity(mockPlayer);
         
         PoliceSystem.init();
     });
@@ -47,15 +60,16 @@ describe('PoliceSystem', () => {
 
         const police = PoliceSystem.policeCars[0];
         // Move player away
-        World.entities[0].transform.x = 2000;
-        World.entities[0].transform.y = 0;
+        const player = World.getEntitiesByType('player')[0];
+        player.transform.x = 2000;
+        player.transform.y = 0;
 
         PoliceSystem.update(0.1);
         
         // Police should accelerate
         expect(police.physics.speed).toBeGreaterThan(0);
-        // Angle should be roughly towards player (0 radians)
-        expect(police.transform.angle).toBeCloseTo(Math.atan2(0 - police.transform.y, 2000 - police.transform.x));
+        // Angle should be roughly towards player
+        expect(police.transform.angle).toBeCloseTo(Math.atan2(player.transform.y - police.transform.y, player.transform.x - police.transform.x));
     });
     it('should include dt in velocity calculation', () => {
         EventBus.emit('wanted_level_change', { stars: 2 });
