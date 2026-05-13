@@ -10,6 +10,16 @@ import { World } from '../world/World.js';
 import { Tilemap, TILE_COLORS } from '../world/Tilemap.js';
 import { VehicleSystem } from '../systems/VehicleSystem.js';
 
+const escapeHTML = (str) => {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+};
+
 export const UISystem = {
     layer: null,
     minimapCanvas: null,
@@ -91,13 +101,16 @@ export const UISystem = {
         const glassStyle = 'background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(4px); box-shadow: 0 4px 6px rgba(0,0,0,0.3);';
 
         if (this.missionText) {
-            html += `<div style="position:absolute; top:25px; left:25px; font-size:20px; font-weight:bold; color:white; font-family: system-ui, -apple-system, sans-serif; letter-spacing:0.5px; ${shadowStyle}">${this.missionText}</div>`;
+            const safeMission = escapeHTML(this.missionText);
+            html += `<div style="position:absolute; top:25px; left:25px; font-size:20px; font-weight:bold; color:white; font-family: system-ui, -apple-system, sans-serif; letter-spacing:0.5px; ${shadowStyle}">${safeMission}</div>`;
         }
         if (this.currentDialogue) {
-            html += `<div style="position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); font-size:15px; font-weight:500; color:white; font-family: system-ui, -apple-system, sans-serif; ${glassStyle} padding:12px 20px; border-radius:8px; max-width: 80%; text-align: center;">${this.currentDialogue}</div>`;
+            const safeDialogue = escapeHTML(this.currentDialogue);
+            html += `<div style="position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); font-size:15px; font-weight:500; color:white; font-family: system-ui, -apple-system, sans-serif; ${glassStyle} padding:12px 20px; border-radius:8px; max-width: 80%; text-align: center;">${safeDialogue}</div>`;
         }
         if (this.actionHint) {
-            html += `<div style="position:absolute; bottom:25px; right:25px; font-size:13px; font-weight:bold; color:white; font-family: system-ui, -apple-system, sans-serif; ${glassStyle} padding:6px 12px; border-radius:6px; letter-spacing:0.5px;">${this.actionHint}</div>`;
+            const safeHint = escapeHTML(this.actionHint);
+            html += `<div style="position:absolute; bottom:25px; right:25px; font-size:13px; font-weight:bold; color:white; font-family: system-ui, -apple-system, sans-serif; ${glassStyle} padding:6px 12px; border-radius:6px; letter-spacing:0.5px;">${safeHint}</div>`;
         }
         if (this.wantedStars > 0) {
             let starsHtml = '';
