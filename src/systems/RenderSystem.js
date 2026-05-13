@@ -171,12 +171,11 @@ export const RenderSystem = {
         });
 
         // 2. Draw flat entities (NPCs, Player)
-        const flatEntities = [...World.getEntitiesByType('npc'), ...World.getEntitiesByType('player')]
-            .filter(e => e.visible !== false);
-
         const controlled = VehicleSystem.getControlledEntity();
 
-        flatEntities.forEach(ent => {
+        World.entities.forEach(ent => {
+            if ((ent.type !== 'npc' && ent.type !== 'player') || ent.visible === false) return;
+
             this.ctx.save();
             this.ctx.translate(ent.transform.x, ent.transform.y);
             this.ctx.rotate(ent.transform.angle);
