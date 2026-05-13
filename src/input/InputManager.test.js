@@ -31,4 +31,14 @@ describe('InputSystem', () => {
         expect(InputSystem.keys.right).toBe(false);
         expect(InputSystem.debugAIJustPressed).toBe(false);
     });
+
+    it('should trigger zoomToggleJustPressed on KeyZ keydown', () => {
+        InputSystem.setKey('KeyZ', true);
+        expect(InputSystem.keys.zoomToggle).toBe(true);
+        expect(InputSystem.zoomToggleJustPressed).toBe(true);
+
+        const consumed = InputSystem.consumeZoomToggle();
+        expect(consumed).toBe(true);
+        expect(InputSystem.zoomToggleJustPressed).toBe(false);
+    });
 });

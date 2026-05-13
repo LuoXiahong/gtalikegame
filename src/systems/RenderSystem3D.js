@@ -18,11 +18,12 @@ import { RenderSync3D } from './RenderSync3D.js';
 import { FacadeGenerator } from './FacadeGenerator.js';
 import { RoadTextureGenerator } from './RoadTextureGenerator.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
+import { InputSystem } from '../input/InputManager.js';
 
 const TiltShiftShader = {
     uniforms: {
         'tDiffuse': { value: null },
-        'blur': { value: 0.004 },       // Maksymalny poziom rozmycia
+        'blur': { value: 0.0004 },       // Maksymalny poziom rozmycia
         'focus': { value: 0.5 },        // Pionowy punkt skupienia (odpowiada środkowi rzutni z graczem)
         'falloff': { value: 0.28 }       // Szerokość ostrego paska wokół punktu skupienia
     },
@@ -73,7 +74,8 @@ export const RenderSystem3D = {
     camera: null,
     composer: null,
     tiltShiftPass: null,
-    
+    isZoomedIn: false,
+
     // 3D environment elements
     groundPlane: null,
     asphaltPlane: null,
@@ -84,13 +86,13 @@ export const RenderSystem3D = {
     billboards: [],
     laneMarkings: [],
     zebras: [],
-    
+
     // Contact shadow texture (T-702)
     contactShadowTexture: null,
-    
+
     // Movement and scale validation cube
     box5u: null,
-    
+
     // Reference origin (matches start intersection)
     originX: 1100,
     originZ: 1100,
@@ -155,7 +157,7 @@ export const RenderSystem3D = {
         // 3. Configure OrthographicCamera (isometric view)
         const aspect = width / height;
         const viewSize = 60; // Scale adjusted isometric view size
-        
+
         this.camera = new THREE.OrthographicCamera(
             -viewSize * aspect / 2, // left
             viewSize * aspect / 2,  // right
@@ -172,7 +174,7 @@ export const RenderSystem3D = {
         this.composer = new EffectComposer(this.renderer);
         const renderPass = new RenderPass(this.scene, this.camera);
         this.composer.addPass(renderPass);
-        
+
         this.tiltShiftPass = new ShaderPass(TiltShiftShader);
         this.composer.addPass(this.tiltShiftPass);
 
@@ -188,12 +190,12 @@ export const RenderSystem3D = {
         window.addEventListener('resize', () => {
             const w = parent.clientWidth || 800;
             const h = parent.clientHeight || 600;
-            
+
             this.renderer.setSize(w, h, false);
             if (this.composer) {
                 this.composer.setSize(w, h);
             }
-            
+
             const newAspect = w / h;
             this.camera.left = -viewSize * newAspect / 2;
             this.camera.right = viewSize * newAspect / 2;
@@ -203,7 +205,7 @@ export const RenderSystem3D = {
         });
 
         // 5. Build environment on WorldGrid
-        
+
         // A. Grass ground plane (3000x3000px -> 300x300m) - desaturated green (T-276)
         const groundGeom = new THREE.PlaneGeometry(3000 * SF, 3000 * SF);
         const groundMat = new THREE.MeshStandardMaterial({ color: 0x42634e, roughness: 0.9, metalness: 0.0 });
@@ -228,17 +230,17 @@ export const RenderSystem3D = {
         this.buildingZones = [];
         this.buildings = [];
         const shops = [];
-        
+
         // Sidewalks - chłodniejsze i jaśniejsze, Plots - lekko zabarwione (T-276)
         const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x9eb1bd, roughness: 0.8, metalness: 0.0 });
         const buildingZoneMat = new THREE.MeshStandardMaterial({ color: 0x7c8a99, roughness: 0.8, metalness: 0.0 });
-        
+
         for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
             for (let c = 0; c < WorldGrid.GRID_COLS; c++) {
                 const b = WorldGrid.getBlockBounds(r, c);
                 const posX = (b.x + b.w / 2) * SF;
                 const posZ = (b.y + b.h / 2) * SF;
-                
+
                 // 1. Sidewalk base
                 const swGeom = new THREE.BoxGeometry(b.w * SF, WorldMetrics.SIDEWALK_HEIGHT, b.h * SF);
                 const swMesh = new THREE.Mesh(swGeom, sidewalkMat);
@@ -246,7 +248,7 @@ export const RenderSystem3D = {
                 swMesh.receiveShadow = true;
                 this.scene.add(swMesh);
                 this.sidewalks.push(swMesh);
-                
+
                 // 2. Building zone platform
                 const bzGeom = new THREE.BoxGeometry(300 * SF, 0.05, 300 * SF);
                 const bzMesh = new THREE.Mesh(bzGeom, buildingZoneMat);
@@ -279,13 +281,13 @@ export const RenderSystem3D = {
         // D. Generate lane markings
         this.laneMarkings = [];
         const roads = WorldGrid.getStreetCenters();
-        
+
         roads.forEach(rx => {
             this.createDashedLine(rx * SF, 500 * SF, rx * SF, 1000 * SF, true);
             this.createDashedLine(rx * SF, 1200 * SF, rx * SF, 1700 * SF, true);
             this.createDashedLine(rx * SF, 1900 * SF, rx * SF, 2400 * SF, true);
         });
-        
+
         roads.forEach(rz => {
             this.createDashedLine(500 * SF, rz * SF, 1000 * SF, rz * SF, false);
             this.createDashedLine(1200 * SF, rz * SF, 1700 * SF, rz * SF, false);
@@ -308,9 +310,9 @@ export const RenderSystem3D = {
         const treePositions = [];
         const treeOffsets = [
             { x: -200, z: -200 }, { x: 200, z: -200 },
-            { x: -200, z: 200 },  { x: 200, z: 200 },
-            { x: -200, z: 0 },    { x: 200, z: 0 },
-            { x: 0, z: -200 },    { x: 0, z: 200 }
+            { x: -200, z: 200 }, { x: 200, z: 200 },
+            { x: -200, z: 0 }, { x: 200, z: 0 },
+            { x: 0, z: -200 }, { x: 0, z: 200 }
         ];
 
         for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
@@ -385,16 +387,16 @@ export const RenderSystem3D = {
 
     createZebra(cx, cz, isVerticalRoad) {
         const SF = WorldMetrics.SCALE_FACTOR;
-        
+
         // Find nearest intersection center among (110, 110), (110, 180), (180, 110), (180, 180)
         const targetX = Math.abs(cx - 110) < Math.abs(cx - 180) ? 110 : 180;
         const targetZ = Math.abs(cz - 110) < Math.abs(cz - 180) ? 110 : 180;
-        
+
         const key = `${targetX},${targetZ}`;
         if (!this.createdIntersections) {
             this.createdIntersections = new Set();
         }
-        
+
         if (this.createdIntersections.has(key)) {
             return;
         }
@@ -550,10 +552,10 @@ export const RenderSystem3D = {
             return new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.8, metalness: 0.1 });
         }
         const texture = originalTexture.clone();
-        
+
         const repeatY = (textureType === 'shop_front' || textureType === 'shop_side') ? 1 : faceHeight / 5.0;
         texture.repeat.set(faceWidth / 5.0, repeatY);
-        
+
         const color = new THREE.Color(baseColor);
         const tint = 0.95 + Math.random() * 0.1; // Subtle variations for organic diversity
         color.multiplyScalar(tint);
@@ -588,7 +590,7 @@ export const RenderSystem3D = {
 
             const marginX = roofWidth * 0.15 + size.w / 2;
             const marginZ = roofDepth * 0.15 + size.d / 2;
-            
+
             const rangeX = Math.max(0, roofWidth - marginX * 2);
             const rangeZ = Math.max(0, roofDepth - marginZ * 2);
 
@@ -657,7 +659,7 @@ export const RenderSystem3D = {
 
     addBillboard(group, roofWidth, roofDepth, roofY) {
         const billboardGroup = new THREE.Group();
-        
+
         // Frame legs
         const legGeom = new THREE.BoxGeometry(0.2, 2.0, 0.2);
         const legMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.7, metalness: 0.5 });
@@ -700,13 +702,13 @@ export const RenderSystem3D = {
         const posterGeom = new THREE.PlaneGeometry(4.6, 2.1);
         const posterColors = [0xe74c3c, 0x9b59b6, 0xf1c40f, 0xe67e22, 0x1abc9c, 0xe84393];
         const randomColor = posterColors[Math.floor(Math.random() * posterColors.length)];
-        const posterMat = new THREE.MeshStandardMaterial({ 
+        const posterMat = new THREE.MeshStandardMaterial({
             color: randomColor,
             roughness: 0.8,
             metalness: 0.0,
             side: THREE.DoubleSide
         });
-        
+
         const poster = new THREE.Mesh(posterGeom, posterMat);
         poster.position.set(0, 2.5, 0.16);
         poster.castShadow = true;
@@ -825,14 +827,14 @@ export const RenderSystem3D = {
         // 2. Directional light simulating the sun - lower angle for longer, dramatic shadows (T-278)
         const sun = new THREE.DirectionalLight(0xfff5e6, 1.55);
         sun.position.set(600 * SF, 550 * SF, 400 * SF);
-        
+
         sun.target.position.set(1500 * SF, 0, 1500 * SF);
         this.scene.add(sun.target);
 
         sun.castShadow = true;
         sun.shadow.bias = -0.0005;
-        sun.shadow.mapSize.width = 1024;
-        sun.shadow.mapSize.height = 1024;
+        sun.shadow.mapSize.width = 2048;
+        sun.shadow.mapSize.height = 2048;
 
         const d = 1600 * SF;
         sun.shadow.camera.left = -d;
@@ -849,6 +851,12 @@ export const RenderSystem3D = {
         if (!this.renderer || !this.scene || !this.camera) return;
 
         const SF = WorldMetrics.SCALE_FACTOR;
+
+        if (InputSystem.consumeZoomToggle()) {
+            this.isZoomedIn = !this.isZoomedIn;
+            this.camera.zoom = this.isZoomedIn ? 2.0 : 1.0;
+            this.camera.updateProjectionMatrix();
+        }
 
         // Validation - smooth red cube movement on X-axis
         const time = Date.now() * 0.001;
@@ -876,7 +884,7 @@ export const RenderSystem3D = {
         this.camera.position.x = sFocusX + Math.cos(yawAngle) * Math.cos(tiltAngle) * distance;
         this.camera.position.y = Math.sin(tiltAngle) * distance;
         this.camera.position.z = sFocusZ + Math.sin(yawAngle) * Math.cos(tiltAngle) * distance;
-        
+
         this.camera.lookAt(sFocusX, 0, sFocusZ);
 
         RenderSync3D.update(this.scene);

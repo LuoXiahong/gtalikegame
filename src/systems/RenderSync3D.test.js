@@ -161,8 +161,9 @@ describe('RenderSync3D', () => {
         const playerMesh = RenderSync3D.meshes.get('player1');
         const npcMesh = RenderSync3D.meshes.get('npc1');
 
-        // Player is moving, so Y position should be groundY + bounceY
-        const expectedBounce = Math.abs(Math.sin(0.5 * 10)) * 0.1;
+        // Player is moving, so Y position should be groundY + walkBounce (lerped)
+        const targetBounce = Math.abs(Math.sin(0.5 * 10)) * 0.025;
+        const expectedBounce = targetBounce * 0.2;
         expect(playerMesh.position.y).toBeCloseTo(expectedBounce);
 
         // NPC is standing still, so Y position should be exactly groundY (0)
