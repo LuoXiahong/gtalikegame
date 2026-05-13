@@ -138,7 +138,7 @@ describe('TrafficSystem', () => {
         car.transform.y = 100;
         
         TrafficSystem.update(0.1);
-        expect(World.getEntitiesByType('car').length).toBe(1);
+        expect(World.entities.includes(car)).toBe(true);
     });
 
     it('should assign a consistent laneOffset to each spawned car', () => {

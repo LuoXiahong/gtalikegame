@@ -27,7 +27,7 @@ export const TrafficSystem = {
             }
         });
         
-        const remainingCars = World.getEntitiesByType('car').filter(c => c.ai && c.ai.type === 'traffic');
+        const remainingCars = World.getEntitiesByType('car').filter(c => c.ai && c.ai.type === 'traffic' && !c.occupied);
         
         // Spawn fresh vehicles if below limit
         if (remainingCars.length < this.maxCars) {

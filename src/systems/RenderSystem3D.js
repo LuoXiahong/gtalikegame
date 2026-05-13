@@ -19,6 +19,7 @@ import { FacadeGenerator } from './FacadeGenerator.js';
 import { RoadTextureGenerator } from './RoadTextureGenerator.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { InputSystem } from '../input/InputManager.js';
+import { VehicleSystem } from './VehicleSystem.js';
 
 const TiltShiftShader = {
     uniforms: {
@@ -854,9 +855,23 @@ export const RenderSystem3D = {
 
         if (InputSystem.consumeZoomToggle()) {
             this.isZoomedIn = !this.isZoomedIn;
-            this.camera.zoom = this.isZoomedIn ? 2.0 : 1.0;
-            this.camera.updateProjectionMatrix();
         }
+
+        const controlled = VehicleSystem.getControlledEntity() || World.getEntitiesByType('player')[0];
+
+        const baseZoom = this.isZoomedIn ? 2.0 : 1.0;
+        let speed = 0;
+        if (controlled && controlled.physics && controlled.type === 'car') {
+            speed = Math.abs(controlled.physics.speed || 0);
+        }
+        // At speed = 300, zoom reduces by 20% (0.2 * baseZoom)
+        const speedRatio = Math.min(speed / 300, 1.0);
+        const targetZoom = baseZoom * (1.0 - 0.2 * speedRatio);
+
+        if (this.currentZoom === undefined) this.currentZoom = baseZoom;
+        this.currentZoom += (targetZoom - this.currentZoom) * 0.05;
+        this.camera.zoom = this.currentZoom;
+        this.camera.updateProjectionMatrix();
 
         // Validation - smooth red cube movement on X-axis
         const time = Date.now() * 0.001;
@@ -864,13 +879,12 @@ export const RenderSystem3D = {
         this.box5u.position.z = 1100 * SF;
 
         // Track focus target (Player or active vehicle)
-        const player = World.getEntitiesByType('player')[0];
         let focusX = this.originX;
         let focusZ = this.originZ;
 
-        if (player && player.transform) {
-            focusX = player.transform.x;
-            focusZ = player.transform.y;
+        if (controlled && controlled.transform) {
+            focusX = controlled.transform.x;
+            focusZ = controlled.transform.y;
         }
 
         const sFocusX = focusX * SF;
