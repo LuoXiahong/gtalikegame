@@ -16,8 +16,14 @@ export const World = {
     tilemap: null,
     decals: null,
 
-    init() {
+    reset() {
+        this.entities = [];
         this.entitiesByType = {};
+        this.buildings = [];
+    },
+
+    init() {
+        this.reset();
         this.tilemap = Tilemap;
         this.tilemap.init();
 
@@ -51,11 +57,17 @@ export const World = {
     },
 
     removeEntity(id) {
-        const entity = this.entities.find(e => e.id === id);
-        if (entity) {
-            this.entitiesByType[entity.type] = this.entitiesByType[entity.type].filter(e => e.id !== id);
+        const idx = this.entities.findIndex(e => e.id === id);
+        if (idx !== -1) {
+            const entity = this.entities[idx];
+            this.entities.splice(idx, 1);
+            if (this.entitiesByType[entity.type]) {
+                const typeIdx = this.entitiesByType[entity.type].findIndex(e => e.id === id);
+                if (typeIdx !== -1) {
+                    this.entitiesByType[entity.type].splice(typeIdx, 1);
+                }
+            }
         }
-        this.entities = this.entities.filter(e => e.id !== id);
     },
 
     getEntitiesByType(type) {

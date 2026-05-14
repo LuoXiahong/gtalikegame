@@ -12,12 +12,11 @@ export const MissionSystem = {
     targetLocation: null,
 
     init() {
-        this.stage = 0;
-        this.timer = 0;
-        this.timerActive = false;
-        this.targetLocation = null;
+        this.reset();
+        if (this._onNearNpc) EventBus.off('player_near_npc', this._onNearNpc);
+        if (this._onNearCar) EventBus.off('player_near_car', this._onNearCar);
 
-        EventBus.on('player_near_npc', () => {
+        this._onNearNpc = () => {
             if (this.stage === 0) {
                 this.stage = 1;
                 this.timer = 45;
@@ -25,9 +24,10 @@ export const MissionSystem = {
                 EventBus.emit('mission_update', 'Mission: Go to Car');
                 EventBus.emit('audio_play', 'beep');
             }
-        });
+        };
+        EventBus.on('player_near_npc', this._onNearNpc);
 
-        EventBus.on('player_near_car', () => {
+        this._onNearCar = () => {
             if (this.stage === 1) {
                 this.stage = 2;
                 this.timer = 60;
@@ -36,10 +36,18 @@ export const MissionSystem = {
                 EventBus.emit('mission_update', 'Mission: Deliver Car to Safehouse');
                 EventBus.emit('audio_play', 'beep');
             }
-        });
+        };
+        EventBus.on('player_near_car', this._onNearCar);
 
         // Stan początkowy
         setTimeout(() => EventBus.emit('mission_update', 'Mission: Find NPC'), 100);
+    },
+
+    reset() {
+        this.stage = 0;
+        this.timer = 0;
+        this.timerActive = false;
+        this.targetLocation = null;
     },
 
     update(dt) {

@@ -12,13 +12,18 @@ export const WantedSystem = {
     lastIncidentTime: 0,
 
     init() {
+        this.reset();
+        if (this._onNpcHit) EventBus.off('npc_hit', this._onNpcHit);
+        this._onNpcHit = () => {
+            this.handleIncident();
+        };
+        EventBus.on('npc_hit', this._onNpcHit);
+    },
+
+    reset() {
         this.stars = 0;
         this.timer = 0;
         this.lastIncidentTime = -9999;
-
-        EventBus.on('npc_hit', () => {
-            this.handleIncident();
-        });
     },
 
     handleIncident() {
@@ -43,7 +48,7 @@ export const WantedSystem = {
                 } else {
                     this.timer = 0;
                 }
-                
+
                 EventBus.emit('wanted_level_change', { stars: this.stars });
                 if (this.stars === 0) {
                     EventBus.emit('wanted_reset');

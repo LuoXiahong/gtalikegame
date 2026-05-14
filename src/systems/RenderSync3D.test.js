@@ -187,4 +187,13 @@ describe('RenderSync3D', () => {
         expect(mockScene.remove).toHaveBeenCalled();
         expect(RenderSync3D.targetMesh).toBeNull();
     });
+
+    it('should reset meshes and targetMesh correctly', () => {
+        RenderSync3D.meshes.set('e1', { traverse: vi.fn() });
+        RenderSync3D.targetMesh = { traverse: vi.fn() };
+        RenderSync3D.reset(mockScene);
+        expect(RenderSync3D.meshes.size).toBe(0);
+        expect(RenderSync3D.targetMesh).toBeNull();
+        expect(mockScene.remove).toHaveBeenCalledTimes(2);
+    });
 });

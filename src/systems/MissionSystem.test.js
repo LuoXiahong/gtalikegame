@@ -63,4 +63,15 @@ describe('MissionSystem', () => {
         expect(MissionSystem.stage).toBe(3);
         expect(MissionSystem.timerActive).toBe(false);
     });
+
+    it('should reset state correctly', () => {
+        MissionSystem.stage = 2;
+        MissionSystem.timer = 10;
+        MissionSystem.timerActive = true;
+        MissionSystem.targetLocation = {};
+        MissionSystem.reset();
+        expect(MissionSystem.stage).toBe(0);
+        expect(MissionSystem.timerActive).toBe(false);
+        expect(MissionSystem.targetLocation).toBeNull();
+    });
 });

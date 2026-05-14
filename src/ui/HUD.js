@@ -32,6 +32,7 @@ export const UISystem = {
     showSpeed: false,
 
     init() {
+        this.lastStateHash = null;
         this.layer = document.getElementById('uiLayer');
         this.minimapCanvas = document.getElementById('minimap');
         this.minimapCtx = this.minimapCanvas ? this.minimapCanvas.getContext('2d') : null;
@@ -96,6 +97,11 @@ export const UISystem = {
     },
 
     updateDOM() {
+        const kmh = Math.round(this.speedValue * 0.3);
+        const stateHash = `${this.missionText}|${this.currentDialogue}|${this.actionHint}|${this.wantedStars}|${this.isBlinking}|${this.showSpeed}|${kmh}`;
+        if (this.lastStateHash === stateHash) return;
+        this.lastStateHash = stateHash;
+
         let html = '';
         const shadowStyle = 'text-shadow: 0 2px 4px rgba(0,0,0,0.85);';
         const glassStyle = 'background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(4px); box-shadow: 0 4px 6px rgba(0,0,0,0.3);';
@@ -121,8 +127,6 @@ export const UISystem = {
             html += `<div style="position:absolute; top:20px; right:25px; font-size:30px; letter-spacing:3px; color:${color}; ${shadowStyle} transition: color 0.15s;">${starsHtml}</div>`;
         }
         if (this.showSpeed) {
-            // Zamieniamy speed z px/s na fikcyjne km/h (np. 500 maxSpeed -> ~150 km/h)
-            const kmh = Math.round(this.speedValue * 0.3);
             html += `<div id="speedometer" style="position:absolute; bottom:25px; left:25px; font-size:24px; font-weight:bold; color:#2ecc71; font-family: monospace; letter-spacing:1px; ${shadowStyle}">${kmh} KM/H</div>`;
         }
         this.layer.innerHTML = html;

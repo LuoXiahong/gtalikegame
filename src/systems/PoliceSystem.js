@@ -12,22 +12,31 @@ export const PoliceSystem = {
     isActive: false,
 
     init() {
-        this.policeCars = [];
-        this.isActive = false;
+        this.reset();
+        if (this._onWantedChange) EventBus.off('wanted_level_change', this._onWantedChange);
+        if (this._onWantedReset) EventBus.off('wanted_reset', this._onWantedReset);
 
-        EventBus.on('wanted_level_change', ({ stars }) => {
+        this._onWantedChange = ({ stars }) => {
             if (stars >= 2) {
                 this.isActive = true;
             } else {
                 this.isActive = false;
                 this.despawnAll();
             }
-        });
+        };
+        EventBus.on('wanted_level_change', this._onWantedChange);
 
-        EventBus.on('wanted_reset', () => {
+        this._onWantedReset = () => {
             this.isActive = false;
             this.despawnAll();
-        });
+        };
+        EventBus.on('wanted_reset', this._onWantedReset);
+    },
+
+    reset() {
+        this.despawnAll();
+        this.policeCars = [];
+        this.isActive = false;
     },
 
     spawnPoliceIfNeeded() {

@@ -85,4 +85,14 @@ describe('World', () => {
         expect(npcs).toContain(entity3);
         expect(npcs).not.toContain(entity1);
     });
+
+    it('should reset state correctly', () => {
+        World.entities = [{}];
+        World.entitiesByType = { npc: [{}] };
+        World.buildings = [{}];
+        World.reset();
+        expect(World.entities.length).toBe(0);
+        expect(Object.keys(World.entitiesByType).length).toBe(0);
+        expect(World.buildings.length).toBe(0);
+    });
 });

@@ -7,6 +7,18 @@ import { InputSystem } from '../input/InputManager.js';
 import { VehicleSystem } from './VehicleSystem.js';
 
 export const InteractionSystem = {
+    lastDialogue: undefined,
+    lastHint: undefined,
+    lastNearNPC: undefined,
+    lastNearCar: undefined,
+
+    reset() {
+        this.lastDialogue = undefined;
+        this.lastHint = undefined;
+        this.lastNearNPC = undefined;
+        this.lastNearCar = undefined;
+    },
+
     update() {
         const players = World.getEntitiesByType('player');
         if (players.length === 0) return;
@@ -38,7 +50,7 @@ export const InteractionSystem = {
         }
 
         const npcs = World.getEntitiesByType('npc');
-        let npcInZone = false;
+        let nearNPCId = null;
 
         npcs.forEach(npc => {
             const dx = p.transform.x - npc.transform.x;
@@ -46,12 +58,20 @@ export const InteractionSystem = {
             const dist = Math.sqrt(dx * dx + dy * dy);
 
             if (dist < p.interactionRadius) {
-                npcInZone = true;
-                EventBus.emit('player_near_npc', { npcId: npc.id });
+                nearNPCId = npc.id;
             }
         });
 
-        EventBus.emit('ui_show_dialogue', npcInZone ? 'NPC: Hej!' : null);
+        if (nearNPCId && nearNPCId !== this.lastNearNPC) {
+            EventBus.emit('player_near_npc', { npcId: nearNPCId });
+        }
+        this.lastNearNPC = nearNPCId;
+
+        const dialogue = nearNPCId ? 'NPC: Hej!' : null;
+        if (dialogue !== this.lastDialogue) {
+            EventBus.emit('ui_show_dialogue', dialogue);
+            this.lastDialogue = dialogue;
+        }
 
         const cars = World.getEntitiesByType('car');
         let carInZone = null;
@@ -63,17 +83,28 @@ export const InteractionSystem = {
 
             if (dist < 150) { // Zwiększony promień dla aut
                 carInZone = car;
-                EventBus.emit('player_near_car', { carId: car.id });
             }
         });
 
         if (carInZone) {
-            EventBus.emit('ui_show_action_hint', 'Naciśnij F aby wsiąść');
+            if (carInZone.id !== this.lastNearCar) {
+                EventBus.emit('player_near_car', { carId: carInZone.id });
+                this.lastNearCar = carInZone.id;
+            }
+            const hint = 'Naciśnij F aby wsiąść';
+            if (hint !== this.lastHint) {
+                EventBus.emit('ui_show_action_hint', hint);
+                this.lastHint = hint;
+            }
             if (isActionPressed) {
                 EventBus.emit('enter_vehicle', { player: p, car: carInZone });
             }
         } else {
-            EventBus.emit('ui_show_action_hint', null);
+            this.lastNearCar = null;
+            if (this.lastHint !== null) {
+                EventBus.emit('ui_show_action_hint', null);
+                this.lastHint = null;
+            }
         }
     }
 };

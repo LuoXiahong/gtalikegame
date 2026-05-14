@@ -12,7 +12,10 @@ export const TrafficSystem = {
     despawnRadius: 1200,
     
     update(dt) {
-        const trafficCars = World.getEntitiesByType('car').filter(c => c.ai && c.ai.type === 'traffic');
+        this.cachedCarsAndPlayers = World.entities.filter(e => e.type === 'car' || e.type === 'player');
+        this.cachedCars = World.getEntitiesByType('car');
+
+        const trafficCars = this.cachedCars.filter(c => c.ai && c.ai.type === 'traffic');
         const player = World.getEntitiesByType('player')[0];
         
         // Despawn vehicles too far from player
@@ -35,6 +38,9 @@ export const TrafficSystem = {
         }
         
         remainingCars.forEach(car => this.updateCar(car, dt));
+
+        this.cachedCarsAndPlayers = null;
+        this.cachedCars = null;
     },
     
     spawnRandomCar() {
@@ -105,8 +111,9 @@ export const TrafficSystem = {
 
         
         // 1. Avoid other vehicles and the player
-        const others = World.entities.filter(e => e !== car && (e.type === 'car' || e.type === 'player'));
+        const others = this.cachedCarsAndPlayers || World.entities.filter(e => e.type === 'car' || e.type === 'player');
         for (const other of others) {
+            if (other === car) continue;
             const odx = other.transform.x - car.transform.x;
             const ody = other.transform.y - car.transform.y;
             const distSq = odx * odx + ody * ody;
@@ -191,8 +198,9 @@ export const TrafficSystem = {
         
         // Check if avoidance trigger is needed
         if (car.ai.avoidTimer === 0) {
-            const others = World.entities.filter(e => e !== car && e.type === 'car');
+            const others = this.cachedCars || World.getEntitiesByType('car');
             for (const other of others) {
+                if (other === car) continue;
                 const odx = other.transform.x - car.transform.x;
                 const ody = other.transform.y - car.transform.y;
                 const odistSq = odx * odx + ody * ody;
@@ -260,8 +268,9 @@ export const TrafficSystem = {
         
         // B. Vehicle/Player collisions
         if (!collisionOccurred) {
-            const others = World.entities.filter(e => e !== car && (e.type === 'car' || e.type === 'player'));
+            const others = this.cachedCarsAndPlayers || World.entities.filter(e => e.type === 'car' || e.type === 'player');
             for (const other of others) {
+                if (other === car) continue;
                 const ohw = other.transform.width / 2;
                 const ohh = other.transform.height / 2;
                 

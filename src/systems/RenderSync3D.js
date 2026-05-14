@@ -14,6 +14,22 @@ export const RenderSync3D = {
     meshes: new Map(), // entityId -> THREE.Object3D
     targetMesh: null,  // Mission target golden circle
 
+    reset(scene) {
+        if (scene) {
+            for (const [id, mesh] of this.meshes.entries()) {
+                scene.remove(mesh);
+                this.disposeHierarchy(mesh);
+            }
+            if (this.targetMesh) {
+                scene.remove(this.targetMesh);
+                this.disposeHierarchy(this.targetMesh);
+                this.targetMesh = null;
+            }
+        }
+        this.meshes.clear();
+        this.targetMesh = null;
+    },
+
     /**
      * Main sync step invoked each frame before rendering the 3D scene.
      * @param {THREE.Scene} scene - The active 3D Scene

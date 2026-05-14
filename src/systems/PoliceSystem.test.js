@@ -82,4 +82,12 @@ describe('PoliceSystem', () => {
         const expectedVelX = Math.cos(police.transform.angle) * police.physics.speed * dt;
         expect(police.physics.velX).toBeCloseTo(expectedVelX);
     });
+
+    it('should reset state correctly', () => {
+        PoliceSystem.isActive = true;
+        PoliceSystem.policeCars = [{}];
+        PoliceSystem.reset();
+        expect(PoliceSystem.isActive).toBe(false);
+        expect(PoliceSystem.policeCars.length).toBe(0);
+    });
 });

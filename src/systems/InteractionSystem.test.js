@@ -55,6 +55,7 @@ describe('InteractionSystem', () => {
             return [];
         });
 
+        InteractionSystem.reset();
         vi.spyOn(EventBus, 'emit');
     });
 
