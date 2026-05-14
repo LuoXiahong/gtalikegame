@@ -294,14 +294,11 @@ export const RenderSystem3D = {
             this.createDashedLine(1900 * SF, rz * SF, 2400 * SF, rz * SF, false);
         });
 
-        // E. Generate pedestrian zebra crossings
+        // E. Generate pedestrian zebra crossings (Optimized intersection placement)
         this.zebras = [];
         roads.forEach(cx => {
             roads.forEach(cz => {
-                this.createZebra(cx * SF, (cz - 110) * SF, true);  // North
-                this.createZebra(cx * SF, (cz + 110) * SF, true);  // South
-                this.createZebra((cx - 110) * SF, cz * SF, false); // West
-                this.createZebra((cx + 110) * SF, cz * SF, false); // East
+                this.createZebra(cx * SF, cz * SF);
             });
         });
 
@@ -385,22 +382,16 @@ export const RenderSystem3D = {
         this.laneMarkings.push(mesh);
     },
 
-    createZebra(cx, cz, isVerticalRoad) {
+    createZebra(targetX, targetZ, isVerticalRoad = true) {
         const SF = WorldMetrics.SCALE_FACTOR;
 
-        // Find nearest intersection center among (110, 110), (110, 180), (180, 110), (180, 180)
-        const targetX = Math.abs(cx - 110) < Math.abs(cx - 180) ? 110 : 180;
-        const targetZ = Math.abs(cz - 110) < Math.abs(cz - 180) ? 110 : 180;
-
-        const key = `${targetX},${targetZ}`;
-        if (!this.createdIntersections) {
-            this.createdIntersections = new Set();
-        }
-
-        if (this.createdIntersections.has(key)) {
+        const key = `${targetX.toFixed(2)},${targetZ.toFixed(2)}`;
+        if (this.createdIntersections && this.createdIntersections.has(key)) {
             return;
         }
-        this.createdIntersections.add(key);
+        if (this.createdIntersections) {
+            this.createdIntersections.add(key);
+        }
 
         const width = WorldGrid.STREET_WIDTH * SF;
         const geom = new THREE.PlaneGeometry(width, width);

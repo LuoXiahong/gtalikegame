@@ -19,6 +19,7 @@ describe('World', () => {
     beforeEach(() => {
         // Reset World state
         World.entities = [];
+        World.entitiesByType = {};
         World.buildings = [];
         World.tilemap = null;
         World.decals = null;
