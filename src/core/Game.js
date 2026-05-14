@@ -1,7 +1,7 @@
 /**
- * CORE: Game - Engine Orchestrator
- * Initializes systems, handles entity creation, and runs the main game loop.
- */
+* CORE: Game - Engine Orchestrator
+* Initializes systems, handles entity creation, and runs the main game loop.
+*/
 import { Time } from './Time.js';
 import { EventBus } from './EventBus.js';
 import { World } from '../world/World.js';
@@ -28,6 +28,7 @@ import { Car } from '../entities/Car.js';
 
 import { GameState, GAME_STATES } from './GameState.js';
 import { MenuScreen } from '../ui/MenuScreen.js';
+import { KeyboardHelpOverlay } from '../ui/KeyboardHelpOverlay.js';
 
 export const Game = {
     is3D: true,
@@ -56,6 +57,7 @@ export const Game = {
         WantedSystem.init();
         PoliceSystem.init();
         AISystem.init();
+        KeyboardHelpOverlay.init();
 
         // Spawn player at start intersection
         const p1 = new Player(1100, 1100);
@@ -65,15 +67,15 @@ export const Game = {
 
         // Spawn 10 starting NPCs on sidewalks around the 3x3 grid
         const npcConfigs = [
-            { id: 'npc1', x: 1000, y: 1000, color: '#8e44ad' }, 
-            { id: 'npc2', x: 1200, y: 1000, color: '#27ae60' }, 
-            { id: 'npc3', x: 1000, y: 1200, color: '#c0392b' }, 
-            { id: 'npc4', x: 1200, y: 1200, color: '#f1c40f' }, 
-            { id: 'npc5', x: 1700, y: 1000, color: '#e67e22' }, 
-            { id: 'npc6', x: 1900, y: 1000, color: '#1abc9c' }, 
-            { id: 'npc7', x: 1000, y: 1700, color: '#9b59b6' }, 
-            { id: 'npc8', x: 1200, y: 1700, color: '#3498db' }, 
-            { id: 'npc9', x: 1700, y: 1700, color: '#e74c3c' }, 
+            { id: 'npc1', x: 1000, y: 1000, color: '#8e44ad' },
+            { id: 'npc2', x: 1200, y: 1000, color: '#27ae60' },
+            { id: 'npc3', x: 1000, y: 1200, color: '#c0392b' },
+            { id: 'npc4', x: 1200, y: 1200, color: '#f1c40f' },
+            { id: 'npc5', x: 1700, y: 1000, color: '#e67e22' },
+            { id: 'npc6', x: 1900, y: 1000, color: '#1abc9c' },
+            { id: 'npc7', x: 1000, y: 1700, color: '#9b59b6' },
+            { id: 'npc8', x: 1200, y: 1700, color: '#3498db' },
+            { id: 'npc9', x: 1700, y: 1700, color: '#e74c3c' },
             { id: 'npc10', x: 1900, y: 1700, color: '#2ecc71' }
         ];
 

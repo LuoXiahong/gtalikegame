@@ -2,13 +2,14 @@
  * ZARZĄDZANIE WEJŚCIEM (Input System)
  */
 export const InputSystem = {
-    keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false, debugAI: false, viewToggle: false, zoomToggle: false },
+    keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false, debugAI: false, viewToggle: false, zoomToggle: false, help: false },
     actionJustPressed: false,
     shootJustPressed: false,
     explodeJustPressed: false,
     debugAIJustPressed: false,
     viewToggleJustPressed: false,
     zoomToggleJustPressed: false,
+    helpJustPressed: false,
 
     init() {
         window.addEventListener("keydown", (e) => {
@@ -53,6 +54,11 @@ export const InputSystem = {
             if (state && !this.keys.zoomToggle) this.zoomToggleJustPressed = true;
             this.keys.zoomToggle = state;
         }
+        // Slash (/) i Shift+Slash (?) — pomoc; NIE blokujemy propagacji (overlay obsługuje sam)
+        if (code === "Slash") {
+            if (state && !this.keys.help) this.helpJustPressed = true;
+            this.keys.help = state;
+        }
     },
 
     consumeDebugAI() {
@@ -91,6 +97,12 @@ export const InputSystem = {
         return pressed;
     },
 
+    consumeHelp() {
+        const pressed = this.helpJustPressed;
+        this.helpJustPressed = false;
+        return pressed;
+    },
+
     resetAll() {
         for (const key in this.keys) {
             this.keys[key] = false;
@@ -101,6 +113,7 @@ export const InputSystem = {
         this.debugAIJustPressed = false;
         this.viewToggleJustPressed = false;
         this.zoomToggleJustPressed = false;
+        this.helpJustPressed = false;
     },
 
     bindHUD(elementId, keyName) {
