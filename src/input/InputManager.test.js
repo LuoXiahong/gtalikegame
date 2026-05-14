@@ -14,9 +14,9 @@ describe('InputSystem', () => {
         expect(InputSystem.keys.right).toBe(false);
     });
 
-    it('should trigger debugAIJustPressed on KeyD keydown', () => {
-        InputSystem.setKey('KeyD', true);
-        expect(InputSystem.keys.right).toBe(true);
+    it('should trigger debugAIJustPressed on Backquote keydown', () => {
+        InputSystem.setKey('Backquote', true);
+        expect(InputSystem.keys.debugAI).toBe(true);
         expect(InputSystem.debugAIJustPressed).toBe(true);
 
         // consume should return true and reset it

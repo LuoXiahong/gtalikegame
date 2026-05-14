@@ -39,4 +39,30 @@ describe('EventBus', () => {
             EventBus.emit('nonExistentEvent', { data: 123 });
         }).not.toThrow();
     });
+
+    it('should unregister a listener using off', () => {
+        const callback1 = vi.fn();
+        const callback2 = vi.fn();
+
+        EventBus.on('testEvent', callback1);
+        EventBus.on('testEvent', callback2);
+
+        EventBus.off('testEvent', callback1);
+
+        EventBus.emit('testEvent', { a: 1 });
+
+        expect(callback1).not.toHaveBeenCalled();
+        expect(callback2).toHaveBeenCalledTimes(1);
+
+        EventBus.off('testEvent', callback2);
+        expect(EventBus.listeners['testEvent']).toBeUndefined();
+    });
+
+    it('should clear all listeners using clear', () => {
+        const callback = vi.fn();
+        EventBus.on('testEvent', callback);
+        EventBus.clear();
+
+        expect(Object.keys(EventBus.listeners).length).toBe(0);
+    });
 });

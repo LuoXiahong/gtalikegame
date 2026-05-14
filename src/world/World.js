@@ -59,6 +59,9 @@ export const World = {
     },
 
     getEntitiesByType(type) {
+        if (type === 'police') {
+            return (this.entitiesByType['car'] || []).filter(e => e.isPolice);
+        }
         return this.entitiesByType[type] || [];
     }
 };

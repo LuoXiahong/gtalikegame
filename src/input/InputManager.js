@@ -28,10 +28,10 @@ export const InputSystem = {
         if (code === "ArrowUp" || code === "KeyW") this.keys.up = state;
         if (code === "ArrowDown" || code === "KeyS") this.keys.down = state;
         if (code === "ArrowLeft" || code === "KeyA") this.keys.left = state;
-        if (code === "ArrowRight") this.keys.right = state;
-        if (code === "KeyD") {
-            if (state && !this.keys.right) this.debugAIJustPressed = true;
-            this.keys.right = state;
+        if (code === "ArrowRight" || code === "KeyD") this.keys.right = state;
+        if (code === "Backquote") {
+            if (state && !this.keys.debugAI) this.debugAIJustPressed = true;
+            this.keys.debugAI = state;
         }
         if (code === "KeyF") {
             if (state && !this.keys.action) this.actionJustPressed = true;

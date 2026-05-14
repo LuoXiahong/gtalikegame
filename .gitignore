@@ -9,3 +9,4 @@ build/
 # Project specific ignores as requested
 meta/
 .agents/
+src/dist/
