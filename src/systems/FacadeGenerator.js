@@ -54,42 +54,36 @@ export const FacadeGenerator = {
         const W = 256;
         const H = 256;
 
-        ctx.fillStyle = '#b2bec3';
+        ctx.fillStyle = '#9c4a3a'; // brick
         ctx.fillRect(0, 0, W, H);
 
-        // Add subtle procedural noise for organic texture (T-261)
         this.addFacadeNoise(ctx, W, H, 0.08, 0.05);
 
-        // Window grid parameters
-        const windowW = 20;
-        const windowH = 30;
-        const startX = 20;
-        const startY = 20;
-        const stepX = 40;
-        const stepY = 60;
+        const windowW = 18;
+        const windowH = 28;
+        const startX = 22;
+        const startY = 22;
+        const stepX = 42;
+        const stepY = 58;
 
         for (let y = startY; y < H; y += stepY) {
             for (let x = startX; x < W; x += stepX) {
-                // Window light variation (T-261)
                 const rand = Math.random();
-                let glassColor = '#2c3e50'; // Standard dark glass
+                let glassColor = '#1a1a18';
                 let lightColor = null;
 
-                if (rand < 0.15) {
-                    glassColor = '#111921'; // Very dark/closed blinds
-                } else if (rand < 0.30) {
-                    lightColor = '#f39c12'; // Warm orange glow
-                } else if (rand < 0.42) {
-                    lightColor = '#f1c40f'; // Golden/warm yellow
-                } else if (rand < 0.48) {
-                    lightColor = '#fff9e6'; // Bright glowing whitish yellow
+                if (rand < 0.12) {
+                    glassColor = '#0d0d0c';
+                } else if (rand < 0.28) {
+                    lightColor = '#e8c070'; // warm tungsten
+                } else if (rand < 0.36) {
+                    lightColor = '#f5e6c8';
                 }
 
                 ctx.fillStyle = glassColor;
                 ctx.fillRect(x, y, windowW, windowH);
 
-                // Window frame bevel
-                ctx.strokeStyle = '#dfe6e9';
+                ctx.strokeStyle = '#c4a882';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(x, y, windowW, windowH);
 
@@ -105,92 +99,75 @@ export const FacadeGenerator = {
         const W = 256;
         const H = 256;
 
-        ctx.fillStyle = '#2d3436';
+        // Limestone / sandstone masonry (not curtain-wall glass)
+        ctx.fillStyle = '#c4a882';
         ctx.fillRect(0, 0, W, H);
 
-        // Modern curtain-wall vertical stripes
-        const stripeW = 12;
-        const stepX = 20;
+        this.addFacadeNoise(ctx, W, H, 0.06, 0.04);
 
-        for (let x = 8; x < W; x += stepX) {
-            ctx.fillStyle = '#1b2a4a'; // Deep navy glass
-            ctx.fillRect(x, 0, stripeW, H);
+        // Punched window grid
+        const windowW = 14;
+        const windowH = 22;
+        const stepX = 28;
+        const stepY = 36;
 
-            // Horizontal floor divisions
-            ctx.fillStyle = '#34495e';
-            for (let y = 0; y < H; y += 40) {
-                ctx.fillRect(x, y, stripeW, 2);
-            }
-
-            // Random reflections & illuminated offices (T-261)
-            for (let y = 15; y < H; y += 40) {
+        for (let y = 10; y < H - 8; y += stepY) {
+            for (let x = 8; x < W - 8; x += stepX) {
                 const rand = Math.random();
-                if (rand < 0.15) {
-                    ctx.fillStyle = '#f1c40f'; // Warm yellow office light
-                    ctx.fillRect(x + 1, y, stripeW - 2, 10);
-                } else if (rand < 0.25) {
-                    ctx.fillStyle = '#fff9e6'; // Neon white office light
-                    ctx.fillRect(x + 1, y, stripeW - 2, 10);
-                } else if (rand < 0.32) {
-                    ctx.fillStyle = '#45aaf2'; // Sky reflection
-                    ctx.fillRect(x + 1, y, stripeW - 2, 12);
-                } else if (rand < 0.35) {
-                    ctx.fillStyle = '#ff4757'; // Red alert/warning beacon inside
-                    ctx.fillRect(x + 1, y, stripeW - 2, 10);
+                let glassColor = '#1a1f28';
+                if (rand < 0.12) {
+                    glassColor = '#e8c070'; // lit office
+                } else if (rand < 0.18) {
+                    glassColor = '#f5e6c8';
+                } else if (rand < 0.22) {
+                    glassColor = '#0a0a0a';
                 }
+
+                ctx.fillStyle = glassColor;
+                ctx.fillRect(x, y, windowW, windowH);
+
+                ctx.strokeStyle = '#8b7355';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, y, windowW, windowH);
             }
         }
 
-        // Fake glass sheen / gradient diagonal reflections
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.beginPath();
-        ctx.moveTo(0, 40);
-        ctx.lineTo(160, 0);
-        ctx.lineTo(210, 0);
-        ctx.lineTo(0, 100);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.moveTo(80, H);
-        ctx.lineTo(W, H - 80);
-        ctx.lineTo(W, H - 50);
-        ctx.lineTo(110, H);
-        ctx.closePath();
-        ctx.fill();
+        // Subtle horizontal string courses
+        ctx.fillStyle = 'rgba(90, 70, 45, 0.25)';
+        for (let y = stepY - 4; y < H; y += stepY) {
+            ctx.fillRect(0, y, W, 2);
+        }
     },
 
     drawShopFrontFacade(ctx) {
         const W = 256;
         const H = 256;
 
-        ctx.fillStyle = '#f5cd79';
+        ctx.fillStyle = '#d4c5a9'; // cream
         ctx.fillRect(0, 0, W, H);
 
-        // Add subtle procedural noise (T-261)
         this.addFacadeNoise(ctx, W, H, 0.08, 0.05);
 
-        // Upper floors: Office windows
         const windowW = 18;
         const windowH = 26;
         for (let y = 20; y < 140; y += 50) {
             for (let x = 20; x < W; x += 40) {
                 const rand = Math.random();
-                let glassColor = '#4b6584';
+                let glassColor = '#1a1f28';
                 let lightColor = null;
 
                 if (rand < 0.15) {
-                    glassColor = '#1e272e'; // Dark/closed window
+                    glassColor = '#0d0d0c';
                 } else if (rand < 0.30) {
-                    lightColor = '#fed330'; // Golden yellow light
-                } else if (rand < 0.40) {
-                    lightColor = '#f39c12'; // Warm orange light
+                    lightColor = '#e8c070';
+                } else if (rand < 0.38) {
+                    lightColor = '#f5e6c8';
                 }
 
                 ctx.fillStyle = glassColor;
                 ctx.fillRect(x, y, windowW, windowH);
 
-                ctx.strokeStyle = '#f1f2f6';
+                ctx.strokeStyle = '#8b7355';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(x, y, windowW, windowH);
 
@@ -201,39 +178,36 @@ export const FacadeGenerator = {
             }
         }
 
-        // Storefront awning (striped retro style)
+        // Storefront awning — deep burgundy with cream stripes (period, not neon)
         const awningY = 150;
         const awningH = 15;
-        ctx.fillStyle = '#eb4d4b';
+        ctx.fillStyle = '#5c1a1a';
         ctx.fillRect(5, awningY, W - 10, awningH);
 
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = '#d4c5a9';
         for (let x = 10; x < W - 10; x += 20) {
             ctx.fillRect(x, awningY, 10, awningH);
         }
 
-        // Awning dropshadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.fillRect(0, awningY + awningH, W, 4);
 
-        // Ground floor: Storefront display windows
         const groundY = 175;
         const groundH = 81;
 
         for (let x = 12; x < W; x += 80) {
             const glassW = 68;
             const glassH = groundH - 12;
-            ctx.fillStyle = '#1e272e';
+            ctx.fillStyle = '#1a1a18';
             ctx.fillRect(x, groundY, glassW, glassH);
 
-            ctx.strokeStyle = '#718093';
+            ctx.strokeStyle = '#6b5a40';
             ctx.lineWidth = 2;
             ctx.strokeRect(x, groundY, glassW, glassH);
 
-            // Illuminated interior glow
             const grad = ctx.createLinearGradient(0, groundY + 20, 0, groundY + glassH);
             grad.addColorStop(0, 'rgba(0,0,0,0)');
-            grad.addColorStop(1, 'rgba(255,255,255,0.15)');
+            grad.addColorStop(1, 'rgba(232,192,112,0.12)');
             ctx.fillStyle = grad;
             ctx.fillRect(x + 2, groundY + 2, glassW - 4, glassH - 4);
         }
@@ -243,33 +217,31 @@ export const FacadeGenerator = {
         const W = 256;
         const H = 256;
 
-        ctx.fillStyle = '#f5cd79';
+        ctx.fillStyle = '#d4c5a9';
         ctx.fillRect(0, 0, W, H);
 
-        // Add subtle procedural noise (T-261)
         this.addFacadeNoise(ctx, W, H, 0.08, 0.05);
 
-        // Regular upper-floor windows on shop sides
         const windowW = 18;
         const windowH = 26;
         for (let y = 20; y < H - 40; y += 50) {
             for (let x = 20; x < W; x += 40) {
                 const rand = Math.random();
-                let glassColor = '#4b6584';
+                let glassColor = '#1a1f28';
                 let lightColor = null;
 
                 if (rand < 0.15) {
-                    glassColor = '#1e272e'; // Dark/closed window
+                    glassColor = '#0d0d0c';
                 } else if (rand < 0.30) {
-                    lightColor = '#fed330'; // Golden yellow light
-                } else if (rand < 0.40) {
-                    lightColor = '#f39c12'; // Warm orange light
+                    lightColor = '#e8c070';
+                } else if (rand < 0.38) {
+                    lightColor = '#f5e6c8';
                 }
 
                 ctx.fillStyle = glassColor;
                 ctx.fillRect(x, y, windowW, windowH);
 
-                ctx.strokeStyle = '#f1f2f6';
+                ctx.strokeStyle = '#8b7355';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(x, y, windowW, windowH);
 

@@ -41,11 +41,16 @@ canvas {
     position: absolute;
     bottom: 20px;
     left: 20px;
-    display: grid;
+    display: none; /* shown only when UISettings + PLAY — not on desktop by default */
     grid-template-columns: 60px 60px 60px 80px;
     grid-template-rows: 60px 60px 60px;
     gap: 5px;
     z-index: 10;
+    pointer-events: auto;
+}
+
+#mobileHUD.is-visible {
+    display: grid;
 }
 
 .hud-btn {

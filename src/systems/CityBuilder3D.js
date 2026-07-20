@@ -15,7 +15,7 @@ export const CityBuilder3D = {
 
         // A. Ground plane
         const groundGeom = new THREE.PlaneGeometry(width, height);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x556b2f, roughness: 0.9, metalness: 0.1 });
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x4a5a3a, roughness: 0.92, metalness: 0.05 });
         renderSystem.groundPlane = new THREE.Mesh(groundGeom, groundMat);
         renderSystem.groundPlane.rotation.x = -Math.PI / 2;
         renderSystem.groundPlane.position.set(width / 2, 0, height / 2);
@@ -37,8 +37,8 @@ export const CityBuilder3D = {
         renderSystem.buildings = [];
         const shops = [];
 
-        const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x95a5a6, roughness: 0.9, metalness: 0.1 });
-        const buildingZoneMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.9, metalness: 0.1 });
+        const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x8a8478, roughness: 0.92, metalness: 0.05 });
+        const buildingZoneMat = new THREE.MeshStandardMaterial({ color: 0x6b6558, roughness: 0.92, metalness: 0.05 });
 
         for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
             for (let c = 0; c < WorldGrid.GRID_COLS; c++) {
@@ -148,42 +148,41 @@ export const CityBuilder3D = {
         group.add(shadowMesh);
 
         if (type === 'skyscraper') {
-            const baseHeight = height * 0.75;
-            const topHeight = height * 0.25;
+            // Art Deco "wedding cake": stacked setbacks, each smaller than the last
+            const tiers = [
+                { heightRatio: 0.38, scale: 1.00, color: 0xc4a882 }, // sandstone base
+                { heightRatio: 0.26, scale: 0.82, color: 0xb8956c },
+                { heightRatio: 0.20, scale: 0.64, color: 0xa8845a },
+                { heightRatio: 0.16, scale: 0.46, color: 0x8b7355 }  // darker crown
+            ];
 
-            const baseGeom = new THREE.BoxGeometry(width, baseHeight, depth);
-            const baseMats = this.getBuildingMaterials('skyscraper', width, baseHeight, depth, 0x2d3436);
-            const base = new THREE.Mesh(baseGeom, baseMats);
-            base.position.y = baseHeight / 2;
-            base.castShadow = true;
-            base.receiveShadow = true;
-            group.add(base);
+            let yCursor = 0;
+            tiers.forEach(tier => {
+                const tierH = height * tier.heightRatio;
+                const tierW = width * tier.scale;
+                const tierD = depth * tier.scale;
+                const geom = new THREE.BoxGeometry(tierW, tierH, tierD);
+                const mats = this.getBuildingMaterials('skyscraper', tierW, tierH, tierD, tier.color);
+                const mesh = new THREE.Mesh(geom, mats);
+                mesh.position.y = yCursor + tierH / 2;
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add(mesh);
 
-            const topGeom = new THREE.BoxGeometry(width * 0.75, topHeight, depth * 0.75);
-            const topMats = this.getBuildingMaterials('skyscraper', width * 0.75, topHeight, depth * 0.75, 0x353b48);
-            const topMesh = new THREE.Mesh(topGeom, topMats);
-            topMesh.position.y = baseHeight + topHeight / 2;
-            topMesh.castShadow = true;
-            topMesh.receiveShadow = true;
-            group.add(topMesh);
+                const edges = new THREE.EdgesGeometry(geom);
+                const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x3d2e1f }));
+                line.position.y = mesh.position.y;
+                group.add(line);
 
-            const edgesBase = new THREE.EdgesGeometry(baseGeom);
-            const lineBase = new THREE.LineSegments(edgesBase, new THREE.LineBasicMaterial({ color: 0x111111 }));
-            lineBase.position.y = baseHeight / 2;
-            group.add(lineBase);
-
-            const edgesTop = new THREE.EdgesGeometry(topGeom);
-            const lineTop = new THREE.LineSegments(edgesTop, new THREE.LineBasicMaterial({ color: 0x111111 }));
-            lineTop.position.y = baseHeight + topHeight / 2;
-            group.add(lineTop);
-
-            roofWidth = width * 0.75;
-            roofDepth = depth * 0.75;
+                roofWidth = tierW;
+                roofDepth = tierD;
+                yCursor += tierH;
+            });
             roofY = height;
 
         } else if (type === 'residential') {
             const bodyGeom = new THREE.BoxGeometry(width, height, depth);
-            const bodyMats = this.getBuildingMaterials('residential', width, height, depth, 0xb2bec3);
+            const bodyMats = this.getBuildingMaterials('residential', width, height, depth, 0x9c4a3a); // brick
             const body = new THREE.Mesh(bodyGeom, bodyMats);
             body.position.y = height / 2;
             body.castShadow = true;
@@ -191,13 +190,13 @@ export const CityBuilder3D = {
             group.add(body);
 
             const edges = new THREE.EdgesGeometry(bodyGeom);
-            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x222222 }));
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x3d2218 }));
             line.position.y = height / 2;
             group.add(line);
 
         } else if (type === 'shop') {
             const bodyGeom = new THREE.BoxGeometry(width, height, depth);
-            const bodyMats = this.getBuildingMaterials('shop', width, height, depth, 0xf5cd79);
+            const bodyMats = this.getBuildingMaterials('shop', width, height, depth, 0xd4c5a9); // cream
             const body = new THREE.Mesh(bodyGeom, bodyMats);
             body.position.y = height / 2;
             body.castShadow = true;
@@ -205,7 +204,7 @@ export const CityBuilder3D = {
             group.add(body);
 
             const edges = new THREE.EdgesGeometry(bodyGeom);
-            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x444444 }));
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x5c4a32 }));
             line.position.y = height / 2;
             group.add(line);
         }
@@ -262,7 +261,7 @@ export const CityBuilder3D = {
             map: texture,
             color: color,
             roughness: 0.8,
-            metalness: textureType === 'skyscraper' ? 0.25 : 0.1
+            metalness: textureType === 'skyscraper' ? 0.08 : 0.05
         });
     },
 
@@ -389,12 +388,15 @@ export const CityBuilder3D = {
         billboardGroup.add(boardLine);
 
         const posterGeom = new THREE.PlaneGeometry(4.6, 2.1);
-        const posterColors = [0xe74c3c, 0x9b59b6, 0xf1c40f, 0xe67e22, 0x1abc9c, 0xe84393];
-        const randomColor = posterColors[Math.floor(Math.random() * posterColors.length)];
+        // Neon is the only allowed period color accent
+        const neonPosterColors = [0xff2d55, 0xffaa00, 0x00e5ff, 0xff0044];
+        const randomColor = neonPosterColors[Math.floor(Math.random() * neonPosterColors.length)];
         const posterMat = new THREE.MeshStandardMaterial({
             color: randomColor,
-            roughness: 0.8,
-            metalness: 0.0,
+            emissive: randomColor,
+            emissiveIntensity: 0.45,
+            roughness: 0.55,
+            metalness: 0.15,
             side: THREE.DoubleSide
         });
 

@@ -94,7 +94,7 @@ describe('TrafficSystem', () => {
         TrafficSystem.spawnRadius = 0;
         TrafficSystem.update(0.1);
         const car = World.getEntitiesByType('car')[0];
-        const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
+        const colors = ['#1a1a1a', '#5c1a1a', '#1a3a2a', '#1a2744', '#d4c5a9', '#3d2e1f'];
         expect(colors).toContain(car.visual.color);
     });
 

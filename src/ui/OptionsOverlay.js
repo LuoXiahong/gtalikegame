@@ -1,9 +1,10 @@
 /**
  * UI: OptionsOverlay
- * Panel opcji efektu retro (kinoskop). Otwierany klawiszem O.
+ * Panel opcji (sterowanie + efekt retro). Otwierany klawiszem O.
  */
 import { RetroFilmSettings, RETRO_PARAM_KEYS } from '../systems/RetroFilmSettings.js';
 import { EventBus } from '../core/EventBus.js';
+import { UISettings } from './UISettings.js';
 
 const SLIDERS = [
     { key: 'intensity', label: 'Intensywność', min: 0, max: 100 },
@@ -77,17 +78,37 @@ const CSS = `
     margin-right: 8px;
     vertical-align: middle;
 }
+.options-section {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    margin: 18px 0 10px 0;
+}
+.options-section:first-of-type {
+    margin-top: 0;
+}
 .options-toggle-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 16px;
-    padding-bottom: 14px;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
     border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 .options-toggle-row label {
     font-size: 14px;
     color: rgba(255,255,255,0.85);
+    line-height: 1.35;
+}
+.options-toggle-hint {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.35);
+    margin-top: 2px;
 }
 .options-control {
     margin-bottom: 12px;
@@ -146,8 +167,11 @@ export const OptionsOverlay = {
     _valueEls: null,
     _rangeEls: null,
     _enabledEl: null,
+    _onScreenControlsEl: null,
 
     init() {
+        UISettings.init();
+
         const style = document.createElement('style');
         style.textContent = CSS;
         document.head.appendChild(style);
@@ -160,22 +184,53 @@ export const OptionsOverlay = {
 
         const title = document.createElement('div');
         title.id = 'optionsTitle';
-        title.textContent = 'Opcje — efekt retro';
+        title.textContent = 'Opcje';
+
+        // --- Sterowanie ---
+        const controlsSection = document.createElement('div');
+        controlsSection.className = 'options-section';
+        controlsSection.textContent = 'Sterowanie';
+
+        const controlsToggle = document.createElement('div');
+        controlsToggle.className = 'options-toggle-row';
+        controlsToggle.innerHTML = `
+            <label for="opt_onscreen_controls">
+                Przyciski WASD / F na ekranie
+                <span class="options-toggle-hint">Domyślnie wyłączone na desktopie</span>
+            </label>
+            <input type="checkbox" id="opt_onscreen_controls" />
+        `;
+        this._onScreenControlsEl = controlsToggle.querySelector('#opt_onscreen_controls');
+        this._onScreenControlsEl.checked = UISettings.getOnScreenControls();
+        this._onScreenControlsEl.addEventListener('change', () => {
+            UISettings.setOnScreenControls(this._onScreenControlsEl.checked);
+            EventBus.emit('ui_settings_change', {
+                showOnScreenControls: UISettings.showOnScreenControls,
+            });
+        });
+
+        // --- Retro ---
+        const filmSection = document.createElement('div');
+        filmSection.className = 'options-section';
+        filmSection.textContent = 'Efekt taśmy filmowej';
 
         const toggleRow = document.createElement('div');
         toggleRow.className = 'options-toggle-row';
         toggleRow.innerHTML = `
-            <label for="opt_enabled">Efekt taśmy filmowej</label>
+            <label for="opt_enabled">Włącz efekt</label>
             <input type="checkbox" id="opt_enabled" />
         `;
         this._enabledEl = toggleRow.querySelector('#opt_enabled');
         this._enabledEl.checked = RetroFilmSettings.enabled;
         this._enabledEl.addEventListener('change', () => {
             RetroFilmSettings.set('enabled', this._enabledEl.checked);
-            this._notify();
+            this._notifyRetro();
         });
 
         panel.appendChild(title);
+        panel.appendChild(controlsSection);
+        panel.appendChild(controlsToggle);
+        panel.appendChild(filmSection);
         panel.appendChild(toggleRow);
 
         this._valueEls = {};
@@ -202,7 +257,7 @@ export const OptionsOverlay = {
                     RetroFilmSettings.set('enabled', true);
                     this._enabledEl.checked = true;
                 }
-                this._notify();
+                this._notifyRetro();
             });
             panel.appendChild(wrap);
         });
@@ -217,7 +272,7 @@ export const OptionsOverlay = {
             btn.addEventListener('click', () => {
                 RetroFilmSettings.applyPreset(id);
                 this.syncFromSettings();
-                this._notify();
+                this._notifyRetro();
             });
             presets.appendChild(btn);
         });
@@ -250,6 +305,9 @@ export const OptionsOverlay = {
     },
 
     syncFromSettings() {
+        if (this._onScreenControlsEl) {
+            this._onScreenControlsEl.checked = UISettings.getOnScreenControls();
+        }
         if (this._enabledEl) {
             this._enabledEl.checked = RetroFilmSettings.enabled;
         }
@@ -260,7 +318,7 @@ export const OptionsOverlay = {
         });
     },
 
-    _notify() {
+    _notifyRetro() {
         EventBus.emit('retro_settings_change', RetroFilmSettings.toJSON());
     },
 

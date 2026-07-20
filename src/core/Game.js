@@ -86,16 +86,16 @@ export const Game = {
 
         // NPCs na chodnikach; część z przejściem przez jezdnię na sąsiedni blok
         const npcConfigs = [
-            { id: 'npc1', row: 0, col: 0, corner: 0, color: '#8e44ad', cross: false },
-            { id: 'npc2', row: 0, col: 0, corner: 2, color: '#27ae60', cross: true },
-            { id: 'npc3', row: 0, col: 1, corner: 0, color: '#c0392b', cross: true },
-            { id: 'npc4', row: 0, col: 1, corner: 1, color: '#f1c40f', cross: false },
-            { id: 'npc5', row: 0, col: 2, corner: 0, color: '#e67e22', cross: true },
-            { id: 'npc6', row: 1, col: 0, corner: 1, color: '#1abc9c', cross: false },
-            { id: 'npc7', row: 1, col: 1, corner: 0, color: '#9b59b6', cross: true },
-            { id: 'npc8', row: 1, col: 2, corner: 3, color: '#3498db', cross: false },
-            { id: 'npc9', row: 2, col: 0, corner: 2, color: '#e74c3c', cross: true },
-            { id: 'npc10', row: 2, col: 2, corner: 1, color: '#2ecc71', cross: false }
+            { id: 'npc1', row: 0, col: 0, corner: 0, color: '#3d3d3d', cross: false },
+            { id: 'npc2', row: 0, col: 0, corner: 2, color: '#5c4033', cross: true },
+            { id: 'npc3', row: 0, col: 1, corner: 0, color: '#1a2744', cross: true },
+            { id: 'npc4', row: 0, col: 1, corner: 1, color: '#5a5a5a', cross: false },
+            { id: 'npc5', row: 0, col: 2, corner: 0, color: '#6b4423', cross: true },
+            { id: 'npc6', row: 1, col: 0, corner: 1, color: '#2c3e50', cross: false },
+            { id: 'npc7', row: 1, col: 1, corner: 0, color: '#4a3728', cross: true },
+            { id: 'npc8', row: 1, col: 2, corner: 3, color: '#4a5560', cross: false },
+            { id: 'npc9', row: 2, col: 0, corner: 2, color: '#3e2723', cross: true },
+            { id: 'npc10', row: 2, col: 2, corner: 1, color: '#5a5a5a', cross: false }
         ];
 
         npcConfigs.forEach(cfg => {

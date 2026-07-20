@@ -9,6 +9,7 @@ import { GameState, GAME_STATES } from '../core/GameState.js';
 import { World } from '../world/World.js';
 import { Tilemap, TILE_COLORS } from '../world/Tilemap.js';
 import { VehicleSystem } from '../systems/VehicleSystem.js';
+import { UISettings } from './UISettings.js';
 
 const escapeHTML = (str) => {
     if (!str) return '';
@@ -24,6 +25,8 @@ export const UISystem = {
     layer: null,
     minimapCanvas: null,
     minimapCtx: null,
+    mobileHUD: null,
+    playActive: false,
     currentDialogue: null,
     missionText: '',
     wantedStars: 0,
@@ -36,15 +39,26 @@ export const UISystem = {
         this.layer = document.getElementById('uiLayer');
         this.minimapCanvas = document.getElementById('minimap');
         this.minimapCtx = this.minimapCanvas ? this.minimapCanvas.getContext('2d') : null;
-        const mobileHUD = document.getElementById('mobileHUD');
+        this.mobileHUD = document.getElementById('mobileHUD');
+        this.playActive = GameState.getState() === GAME_STATES.PLAY;
+
+        UISettings.init();
+        this.syncOnScreenControls();
 
         EventBus.on('state_change', ({ to }) => {
             const isPlay = to === GAME_STATES.PLAY;
+            this.playActive = isPlay;
             this.layer.style.display = isPlay ? 'block' : 'none';
             if (this.minimapCanvas) {
                 this.minimapCanvas.style.display = isPlay ? 'block' : 'none';
             }
-            if (mobileHUD) mobileHUD.style.display = isPlay ? 'grid' : 'none';
+            this.syncOnScreenControls();
+        });
+
+        EventBus.on('ui_settings_change', () => {
+            this.syncOnScreenControls();
+            this.lastStateHash = null;
+            this.updateDOM();
         });
 
         EventBus.on('ui_show_dialogue', (text) => {
@@ -68,7 +82,7 @@ export const UISystem = {
                 setTimeout(() => {
                     this.isBlinking = false;
                     this.updateDOM();
-                }, 400); // 400ms flash
+                }, 400);
             }
             this.wantedStars = stars;
             this.updateDOM();
@@ -96,9 +110,24 @@ export const UISystem = {
         });
     },
 
+    /** Apply play-state + UISettings to on-screen WASD/F pad. */
+    syncOnScreenControls() {
+        const el = this.mobileHUD;
+        if (!el) return;
+        const show = this.playActive && UISettings.showOnScreenControls;
+        if (el.classList && typeof el.classList.toggle === 'function') {
+            el.classList.toggle('is-visible', show);
+        }
+        if (el.style) el.style.display = show ? 'grid' : 'none';
+        if (typeof el.setAttribute === 'function') {
+            el.setAttribute('aria-hidden', show ? 'false' : 'true');
+        }
+    },
+
     updateDOM() {
         const kmh = Math.round(this.speedValue * 0.3);
-        const stateHash = `${this.missionText}|${this.currentDialogue}|${this.actionHint}|${this.wantedStars}|${this.isBlinking}|${this.showSpeed}|${kmh}`;
+        const onScreenPad = UISettings.showOnScreenControls;
+        const stateHash = `${this.missionText}|${this.currentDialogue}|${this.actionHint}|${this.wantedStars}|${this.isBlinking}|${this.showSpeed}|${kmh}|${onScreenPad}`;
         if (this.lastStateHash === stateHash) return;
         this.lastStateHash = stateHash;
 
@@ -116,18 +145,26 @@ export const UISystem = {
         }
         if (this.actionHint) {
             const safeHint = escapeHTML(this.actionHint);
-            html += `<div style="position:absolute; bottom:25px; right:25px; font-size:13px; font-weight:bold; color:white; font-family: system-ui, -apple-system, sans-serif; ${glassStyle} padding:6px 12px; border-radius:6px; letter-spacing:0.5px;">${safeHint}</div>`;
+            // When pad is on, action hint sits top-right to avoid F button / speedometer clash
+            const hintPos = onScreenPad
+                ? 'bottom:auto; top:70px; right:25px;'
+                : 'bottom:25px; right:25px;';
+            html += `<div style="position:absolute; ${hintPos} font-size:13px; font-weight:bold; color:white; font-family: system-ui, -apple-system, sans-serif; ${glassStyle} padding:6px 12px; border-radius:6px; letter-spacing:0.5px;">${safeHint}</div>`;
         }
         if (this.wantedStars > 0) {
             let starsHtml = '';
             for (let i = 0; i < 5; i++) {
                 starsHtml += i < this.wantedStars ? '★' : '☆';
             }
-            const color = this.isBlinking ? '#e74c3c' : '#f1c40f'; // red flash, gold normal
+            const color = this.isBlinking ? '#e74c3c' : '#f1c40f';
             html += `<div style="position:absolute; top:20px; right:25px; font-size:30px; letter-spacing:3px; color:${color}; ${shadowStyle} transition: color 0.15s;">${starsHtml}</div>`;
         }
         if (this.showSpeed) {
-            html += `<div id="speedometer" style="position:absolute; bottom:25px; left:25px; font-size:24px; font-weight:bold; color:#2ecc71; font-family: monospace; letter-spacing:1px; ${shadowStyle}">${kmh} KM/H</div>`;
+            // Keep speedometer clear of the on-screen pad when that pad is visible
+            const speedPos = onScreenPad
+                ? 'bottom:25px; right:25px;'
+                : 'bottom:25px; left:25px;';
+            html += `<div id="speedometer" style="position:absolute; ${speedPos} font-size:24px; font-weight:bold; color:#2ecc71; font-family: monospace; letter-spacing:1px; ${shadowStyle}">${kmh} KM/H</div>`;
         }
         this.layer.innerHTML = html;
     },
@@ -153,17 +190,14 @@ export const UISystem = {
         const cx = width / 2;
         const cy = height / 2;
 
-        // 1. Clear minimap canvas
         ctx.clearRect(0, 0, width, height);
 
-        // 2. Setup map orientation and scale (centered on player, rotates with player direction)
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(-pAngle - Math.PI / 2);
-        ctx.scale(0.22, 0.22); // Scaling factor to translate world units to radar size
+        ctx.scale(0.22, 0.22);
         ctx.translate(-px, -py);
 
-        // 3. Draw surrounding tile grid
         const startCol = Math.max(0, Math.floor((px - 350) / 100));
         const endCol = Math.min(Tilemap.cols - 1, Math.floor((px + 350) / 100));
         const startRow = Math.max(0, Math.floor((py - 350) / 100));
@@ -177,22 +211,20 @@ export const UISystem = {
             }
         }
 
-        // 4. Draw building blocks
         World.buildings.forEach(b => {
-            ctx.fillStyle = '#1e272e'; // dark building block color
+            ctx.fillStyle = '#1e272e';
             ctx.fillRect(b.x, b.y, b.w, b.h);
-            ctx.strokeStyle = '#2f3640'; // roof edge
+            ctx.strokeStyle = '#2f3640';
             ctx.lineWidth = 12;
             ctx.strokeRect(b.x, b.y, b.w, b.h);
         });
 
-        // 5. Draw active traffic cars
         World.getEntitiesByType('car').forEach(carEntity => {
             if (carEntity === controlled) return;
             ctx.save();
             ctx.translate(carEntity.transform.x, carEntity.transform.y);
             ctx.rotate(carEntity.transform.angle);
-            ctx.fillStyle = '#e67e22'; // traffic car color
+            ctx.fillStyle = '#e67e22';
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 4;
             ctx.fillRect(-22, -10, 44, 20);
@@ -200,13 +232,12 @@ export const UISystem = {
             ctx.restore();
         });
 
-        // 6. Draw police vehicles
         World.getEntitiesByType('police').forEach(p => {
             ctx.save();
             ctx.translate(p.transform.x, p.transform.y);
             ctx.rotate(p.transform.angle);
             const blink = Math.floor(Date.now() / 150) % 2 === 0;
-            ctx.fillStyle = blink ? '#2980b9' : '#e74c3c'; // blinking sirens
+            ctx.fillStyle = blink ? '#2980b9' : '#e74c3c';
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 4;
             ctx.fillRect(-22, -10, 44, 20);
@@ -214,9 +245,8 @@ export const UISystem = {
             ctx.restore();
         });
 
-        // 7. Draw NPCs
         World.getEntitiesByType('npc').forEach(npc => {
-            ctx.fillStyle = '#fed330'; // yellow NPC dot
+            ctx.fillStyle = '#fed330';
             ctx.beginPath();
             ctx.arc(npc.transform.x, npc.transform.y, 14, 0, Math.PI * 2);
             ctx.fill();
@@ -224,20 +254,18 @@ export const UISystem = {
 
         ctx.restore();
 
-        // 8. Draw player icon on top of the map (static center pointing straight up)
-        ctx.fillStyle = '#00d2d3'; // sleek cyan indicator
+        ctx.fillStyle = '#00d2d3';
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
         ctx.moveTo(cx, cy - 12);
         ctx.lineTo(cx - 8, cy + 9);
-        ctx.lineTo(cx, cy + 5); // inner notch
+        ctx.lineTo(cx, cy + 5);
         ctx.lineTo(cx + 8, cy + 9);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
 
-        // 9. Overlay cool glass reflection gloss (static)
         ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
         ctx.beginPath();
         ctx.arc(cx, cy, 65, 0, Math.PI, true);

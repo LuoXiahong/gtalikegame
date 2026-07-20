@@ -15,7 +15,7 @@ const KEYBINDINGS = [
     { key: 'V',           desc: 'Przełącz widok 2D / 3D' },
     { key: 'Z',           desc: 'Zoom kamery (przybliż / oddal)' },
     { key: '` (backtick)',desc: 'Tryb debug AI' },
-    { key: 'O',           desc: 'Opcje — efekt retro (taśma filmowa)' },
+    { key: 'O',           desc: 'Opcje (sterowanie + efekt taśmy)' },
     { key: '? lub /',     desc: 'Pomoc — pokaż / ukryj ten ekran' },
     { key: 'Esc',         desc: 'Zamknij ten ekran' },
 ];

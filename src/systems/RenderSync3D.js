@@ -8,6 +8,7 @@ import { World } from '../world/World.js';
 import { MissionSystem } from './MissionSystem.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { createNPCModel } from './NPCModelFactory.js';
+import { createVehicleModel, pickArchetypeKey } from './VehicleModelFactory.js';
 import { Time } from '../core/Time.js';
 
 export const RenderSync3D = {
@@ -128,159 +129,15 @@ export const RenderSync3D = {
 
         if (ent.type === 'player') {
             // Model Gracza o identycznej strukturze (boxy body & head), z unikalnym niebieskawym kolorem ubrania
-            group = createNPCModel(0x2980b9);
+            group = createNPCModel(0x1a2744); // period navy (player accent)
 
         } else if (ent.type === 'npc') {
             group = createNPCModel(ent.visual?.color);
 
         } else if (ent.type === 'car') {
-            const color = ent.visual?.color ? parseInt(ent.visual.color.replace('#', '0x')) : 0xc0392b;
-            
-            // Stable selection of vehicle model type (Sedan vs Van) using entity ID
-            const idNum = typeof ent.id === 'string' ? parseInt(ent.id.replace(/[^0-9]/g, '')) : 0;
-            const isVan = !isNaN(idNum) ? (idNum % 3 === 0) : false; // 1/3 vans, 2/3 sedans
-
-            if (!isVan) {
-                // --- MODEL: SEDAN (Type A) ---
-                const metrics = WorldMetrics.SEDAN;
-                const chassisH = metrics.height * metrics.chassisHeightRatio;
-                const cabinH = metrics.height * (1 - metrics.chassisHeightRatio);
-
-                // Lower chassis
-                const lowerGeom = new THREE.BoxGeometry(metrics.length, chassisH, metrics.width);
-                const lowerMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4, metalness: 0.3 });
-                const lower = new THREE.Mesh(lowerGeom, lowerMat);
-                lower.position.y = chassisH / 2 + 0.1; // 0.1m ground clearance
-                group.add(lower);
-
-                // Cabin dome (shifted back: negative X)
-                const upperGeom = new THREE.BoxGeometry(metrics.length * 0.55, cabinH, metrics.width * 0.85);
-                const upperMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.2, metalness: 0.8 });
-                const upper = new THREE.Mesh(upperGeom, upperMat);
-                upper.position.set(-metrics.length * 0.1, chassisH + cabinH / 2 + 0.1, 0);
-                group.add(upper);
-
-                // Front emissive headlights
-                const lightFrontGeom = new THREE.BoxGeometry(0.1, 0.1, 0.2);
-                const lightFrontMat = new THREE.MeshStandardMaterial({
-                    color: 0xffffff,
-                    emissive: 0xffeeaa,
-                    emissiveIntensity: 1.0,
-                    roughness: 0.1
-                });
-                const leftLightF = new THREE.Mesh(lightFrontGeom, lightFrontMat);
-                leftLightF.position.set(metrics.length / 2, chassisH / 2 + 0.1, -metrics.width * 0.35);
-                group.add(leftLightF);
-
-                const rightLightF = new THREE.Mesh(lightFrontGeom, lightFrontMat);
-                rightLightF.position.set(metrics.length / 2, chassisH / 2 + 0.1, metrics.width * 0.35);
-                group.add(rightLightF);
-
-                // Rear emissive taillights
-                const lightRearGeom = new THREE.BoxGeometry(0.1, 0.1, 0.2);
-                const lightRearMat = new THREE.MeshStandardMaterial({
-                    color: 0xff0000,
-                    emissive: 0xff0000,
-                    emissiveIntensity: 1.0,
-                    roughness: 0.1
-                });
-                const leftLightR = new THREE.Mesh(lightRearGeom, lightRearMat);
-                leftLightR.position.set(-metrics.length / 2, chassisH / 2 + 0.1, -metrics.width * 0.35);
-                group.add(leftLightR);
-
-                const rightLightR = new THREE.Mesh(lightRearGeom, lightRearMat);
-                rightLightR.position.set(-metrics.length / 2, chassisH / 2 + 0.1, metrics.width * 0.35);
-                group.add(rightLightR);
-
-                // Wheels
-                const wheelGeom = new THREE.BoxGeometry(0.4, 0.3, 0.3);
-                const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0.0 });
-                const wheelOffsets = [
-                    { x: -metrics.length * 0.3, z: -metrics.width * 0.45 },
-                    { x: metrics.length * 0.3, z: -metrics.width * 0.45 },
-                    { x: -metrics.length * 0.3, z: metrics.width * 0.45 },
-                    { x: metrics.length * 0.3, z: metrics.width * 0.45 }
-                ];
-                wheelOffsets.forEach(offset => {
-                    const wheel = new THREE.Mesh(wheelGeom, wheelMat);
-                    wheel.position.set(offset.x, 0.15, offset.z);
-                    group.add(wheel);
-                });
-
-            } else {
-                // --- MODEL: VAN (Type B) ---
-                const metrics = WorldMetrics.VAN;
-                const chassisH = metrics.height * metrics.chassisHeightRatio;
-                const cabinH = metrics.height * (1 - metrics.chassisHeightRatio);
-
-                // Lower chassis
-                const lowerGeom = new THREE.BoxGeometry(metrics.length, chassisH, metrics.width);
-                const lowerMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5, metalness: 0.2 });
-                const lower = new THREE.Mesh(lowerGeom, lowerMat);
-                lower.position.y = chassisH / 2 + 0.1;
-                group.add(lower);
-
-                // High cabin
-                const upperGeom = new THREE.BoxGeometry(metrics.length * 0.85, cabinH, metrics.width * 0.9);
-                const upperMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5, metalness: 0.2 });
-                const upper = new THREE.Mesh(upperGeom, upperMat);
-                upper.position.set(-metrics.length * 0.05, chassisH + cabinH / 2 + 0.1, 0);
-                group.add(upper);
-
-                // Windshield window block
-                const windowGeom = new THREE.BoxGeometry(metrics.length * 0.3, cabinH * 0.4, metrics.width * 0.85);
-                const windowMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.9 });
-                const win = new THREE.Mesh(windowGeom, windowMat);
-                win.position.set(metrics.length * 0.25, chassisH + cabinH * 0.7 + 0.1, 0);
-                group.add(win);
-
-                // Headlights
-                const lightFrontGeom = new THREE.BoxGeometry(0.1, 0.15, 0.25);
-                const lightFrontMat = new THREE.MeshStandardMaterial({
-                    color: 0xffffff,
-                    emissive: 0xffeeaa,
-                    emissiveIntensity: 1.0,
-                    roughness: 0.1
-                });
-                const leftLightF = new THREE.Mesh(lightFrontGeom, lightFrontMat);
-                leftLightF.position.set(metrics.length / 2, chassisH / 2 + 0.1, -metrics.width * 0.35);
-                group.add(leftLightF);
-
-                const rightLightF = new THREE.Mesh(lightFrontGeom, lightFrontMat);
-                rightLightF.position.set(metrics.length / 2, chassisH / 2 + 0.1, metrics.width * 0.35);
-                group.add(rightLightF);
-
-                // Taillights
-                const lightRearGeom = new THREE.BoxGeometry(0.1, 0.15, 0.25);
-                const lightRearMat = new THREE.MeshStandardMaterial({
-                    color: 0xff0000,
-                    emissive: 0xff0000,
-                    emissiveIntensity: 1.0,
-                    roughness: 0.1
-                });
-                const leftLightR = new THREE.Mesh(lightRearGeom, lightRearMat);
-                leftLightR.position.set(-metrics.length / 2, chassisH / 2 + 0.1, -metrics.width * 0.35);
-                group.add(leftLightR);
-
-                const rightLightR = new THREE.Mesh(lightRearGeom, lightRearMat);
-                rightLightR.position.set(-metrics.length / 2, chassisH / 2 + 0.1, metrics.width * 0.35);
-                group.add(rightLightR);
-
-                // Wheels
-                const wheelGeom = new THREE.BoxGeometry(0.45, 0.35, 0.35);
-                const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0.0 });
-                const wheelOffsets = [
-                    { x: -metrics.length * 0.3, z: -metrics.width * 0.45 },
-                    { x: metrics.length * 0.3, z: -metrics.width * 0.45 },
-                    { x: -metrics.length * 0.3, z: metrics.width * 0.45 },
-                    { x: metrics.length * 0.3, z: metrics.width * 0.45 }
-                ];
-                wheelOffsets.forEach(offset => {
-                    const wheel = new THREE.Mesh(wheelGeom, wheelMat);
-                    wheel.position.set(offset.x, 0.175, offset.z);
-                    group.add(wheel);
-                });
-            }
+            const color = ent.visual?.color ? parseInt(ent.visual.color.replace('#', '0x')) : 0x1a1a1a;
+            const archetypeKey = pickArchetypeKey(ent.id);
+            group = createVehicleModel(color, archetypeKey);
         }
 
         // Enable shadows for all sub-meshes (T-701)

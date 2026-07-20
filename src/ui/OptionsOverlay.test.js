@@ -17,6 +17,7 @@ describe('OptionsOverlay', () => {
         });
         globalThis.window = dom.window;
         globalThis.document = dom.window.document;
+        globalThis.localStorage = dom.window.localStorage;
         globalThis.HTMLElement = dom.window.HTMLElement;
         globalThis.Event = dom.window.Event;
         globalThis.KeyboardEvent = dom.window.KeyboardEvent;
@@ -39,6 +40,7 @@ describe('OptionsOverlay', () => {
         if (EventBus) EventBus.clear();
         delete globalThis.window;
         delete globalThis.document;
+        delete globalThis.localStorage;
         delete globalThis.HTMLElement;
         delete globalThis.Event;
         delete globalThis.KeyboardEvent;
@@ -48,9 +50,27 @@ describe('OptionsOverlay', () => {
     it('should mount backdrop and panel into the DOM', () => {
         expect(document.getElementById('optionsBackdrop')).toBeTruthy();
         expect(document.getElementById('optionsPanel')).toBeTruthy();
+        expect(document.getElementById('opt_onscreen_controls')).toBeTruthy();
         expect(document.getElementById('opt_enabled')).toBeTruthy();
         expect(document.getElementById('opt_intensity')).toBeTruthy();
         expect(document.getElementById('opt_sepia')).toBeTruthy();
+    });
+
+    it('should toggle on-screen controls and emit ui_settings_change', async () => {
+        const { UISettings } = await import('./UISettings.js');
+        UISettings.reset();
+
+        const spy = vi.fn();
+        EventBus.on('ui_settings_change', spy);
+
+        const toggle = document.getElementById('opt_onscreen_controls');
+        expect(toggle.checked).toBe(false);
+
+        toggle.checked = true;
+        toggle.dispatchEvent(new Event('change', { bubbles: true }));
+
+        expect(UISettings.showOnScreenControls).toBe(true);
+        expect(spy).toHaveBeenCalled();
     });
 
     it('should toggle visibility with show/hide', () => {

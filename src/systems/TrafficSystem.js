@@ -80,7 +80,8 @@ export const TrafficSystem = {
         const { pathName, x, y, targetIndex, pathDir, angle } = candidate;
         const cruise = GameConfig.TRAFFIC.BASE_SPEED + Math.random() * GameConfig.TRAFFIC.SPEED_VARIANCE;
 
-        const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
+        // Period body paints: black, burgundy, bottle green, navy, cream
+        const colors = ['#1a1a1a', '#5c1a1a', '#1a3a2a', '#1a2744', '#d4c5a9', '#3d2e1f'];
         const color = colors[Math.floor(Math.random() * colors.length)];
 
         const car = new Car(`traffic_${Date.now()}_${Math.random()}`, x, y, color);

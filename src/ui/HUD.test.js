@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UISystem } from './HUD.js';
 import { EventBus } from '../core/EventBus.js';
 import { GameState, GAME_STATES } from '../core/GameState.js';
+import { UISettings } from './UISettings.js';
 
 vi.mock('../world/World.js', () => ({
     World: {
@@ -32,20 +33,22 @@ describe('UISystem Speedometer & Minimap Logic', () => {
     let mockMinimapCtx;
 
     beforeEach(() => {
-        // Reset properties
+        UISettings.reset();
         UISystem.speedValue = 0;
         UISystem.showSpeed = false;
         UISystem.wantedStars = 0;
         UISystem.missionText = '';
         UISystem.currentDialogue = null;
+        UISystem.playActive = false;
 
-        // Mock document elements
         mockUiLayer = {
             style: { display: 'none' },
             innerHTML: ''
         };
         mockMobileHUD = {
-            style: { display: 'none' }
+            style: { display: 'none' },
+            classList: { toggle: vi.fn() },
+            setAttribute: vi.fn()
         };
         mockMinimapCtx = {
             clearRect: vi.fn(),
@@ -111,5 +114,19 @@ describe('UISystem Speedometer & Minimap Logic', () => {
         expect(mockMinimapCtx.clearRect).toHaveBeenCalled();
         expect(mockMinimapCtx.save).toHaveBeenCalled();
         expect(mockMinimapCtx.restore).toHaveBeenCalled();
+    });
+
+    it('hides on-screen controls on desktop by default even in PLAY', () => {
+        UISystem.init();
+        EventBus.emit('state_change', { to: GAME_STATES.PLAY });
+        expect(mockMobileHUD.style.display).toBe('none');
+    });
+
+    it('shows on-screen controls when enabled via ui_settings_change', () => {
+        UISystem.init();
+        EventBus.emit('state_change', { to: GAME_STATES.PLAY });
+        UISettings.setOnScreenControls(true);
+        EventBus.emit('ui_settings_change', {});
+        expect(mockMobileHUD.style.display).toBe('grid');
     });
 });
