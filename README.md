@@ -1,13 +1,32 @@
-# GTA JS (ECS-lite) 🚗💥
+# Lightweight Open World Game Engine 🚗💥
 
 [![GitHub Pages Deployment](https://github.com/LuoXiahong/gtalikegame/actions/workflows/deploy.yml/badge.svg)](https://github.com/LuoXiahong/gtalikegame/actions/workflows/deploy.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Play_Now!-brightgreen?style=flat-square&logo=gamepad)](https://luoxiahong.github.io/gtalikegame/)
 
-A lightweight, high-performance, noir-flavored GTA-like game engine written in modern vanilla JavaScript, built around an **ECS-lite (Entity-Component-System)** architecture. Set in a procedurally generated 1930s-40s city, rendered through a live, tweakable retro film / kinescope effect — grain, flicker, scratches, and all.
+This project is an experiment in building a **lightweight open-world game engine** in modern vanilla JavaScript. It started with early top-down open-world games (GTA 1/2) and PS2-era design principles as a spark — and grew into a noir, 1930s–40s city sandbox focused on architecture, procedural content, and the illusion of a living world rather than photorealism or recreating any commercial title.
+
+Built around an **ECS-lite (Entity-Component-System)** core, it shares one world state across classic 2D Canvas and Three.js 3D, with a live, tweakable film / kinescope post-process — grain, flicker, scratches, and all.
 
 🎮 **[Play the Live Demo](https://luoxiahong.github.io/gtalikegame/)**
 
-The project follows a "Low effort / High impact" philosophy (clever PS2-era tricks over heavy simulation) to construct a living city simulation, featuring both a classic 2D top-down canvas mode and a modern 3D rendering mode powered by Three.js.
+In ~15 seconds, this README should answer:
+
+1. **What is it?** — A modular open-world sandbox engine (2D Canvas + 3D Three.js) on one shared world state.
+2. **Why does it exist?** — To explore and showcase lightweight game-engine architecture, procedural content generation and performance-oriented design in modern JavaScript.
+3. **What does it demonstrate?** — See the section below.
+
+## What this project demonstrates
+
+*   ECS-lite architecture design
+*   Game loop design
+*   Event-driven systems
+*   2D and 3D rendering pipelines sharing one world
+*   Three.js post-processing
+*   Procedural content generation
+*   Automated testing (including UI security regression)
+*   Internationalization (custom catalog, 5 locales)
+*   CI/CD deployment (GitHub Pages)
+*   Performance-oriented, separation-of-concerns design
 
 ## Screenshots
 
@@ -25,12 +44,12 @@ The project follows a "Low effort / High impact" philosophy (clever PS2-era tric
 
 ## ✨ Features
 
-*   **Procedural 1930s-40s vehicles** — `VehicleModelFactory` builds sedans, coupes, and panel vans from data-driven archetypes (separate rounded fenders, running boards, exposed round headlamps, whitewall tires) instead of licensed or overly-detailed 3D assets.
-*   **Retro film / kinescope post-processing** — a custom `ShaderPass` layering film grain, gate jitter, flicker, animated scratches, dust, and vignette, with four live-tweakable presets (`off`, `subtle`, `classic`, `ruined`).
-*   **Full internationalization** — UI strings translated across 5 locales (`pl`, `en`, `de`, `es`, `fr`) via a small custom `I18n` catalog system.
+*   **Procedural 1930s–40s vehicles** — `VehicleModelFactory` builds sedans, coupes, and panel vans from data-driven archetypes (rounded fenders, running boards, exposed round headlamps, whitewall tires) instead of licensed or overly detailed 3D assets.
+*   **Retro film / kinescope post-processing** — a custom `ShaderPass` with film grain, gate jitter, flicker, animated scratches, dust, and vignette, plus four live-tweakable presets (`off`, `subtle`, `classic`, `ruined`).
+*   **Full internationalization** — UI strings across 5 locales (`pl`, `en`, `de`, `es`, `fr`) via a small custom `I18n` catalog system.
 *   **Adaptive input UI** — on-screen touch controls auto-detected via pointer/hover media queries, with manual override in Settings.
 *   **Dual rendering modes** — 2D top-down Canvas and full 3D (Three.js) sharing the same ECS world/state.
-*   **Security-conscious UI layer** — HUD rendering has dedicated regression tests guarding against XSS injection through entity/display data.
+*   **Security-conscious UI layer** — HUD rendering has dedicated regression tests guarding against XSS through entity/display data.
 
 ---
 
@@ -38,7 +57,7 @@ The project follows a "Low effort / High impact" philosophy (clever PS2-era tric
 
 ```
 /game
-├── src/                    # Source code of the game
+├── src/                    # Source code of the engine & demo sandbox
 │   ├── core/               # Engine core (Game Loop, Time, EventBus, GameState)
 │   ├── entities/           # Data-only entities (Entity, Player, NPC, Car)
 │   ├── systems/            # Logic systems (Movement, AI, Render, Mission, Audio, Vehicle Models, Retro Film, etc.)
@@ -55,13 +74,13 @@ The project follows a "Low effort / High impact" philosophy (clever PS2-era tric
 
 ## 🏗️ ECS-lite Architecture
 
-My core design strictly separates data from logic, allowing extreme flexibility and high optimization.
+The core design strictly separates data from logic, allowing flexibility and targeted optimization.
 
 ### Core Concepts
 
 *   **Entities** are purely containers of data components (such as `transform`, `physics`, `visual`, `ai`). They **do not contain** gameplay logic.
 *   **Systems** are stateless, single-purpose logic processors. They query and manipulate components from entities stored in the `World` but do not store state themselves.
-*   **EventBus** acts as the central decouple communication layer. Systems communicate exclusively using events (`EventBus.publish` / `subscribe`), preventing hard coupling.
+*   **EventBus** acts as the central decoupled communication layer. Systems communicate exclusively using events (`EventBus.publish` / `subscribe`), preventing hard coupling.
 
 ### Strict Architectural Rules
 
@@ -70,6 +89,21 @@ My core design strictly separates data from logic, allowing extreme flexibility 
 3.  **Extensibility through composition.** New mechanics or features must always be introduced as **new Systems**, rather than modifying existing ones.
 4.  **No direct coupling.** System-to-system communications are managed **only** via the `EventBus`.
 5.  **RenderSystem separation.** The renderer (both 2D and 3D) is purely a visualizer—it reads transform/visual data and renders it, remaining completely oblivious to gameplay logic.
+
+---
+
+## Performance Philosophy
+
+The engine intentionally favors inexpensive visual and architectural techniques over heavy simulation.
+
+Examples include:
+- Procedural vehicle generation instead of detailed meshes.
+- Shared world state across 2D and 3D renderers.
+- Stateless systems for predictable updates.
+- Event-driven communication to reduce coupling.
+- Lightweight post-processing effects designed for rapid iteration.
+
+The goal is not photorealism, but maximizing perceived world complexity per unit of computational cost.
 
 ---
 
@@ -151,8 +185,9 @@ npm run test:watch
 
 ## 🎯 Design & Philosophy
 
-> **"Low effort / High impact"** — maximize the illusion of a living, breathing 1930s-40s city with minimal computational complexity.
+> **"Low effort / High impact"** — maximize the illusion of a living, breathing 1930s–40s city with minimal computational complexity.
 
-*   **Retro Inspiration (PS2 Era + Golden-Age Noir)**: Use visual tricks and smart heuristics — procedural geometry, canvas-based facades, shader post-processing — rather than heavy physical simulation or licensed art assets.
-*   **Arcade Feel**: Vehicle/character controls and physical properties behave according to player expectations rather than strict real-world physics.
-*   **Rapid Iteration**: Get a feature working first, polish visually, and optimize only when bottlenecks arise.
+*   **Retro inspiration (PS2 era + golden-age noir)**: procedural geometry, canvas-based facades, and shader post-processing instead of heavy simulation or licensed art.
+*   **Arcade feel**: vehicle and character controls prioritize player expectations over strict real-world physics.
+*   **Rapid iteration**: get a feature working first, polish visually, optimize only when bottlenecks appear.
+*   **Engine over clone**: the sandbox demos architecture — modular systems, shared world state, extensible pipelines. Early open-world games were only a starting inspiration; the result is its own noir city experiment.

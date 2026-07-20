@@ -64,7 +64,7 @@ export const MenuScreen = {
 
         if (state === GAME_STATES.MENU) {
             html = `
-                <h1 style="font-size: 48px; margin-bottom: 20px; color: #f1c40f; text-shadow: 2px 2px #000;">GTA JS</h1>
+                <h1 style="font-size: 48px; margin-bottom: 20px; color: #f1c40f; text-shadow: 2px 2px #000;">NOIR CITY</h1>
                 <p style="font-size: 24px; animation: blink 1s infinite;">${I18n.t('menu.pressStart')}</p>
                 <div style="margin-top: 40px; font-size: 14px; color: #bdc3c7;">
                     ${I18n.t('menu.controls')}
