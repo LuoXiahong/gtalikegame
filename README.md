@@ -31,13 +31,13 @@ In ~15 seconds, this README should answer:
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/street-intersection.png" alt="Noir street intersection with vintage cars and player" width="48%" />
+  <img src="docs/screenshots/street-intersection.png" alt="Noir street intersection with period cars and light shafts" width="48%" />
   &nbsp;
-  <img src="docs/screenshots/city-overview.png" alt="Isometric city overview with long shadows" width="48%" />
+  <img src="docs/screenshots/city-overview.png" alt="Isometric sidewalk corner with long shadows and film border" width="48%" />
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/traffic-block.png" alt="City block with traffic and retro film effect" width="72%" />
+  <img src="docs/screenshots/traffic-block.png" alt="City intersection with traffic and retro film effect" width="72%" />
 </p>
 
 ---

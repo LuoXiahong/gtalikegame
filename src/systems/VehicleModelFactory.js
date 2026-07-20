@@ -4,6 +4,20 @@
  * Adding a new car = new archetype entry, not a new code branch.
  */
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+/**
+ * Soft box with clamped corner radius (2 segments keep cost low).
+ * @param {number} w
+ * @param {number} h
+ * @param {number} d
+ * @param {number} radius
+ * @returns {RoundedBoxGeometry}
+ */
+function softBox(w, h, d, radius) {
+    const r = Math.min(radius, Math.min(w, h, d) * 0.45);
+    return new RoundedBoxGeometry(w, h, d, 2, r);
+}
 
 /**
  * Visual archetypes for period vehicles.
@@ -113,7 +127,7 @@ export function createVehicleModel(color, archetypeKey) {
 
     // --- Chassis (long low body) ---
     const chassis = new THREE.Mesh(
-        new THREE.BoxGeometry(L, chassisH, W * 0.88),
+        softBox(L, chassisH, W * 0.88, 0.08),
         bodyMat
     );
     chassis.position.y = chassisY;
@@ -125,7 +139,7 @@ export function createVehicleModel(color, archetypeKey) {
     // Cabin sits behind the long hood: center shifted by recess toward -X
     const cabinCenterX = L * (0.5 - arch.hoodRatio - arch.cabinLengthRatio / 2) - L * arch.cabinRecess * 0.15;
     const cabin = new THREE.Mesh(
-        new THREE.BoxGeometry(cabinLen, cabinH, cabinW),
+        softBox(cabinLen, cabinH, cabinW, 0.10),
         darkMat
     );
     cabin.position.set(cabinCenterX, clearance + chassisH + cabinH / 2, 0);
@@ -148,7 +162,7 @@ export function createVehicleModel(color, archetypeKey) {
     // --- Running boards ---
     if (arch.runningBoard) {
         const boardLen = L * 0.45;
-        const boardGeom = new THREE.BoxGeometry(boardLen, 0.06, 0.12);
+        const boardGeom = softBox(boardLen, 0.06, 0.12, 0.02);
         [-1, 1].forEach(side => {
             const board = new THREE.Mesh(boardGeom, chromeMat);
             board.position.set(0, clearance + 0.08, side * (W * 0.52));
@@ -161,7 +175,7 @@ export function createVehicleModel(color, archetypeKey) {
         const grilleW = W * 0.42;
         const grilleH = chassisH * 0.7;
         const grille = new THREE.Mesh(
-            new THREE.BoxGeometry(0.08, grilleH, grilleW),
+            softBox(0.08, grilleH, grilleW, 0.02),
             chromeMat
         );
         grille.position.set(L / 2 + 0.02, chassisY, 0);
@@ -210,7 +224,7 @@ export function createVehicleModel(color, archetypeKey) {
         roughness: 0.3
     });
     [-1, 1].forEach(side => {
-        const tail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.12), tailMat);
+        const tail = new THREE.Mesh(softBox(0.08, 0.1, 0.12, 0.02), tailMat);
         tail.position.set(-L / 2, chassisY, side * W * 0.35);
         group.add(tail);
     });
