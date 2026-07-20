@@ -4,6 +4,7 @@ import { JSDOM } from 'jsdom';
 describe('OptionsOverlay', () => {
     let OptionsOverlay;
     let RetroFilmSettings;
+    let TimeOfDaySettings;
     let RenderSystem;
     let UISettings;
     let I18n;
@@ -29,11 +30,13 @@ describe('OptionsOverlay', () => {
         vi.resetModules();
         ({ EventBus } = await import('../core/EventBus.js'));
         ({ RetroFilmSettings } = await import('../systems/RetroFilmSettings.js'));
+        ({ TimeOfDaySettings } = await import('../systems/TimeOfDaySettings.js'));
         ({ RenderSystem } = await import('../systems/RenderSystem.js'));
         ({ UISettings } = await import('./UISettings.js'));
         ({ I18n } = await import('../i18n/I18n.js'));
         EventBus.clear();
         RetroFilmSettings.reset();
+        TimeOfDaySettings.reset();
         UISettings.reset();
         RenderSystem.debugAI = false;
         I18n.init('pl');
@@ -136,6 +139,20 @@ describe('OptionsOverlay', () => {
         expect(RetroFilmSettings.enabled).toBe(false);
         expect(RetroFilmSettings.isActive()).toBe(false);
         expect(spy).toHaveBeenCalled();
+    });
+
+    it('should switch time of day presets and mark active button', () => {
+        const spy = vi.fn();
+        EventBus.on('time_of_day_change', spy);
+
+        const nightBtn = [...document.querySelectorAll('.options-presets button')]
+            .find((b) => b.dataset.preset === 'night');
+        expect(nightBtn).toBeDefined();
+        nightBtn.click();
+
+        expect(TimeOfDaySettings.current).toBe('night');
+        expect(spy).toHaveBeenCalledWith('night');
+        expect(nightBtn.classList.contains('active')).toBe(true);
     });
 
     it('should apply off preset from button', () => {

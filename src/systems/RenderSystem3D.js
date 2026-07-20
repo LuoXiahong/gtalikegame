@@ -26,9 +26,15 @@ import { getContactShadowTexture } from './ContactShadow.js';
 import { TiltShiftShader } from './TiltShiftShader.js';
 import { RetroFilmShader } from './RetroFilmShader.js';
 import { RetroFilmSettings } from './RetroFilmSettings.js';
+import { TimeOfDaySettings } from './TimeOfDaySettings.js';
 import { EventBus } from '../core/EventBus.js';
+import { Time } from '../core/Time.js';
 import { CityBuilder3D } from './CityBuilder3D.js';
 import { RoadBuilder3D } from './RoadBuilder3D.js';
+
+/** Base PointLight intensity from PropFactory lamp posts. */
+const STREET_LIGHT_BASE = 0.7;
+const TOD_TRANSITION_SEC = 1.5;
 
 export const RenderSystem3D = {
     renderer: null,
@@ -38,6 +44,10 @@ export const RenderSystem3D = {
     tiltShiftPass: null,
     retroFilmPass: null,
     isZoomedIn: false,
+    _todFrom: null,
+    _todTo: null,
+    _todT: 1,
+    _streetLightMult: 0,
 
     // Environment meshes
     groundPlane: null,
@@ -123,6 +133,7 @@ export const RenderSystem3D = {
         this.applyRetroSettings();
 
         EventBus.on('retro_settings_change', () => this.applyRetroSettings());
+        EventBus.on('time_of_day_change', () => this.startTimeOfDayTransition());
 
         const outputPass = new OutputPass();
         this.composer.addPass(outputPass);
@@ -149,6 +160,9 @@ export const RenderSystem3D = {
 
         CityBuilder3D.buildCity(this);
         RoadBuilder3D.buildRoads(this);
+
+        // Apply saved/default TOD after lights + street lamps exist
+        this.applyTimeOfDayImmediate(TimeOfDaySettings.get());
 
         // Scale/movement validation cube
         const SF = WorldMetrics.SCALE_FACTOR;
@@ -199,6 +213,110 @@ export const RenderSystem3D = {
         if (!this.retroFilmPass) return;
         RetroFilmSettings.applyToUniforms(this.retroFilmPass.uniforms);
         this.retroFilmPass.enabled = RetroFilmSettings.isActive();
+    },
+
+    startTimeOfDayTransition() {
+        if (!this.ambientLight || !this.hemiLight || !this.sunLight || !this.scene?.fog) return;
+        this._todFrom = this._captureLightingSnapshot();
+        this._todTo = TimeOfDaySettings.get();
+        this._todT = 0;
+    },
+
+    /**
+     * Snap lighting/fog/street lights to a preset (used on init).
+     * @param {object} preset
+     */
+    applyTimeOfDayImmediate(preset) {
+        if (!preset || !this.ambientLight) return;
+        this.ambientLight.color.setHex(preset.ambient.color);
+        this.ambientLight.intensity = preset.ambient.intensity;
+
+        this.hemiLight.color.setHex(preset.hemi.sky);
+        this.hemiLight.groundColor.setHex(preset.hemi.ground);
+        this.hemiLight.intensity = preset.hemi.intensity;
+
+        this.sunLight.color.setHex(preset.sun.color);
+        this.sunLight.intensity = preset.sun.intensity;
+
+        if (this.scene.fog) {
+            this.scene.fog.color.setHex(preset.fog.color);
+            this.scene.fog.near = preset.fog.near;
+            this.scene.fog.far = preset.fog.far;
+        }
+        if (this.renderer) {
+            this.renderer.setClearColor(preset.fog.color, 1.0);
+        }
+
+        this._streetLightMult = preset.streetLightMultiplier;
+        this._applyStreetLightMultiplier(this._streetLightMult);
+        this._todTo = null;
+        this._todT = 1;
+    },
+
+    _captureLightingSnapshot() {
+        return {
+            ambient: {
+                color: this.ambientLight.color.clone(),
+                intensity: this.ambientLight.intensity,
+            },
+            hemi: {
+                sky: this.hemiLight.color.clone(),
+                ground: this.hemiLight.groundColor.clone(),
+                intensity: this.hemiLight.intensity,
+            },
+            sun: {
+                color: this.sunLight.color.clone(),
+                intensity: this.sunLight.intensity,
+            },
+            fog: {
+                color: this.scene.fog.color.clone(),
+                near: this.scene.fog.near,
+                far: this.scene.fog.far,
+            },
+            streetMult: this._streetLightMult,
+        };
+    },
+
+    _applyStreetLightMultiplier(mult) {
+        const lights = this.streetLights || [];
+        for (const light of lights) {
+            const base = light.userData?.baseIntensity ?? STREET_LIGHT_BASE;
+            light.intensity = base * mult;
+        }
+    },
+
+    updateTimeOfDay(dt) {
+        if (!this._todTo || !this._todFrom) return;
+        this._todT = Math.min(1, this._todT + dt / TOD_TRANSITION_SEC);
+        const t = this._todT;
+        const from = this._todFrom;
+        const to = this._todTo;
+
+        this.ambientLight.color.copy(from.ambient.color).lerp(new THREE.Color(to.ambient.color), t);
+        this.ambientLight.intensity = THREE.MathUtils.lerp(from.ambient.intensity, to.ambient.intensity, t);
+
+        this.hemiLight.color.copy(from.hemi.sky).lerp(new THREE.Color(to.hemi.sky), t);
+        this.hemiLight.groundColor.copy(from.hemi.ground).lerp(new THREE.Color(to.hemi.ground), t);
+        this.hemiLight.intensity = THREE.MathUtils.lerp(from.hemi.intensity, to.hemi.intensity, t);
+
+        this.sunLight.color.copy(from.sun.color).lerp(new THREE.Color(to.sun.color), t);
+        this.sunLight.intensity = THREE.MathUtils.lerp(from.sun.intensity, to.sun.intensity, t);
+
+        this.scene.fog.color.copy(from.fog.color).lerp(new THREE.Color(to.fog.color), t);
+        this.scene.fog.near = THREE.MathUtils.lerp(from.fog.near, to.fog.near, t);
+        this.scene.fog.far = THREE.MathUtils.lerp(from.fog.far, to.fog.far, t);
+        if (this.renderer) {
+            this.renderer.setClearColor(this.scene.fog.color, 1.0);
+        }
+
+        const mult = THREE.MathUtils.lerp(from.streetMult ?? 0, to.streetLightMultiplier, t);
+        this._streetLightMult = mult;
+        this._applyStreetLightMultiplier(mult);
+
+        if (this._todT >= 1) {
+            this._todTo = null;
+            this._todFrom = null;
+        }
     },
 
     setupLighting() {
@@ -301,6 +419,8 @@ export const RenderSystem3D = {
         this.camera.lookAt(sFocusX, 0, sFocusZ);
 
         RenderSync3D.update(this.scene);
+
+        this.updateTimeOfDay(Time.delta || 0.016);
 
         if (this.retroFilmPass && this.retroFilmPass.enabled && this.retroFilmPass.uniforms?.time) {
             this.retroFilmPass.uniforms.time.value = performance.now() * 0.001;

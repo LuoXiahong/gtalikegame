@@ -36,6 +36,7 @@ import { FilmGateOverlay } from '../ui/FilmGateOverlay.js';
 import { UISettings } from '../ui/UISettings.js';
 import { I18n } from '../i18n/I18n.js';
 import { RetroFilmSettings } from '../systems/RetroFilmSettings.js';
+import { TimeOfDaySettings } from '../systems/TimeOfDaySettings.js';
 
 export const Game = {
     is3D: true,
@@ -43,6 +44,7 @@ export const Game = {
     init() {
         UISettings.init();
         RetroFilmSettings.init();
+        TimeOfDaySettings.init();
         I18n.init(UISettings.getLocale());
 
         World.init();

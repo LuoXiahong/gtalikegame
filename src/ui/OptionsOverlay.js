@@ -1,7 +1,8 @@
 /**
- * OptionsOverlay — language, controls, AI debug, retro film (open with O).
+ * OptionsOverlay — language, controls, AI debug, time of day, retro film (open with O).
  */
 import { RetroFilmSettings, RETRO_PARAM_KEYS } from '../systems/RetroFilmSettings.js';
+import { TimeOfDaySettings } from '../systems/TimeOfDaySettings.js';
 import { RenderSystem } from '../systems/RenderSystem.js';
 import { EventBus } from '../core/EventBus.js';
 import { UISettings } from './UISettings.js';
@@ -24,6 +25,12 @@ const PRESET_IDS = [
     { id: 'subtle', labelKey: 'options.preset.subtle' },
     { id: 'classic', labelKey: 'options.preset.classic' },
     { id: 'ruined', labelKey: 'options.preset.ruined' },
+];
+
+const TIME_PRESET_IDS = [
+    { id: 'day', labelKey: 'options.time.day' },
+    { id: 'dusk', labelKey: 'options.time.dusk' },
+    { id: 'night', labelKey: 'options.time.night' },
 ];
 
 const CSS = `
@@ -154,6 +161,11 @@ const CSS = `
     border-color: #e0b978;
     color: #e0b978;
 }
+.options-presets button.active {
+    background: rgba(232, 192, 112, 0.28);
+    border-color: rgba(232, 192, 112, 0.55);
+    color: #f5e6c8;
+}
 #opt_locale {
     width: 100%;
     font-size: 14px;
@@ -186,11 +198,13 @@ export const OptionsOverlay = {
     _sectionEls: null,
     _labelEls: null,
     _presetBtns: null,
+    _timePresetBtns: null,
     _sliderLabelEls: null,
 
     init() {
         UISettings.init();
         RetroFilmSettings.init();
+        TimeOfDaySettings.init();
         I18n.init(UISettings.getLocale());
 
         const style = document.createElement('style');
@@ -283,6 +297,27 @@ export const OptionsOverlay = {
             });
         });
 
+        // --- Time of day ---
+        const timeSection = document.createElement('div');
+        timeSection.className = 'options-section';
+        this._sectionEls.time = timeSection;
+
+        const timePresets = document.createElement('div');
+        timePresets.className = 'options-presets';
+        this._timePresetBtns = [];
+        TIME_PRESET_IDS.forEach(({ id, labelKey }) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.dataset.preset = id;
+            btn.dataset.labelKey = labelKey;
+            btn.addEventListener('click', () => {
+                TimeOfDaySettings.applyPreset(id);
+                this._syncTimePresetButtons();
+            });
+            timePresets.appendChild(btn);
+            this._timePresetBtns.push(btn);
+        });
+
         // --- Retro ---
         const filmSection = document.createElement('div');
         filmSection.className = 'options-section';
@@ -309,6 +344,8 @@ export const OptionsOverlay = {
         panel.appendChild(controlsToggle);
         panel.appendChild(devSection);
         panel.appendChild(debugToggle);
+        panel.appendChild(timeSection);
+        panel.appendChild(timePresets);
         panel.appendChild(filmSection);
         panel.appendChild(toggleRow);
 
@@ -397,6 +434,7 @@ export const OptionsOverlay = {
         if (this._sectionEls.language) this._sectionEls.language.textContent = I18n.t('options.section.language');
         if (this._sectionEls.controls) this._sectionEls.controls.textContent = I18n.t('options.section.controls');
         if (this._sectionEls.dev) this._sectionEls.dev.textContent = I18n.t('options.section.dev');
+        if (this._sectionEls.time) this._sectionEls.time.textContent = I18n.t('options.time.title');
         if (this._sectionEls.film) this._sectionEls.film.textContent = I18n.t('options.section.film');
 
         if (this._labelEls.onscreen) this._labelEls.onscreen.textContent = I18n.t('options.onscreen');
@@ -411,9 +449,19 @@ export const OptionsOverlay = {
         (this._presetBtns || []).forEach((btn) => {
             btn.textContent = I18n.t(btn.dataset.labelKey);
         });
+        (this._timePresetBtns || []).forEach((btn) => {
+            btn.textContent = I18n.t(btn.dataset.labelKey);
+        });
+        this._syncTimePresetButtons();
         if (this._localeEl) {
             this._localeEl.value = I18n.getLocale();
         }
+    },
+
+    _syncTimePresetButtons() {
+        (this._timePresetBtns || []).forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.preset === TimeOfDaySettings.current);
+        });
     },
 
     syncFromSettings() {

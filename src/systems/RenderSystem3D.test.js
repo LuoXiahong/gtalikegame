@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { RenderSystem3D } from './RenderSystem3D.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { RetroFilmSettings } from './RetroFilmSettings.js';
+import { TimeOfDaySettings } from './TimeOfDaySettings.js';
 import { EventBus } from '../core/EventBus.js';
 
 // JSDOM has no WebGL — mock Three.js WebGLRenderer + PMREM
@@ -114,6 +115,7 @@ describe('RenderSystem3D', () => {
         vi.clearAllMocks();
         EventBus.clear();
         RetroFilmSettings.reset();
+        TimeOfDaySettings.reset();
         
         mockParent = {
             clientWidth: 800,
@@ -143,12 +145,14 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.scene).toBeDefined();
         expect(RenderSystem3D.camera).toBeDefined();
 
-        // Fog + post-processing + IBL environment
+        // Fog + post-processing + IBL environment (default TOD = dusk)
         expect(RenderSystem3D.scene.fog).toBeDefined();
-        expect(RenderSystem3D.scene.fog.near).toBe(200);
-        expect(RenderSystem3D.scene.fog.far).toBe(350);
+        expect(RenderSystem3D.scene.fog.near).toBe(60);
+        expect(RenderSystem3D.scene.fog.far).toBe(220);
         expect(RenderSystem3D.scene.environment).toBeDefined();
         expect(RenderSystem3D.composer).toBeDefined();
+        expect(RenderSystem3D.ambientLight.intensity).toBeCloseTo(0.42);
+        expect(RenderSystem3D._streetLightMult).toBeCloseTo(0.6);
         expect(RenderSystem3D.tiltShiftPass).toBeDefined();
         expect(RenderSystem3D.retroFilmPass).toBeDefined();
         expect(RenderSystem3D.retroFilmPass.uniforms.intensity).toBeDefined();
@@ -220,6 +224,28 @@ describe('RenderSystem3D', () => {
         RenderSystem3D.applyRetroSettings();
         expect(RenderSystem3D.retroFilmPass.enabled).toBe(true);
         expect(RenderSystem3D.retroFilmPass.uniforms.vignette.value).toBeCloseTo(0.25);
+    });
+
+    it('should lerp lighting when time of day changes', () => {
+        RenderSystem3D.init();
+        expect(RenderSystem3D.ambientLight.intensity).toBeCloseTo(0.42); // dusk
+
+        TimeOfDaySettings.applyPreset('night');
+        expect(RenderSystem3D._todTo).toBeDefined();
+        expect(RenderSystem3D._todT).toBe(0);
+
+        // Halfway through 1.5s transition
+        RenderSystem3D.updateTimeOfDay(0.75);
+        expect(RenderSystem3D._todT).toBeCloseTo(0.5);
+        expect(RenderSystem3D.ambientLight.intensity).toBeGreaterThan(0.22);
+        expect(RenderSystem3D.ambientLight.intensity).toBeLessThan(0.42);
+
+        // Finish transition
+        RenderSystem3D.updateTimeOfDay(1.0);
+        expect(RenderSystem3D._todTo).toBeNull();
+        expect(RenderSystem3D.ambientLight.intensity).toBeCloseTo(0.22);
+        expect(RenderSystem3D.scene.fog.near).toBe(40);
+        expect(RenderSystem3D._streetLightMult).toBeCloseTo(1.0);
     });
 
     it('should create custom building types via createBuilding', () => {

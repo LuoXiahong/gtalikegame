@@ -81,6 +81,7 @@ function addLampPost(group) {
     light.position.copy(globe.position);
     light.castShadow = false;
     light.userData.isStreetLight = true;
+    light.userData.baseIntensity = 0.7;
     group.add(light);
 }
 
