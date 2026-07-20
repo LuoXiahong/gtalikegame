@@ -9,11 +9,11 @@ export class NPC extends Entity {
         this.physics = { velX: 0, velY: 0, speed: 80, friction: 1 };
         this.visual.color = color;
 
-        // Domyślnie: pętla po chodniku najbliższego bloku (nie skróty przez jezdnię)
+        // Default: loop nearest block sidewalk (no shortcuts across the road)
         let pts = waypoints;
         if (!pts) {
             const near = PedestrianPaths.nearestSidewalkPoint(x, y);
-            // Znajdź pętlę zawierającą ten punkt (po inset)
+            // Pick sidewalk loop containing that inset point
             const loops = PedestrianPaths.getAllSidewalkLoops();
             let bestLoop = loops[0]?.points || [near];
             let bestD = Infinity;
@@ -27,7 +27,6 @@ export class NPC extends Entity {
                 });
             });
             pts = bestLoop.map(p => ({ x: p.x, y: p.y }));
-            // Start na najbliższym punkcie pętli
             let startIdx = 0;
             let startD = Infinity;
             pts.forEach((p, i) => {

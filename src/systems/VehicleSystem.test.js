@@ -67,7 +67,6 @@ describe('VehicleSystem', () => {
         VehicleSystem.init(mockPlayer);
         VehicleSystem.enterVehicle({ player: mockPlayer, car: mockCar });
         
-        // Ustaw prędkość auta w trakcie sterowania
         mockCar.physics.speed = 20;
         mockCar.physics.velX = 15;
         mockCar.physics.velY = 15;
@@ -83,9 +82,8 @@ describe('VehicleSystem', () => {
         expect(mockCar.physics.velY).toBe(0);
         expect(mockPlayer.physics.velX).toBe(0);
         expect(mockPlayer.physics.velY).toBe(0);
-        expect(InputSystem.resetAll).toHaveBeenCalledTimes(2); // raz przy enter, raz przy exit
+        expect(InputSystem.resetAll).toHaveBeenCalledTimes(2); // once on enter, once on exit
         
-        // Sprawdź pozycję gracza po wyjściu (obok auta)
         expect(mockPlayer.transform.x).toBe(mockCar.transform.x + mockCar.transform.width / 2 + 30);
         expect(EventBus.emit).toHaveBeenCalledWith('vehicle_exited', { carId: mockCar.id });
     });

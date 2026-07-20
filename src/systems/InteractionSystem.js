@@ -1,5 +1,5 @@
 /**
- * System interakcji (InteractionSystem)
+ * Proximity prompts, vehicle enter/exit, on-foot gunshot/explosion input.
  */
 import { World } from '../world/World.js';
 import { EventBus } from '../core/EventBus.js';
@@ -42,7 +42,7 @@ export const InteractionSystem = {
         const isExplodePressed = InputSystem.consumeExplode();
         const controlled = VehicleSystem.getControlledEntity();
 
-        // 1. Strzelanie i Eksplozje (tylko pieszo na razie)
+        // Shoot / explode only while on foot (for now)
         if (controlled && controlled.type === 'player') {
             if (isShootPressed) {
                 EventBus.emit('gunshot', { x: p.transform.x, y: p.transform.y });
@@ -58,7 +58,6 @@ export const InteractionSystem = {
             }
         }
 
-        // 2. Jeśli jesteśmy w aucie, sprawdź tylko wyjście
         if (controlled && controlled.type === 'car') {
             if (isActionPressed) {
                 EventBus.emit('exit_vehicle', { player: p });

@@ -3,7 +3,6 @@ import { EventBus } from './EventBus.js';
 
 describe('EventBus', () => {
     beforeEach(() => {
-        // Czyszczenie stanu przed każdym testem
         EventBus.listeners = {};
     });
 
@@ -34,7 +33,6 @@ describe('EventBus', () => {
     });
 
     it('should safely emit an event even if there are no listeners', () => {
-        // Nie powinno rzucić wyjątku
         expect(() => {
             EventBus.emit('nonExistentEvent', { data: 123 });
         }).not.toThrow();

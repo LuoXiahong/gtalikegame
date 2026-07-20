@@ -5,7 +5,7 @@ import { WorldMetrics } from '../world/WorldMetrics.js';
 import { RetroFilmSettings } from './RetroFilmSettings.js';
 import { EventBus } from '../core/EventBus.js';
 
-// Mockowanie Three.js WebGLRenderer, ponieważ JSDOM nie posiada wsparcia dla WebGL
+// JSDOM has no WebGL — mock Three.js WebGLRenderer
 vi.mock('three', async () => {
     const original = await vi.importActual('three');
     return {
@@ -27,7 +27,6 @@ vi.mock('three', async () => {
     };
 });
 
-// Mockowanie modułów post-processingu Three.js
 vi.mock('three/addons/postprocessing/EffectComposer.js', () => {
     return {
         EffectComposer: class {
@@ -65,7 +64,7 @@ vi.mock('three/addons/postprocessing/ShaderPass.js', () => {
             constructor(shader) {
                 this.shader = shader;
                 this.enabled = true;
-                // Klon uniformów jak w Three.js ShaderPass
+                // Clone uniforms like Three.js ShaderPass
                 this.uniforms = {};
                 if (shader && shader.uniforms) {
                     for (const key of Object.keys(shader.uniforms)) {
@@ -85,7 +84,6 @@ vi.mock('three/addons/postprocessing/OutputPass.js', () => {
     };
 });
 
-// Mockowanie World
 vi.mock('../world/World.js', () => ({
     World: {
         getEntitiesByType: vi.fn().mockReturnValue([])
@@ -102,7 +100,6 @@ describe('RenderSystem3D', () => {
         EventBus.clear();
         RetroFilmSettings.reset();
         
-        // Przygotowanie mocków DOM
         mockParent = {
             clientWidth: 800,
             clientHeight: 600
@@ -112,7 +109,6 @@ describe('RenderSystem3D', () => {
             parentElement: mockParent
         };
  
-        // Podpinamy mock pod document.getElementById
         vi.spyOn(document, 'getElementById').mockImplementation((id) => {
             if (id === 'gameCanvas3D') return mockCanvas;
             return null;
@@ -132,7 +128,7 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.scene).toBeDefined();
         expect(RenderSystem3D.camera).toBeDefined();
 
-        // Sprawdzenie mgły i post-processingu (T-704)
+        // Fog + post-processing (T-704)
         expect(RenderSystem3D.scene.fog).toBeDefined();
         expect(RenderSystem3D.scene.fog.near).toBe(200);
         expect(RenderSystem3D.scene.fog.far).toBe(350);
@@ -142,17 +138,15 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.retroFilmPass.uniforms.intensity).toBeDefined();
         expect(RenderSystem3D.retroFilmPass.enabled).toBe(true);
 
-        // Sprawdzenie czy poprawnie stworzyliśmy podłoża, chodniki, budynki i pasy drogowe
         expect(RenderSystem3D.groundPlane).toBeDefined();
         expect(RenderSystem3D.asphaltPlane).toBeDefined();
         expect(RenderSystem3D.sidewalks.length).toBe(9);
         expect(RenderSystem3D.buildingZones.length).toBe(9);
-        expect(RenderSystem3D.buildings.length).toBe(24); // Zweryfikowana ilość budynków z klastrów
+        expect(RenderSystem3D.buildings.length).toBe(24); // cluster building count
         expect(RenderSystem3D.laneMarkings.length).toBeGreaterThan(0);
         expect(RenderSystem3D.zebras.length).toBeGreaterThan(0);
         expect(RenderSystem3D.box5u).toBeDefined();
 
-        // Sprawdzenie poprawności generowania rekwizytów środowiskowych
         expect(RenderSystem3D.trees.length).toBeGreaterThanOrEqual(18);
         expect(RenderSystem3D.trees.length).toBeLessThanOrEqual(25);
         expect(RenderSystem3D.billboards.length).toBe(2);
@@ -163,10 +157,9 @@ describe('RenderSystem3D', () => {
         
         RenderSystem3D.update();
 
-        // Sprawdzenie czy pozycja boxa 5u uległa zmianie (funkcja ruchu)
+        // box5u motion function should have moved it
         expect(RenderSystem3D.box5u.position.x).not.toBe(RenderSystem3D.originX * SF);
 
-        // Renderer powinien wywołać render()
         expect(RenderSystem3D.renderer.render).toHaveBeenCalled();
     });
 
@@ -198,7 +191,7 @@ describe('RenderSystem3D', () => {
         expect(newBuilding.position.x).toBe(200);
         expect(newBuilding.position.z).toBe(200);
         
-        // Skyscraper powinien posiadać obiekty składowe (cień kontaktowy, bazę i top setback)
+        // Skyscraper has sub-meshes (contact shadow, base, top setback)
         expect(newBuilding.children.length).toBeGreaterThan(2);
     });
 
@@ -211,7 +204,7 @@ describe('RenderSystem3D', () => {
         expect(Array.isArray(mesh.material)).toBe(true);
         expect(mesh.material.length).toBe(6);
         
-        // Sprawdź czy boki mają mapę tekstury (proceduralną), a góra/dół mają czysty, jednolity kolor (brak mapy)
+        // Sides get procedural texture maps; top/bottom are solid color (no map)
         expect(mesh.material[0].map).toBeDefined(); // Side X+
         expect(mesh.material[1].map).toBeDefined(); // Side X-
         expect(mesh.material[2].map).toBeNull();    // Top (Roof)
@@ -229,7 +222,6 @@ describe('RenderSystem3D', () => {
         expect(tree.position.z).toBe(100);
         expect(tree.position.y).toBeCloseTo(WorldMetrics.SIDEWALK_HEIGHT);
         
-        // Drzewo powinno mieć elementy rzucające i przyjmujące cienie
         const trunkMesh = tree.children.find(c => c.geometry && c.geometry.type === 'CylinderGeometry');
         expect(trunkMesh).toBeDefined();
         expect(trunkMesh.castShadow).toBe(true);

@@ -1,6 +1,6 @@
 /**
- * Katalogi tłumaczeń — pl, en, de, es, fr.
- * Placeholdery: {s}, {n} itd. (I18n.t).
+ * Translation catalogs — pl, en, de, es, fr.
+ * Placeholders: {s}, {n}, etc. (I18n.t).
  */
 export const SUPPORTED_LOCALES = ['pl', 'en', 'de', 'es', 'fr'];
 

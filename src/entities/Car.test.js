@@ -11,13 +11,12 @@ describe('Car', () => {
         expect(c.transform.width).toBe(90);
         expect(c.transform.height).toBe(45);
         
-        // Auto ma teraz fizykę arcade (T-101)
+        // Arcade physics (T-101)
         expect(c.physics).not.toBeNull();
-        expect(c.physics.speed).toBe(0); // Prędkość początkowa
+        expect(c.physics.speed).toBe(0);
         expect(c.physics.maxSpeed).toBe(500);
         expect(c.physics.rollingResistance).toBe(0.97);
         
-        // Auto ma warstwę z i flagi zajętości
         expect(c.occupied).toBe(false);
         expect(c.visual.color).toBe('#111');
         expect(c.visual.z).toBe(0.05);

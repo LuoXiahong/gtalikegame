@@ -1,5 +1,5 @@
 /**
- * CORE: ZARZĄDZANIE CZASEM (Time)
+ * Frame timing (delta in seconds, FPS-independent).
  */
 export const Time = {
     delta: 0,
@@ -7,11 +7,11 @@ export const Time = {
     lastFrame: performance.now(),
 
     update(currentTime) {
-        // Obliczamy różnicę czasu między klatkami w sekundach (dla płynności niezależnej od FPS)
+        // Seconds between frames (gameplay independent of FPS)
         this.delta = (currentTime - this.lastFrame) / 1000;
         this.lastFrame = currentTime;
 
-        // Zabezpieczenie przed zbyt dużym skokiem (np. przy powrocie do zakładki)
+        // Cap spike after tab background / resume
         if (this.delta > 0.1) this.delta = 0.1;
 
         this.time += this.delta;

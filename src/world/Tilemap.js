@@ -1,6 +1,5 @@
 /**
- * WORLD: Tilemap
- * System kafelków definiujący semantykę podłoża.
+ * Ground-tile semantics (grass, road, sidewalk, building zone).
  */
 import { World } from './World.js';
 import { WorldGrid } from './WorldGrid.js';
@@ -30,15 +29,13 @@ export const Tilemap = {
         this.cols = Math.ceil(World.width / this.tileSize);
         this.rows = Math.ceil(World.height / this.tileSize);
         
-        // Inicjalizacja pustej mapy (trawa)
         this.data = Array(this.rows).fill(0).map(() => Array(this.cols).fill(TILE_TYPES.GRASS));
 
         this.generateSimpleCity();
     },
 
     generateSimpleCity() {
-        // Generowanie siatki na podstawie WorldGrid
-        // Wypełniamy strefę miejską drogą, ignorując zewnętrzny margines
+        // Fill urban area with road, leaving WorldGrid padding as grass
         const padding = WorldGrid.PADDING;
         const startTile = Math.floor(padding / this.tileSize);
         const endTileCol = Math.floor((3000 - padding) / this.tileSize);
@@ -50,7 +47,7 @@ export const Tilemap = {
             }
         }
 
-        // Następnie nadpisujemy bloki odpowiednio chodnikiem i strefami budynków
+        // Overlay blocks: sidewalk ring, building zone interior
         for (let br = 0; br < WorldGrid.GRID_ROWS; br++) {
             for (let bc = 0; bc < WorldGrid.GRID_COLS; bc++) {
                 const b = WorldGrid.getBlockBounds(br, bc);

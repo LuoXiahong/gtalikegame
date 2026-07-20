@@ -1,12 +1,12 @@
 /**
- * UISettings — preferencje warstwy UI (lokalne, niezależne od efektu retro).
- * Przyciski WASD/F: auto (touch = włączone, desktop = wyłączone) lub jawny override.
- * Język: pl | en | de | es | fr.
+ * UI preferences (persisted in localStorage).
+ * On-screen WASD/F: auto (touch on, desktop off) or explicit override.
+ * Locale: pl | en | de | es | fr (default en).
  */
 import { SUPPORTED_LOCALES } from '../i18n/locales.js';
 
 const STORAGE_KEY = 'gtalike_ui_settings';
-const DEFAULT_LOCALE = 'pl';
+const DEFAULT_LOCALE = 'en';
 
 function detectTouchPrimary() {
     if (typeof window === 'undefined') return false;
@@ -30,6 +30,8 @@ export const UISettings = {
     _onScreenControlsOverride: null,
     /** @type {string} */
     _locale: DEFAULT_LOCALE,
+    /** @type {boolean} */
+    _debugAI: false,
 
     init() {
         try {
@@ -41,6 +43,9 @@ export const UISettings = {
             }
             const loc = normalizeLocale(data.locale);
             if (loc) this._locale = loc;
+            if (typeof data.debugAI === 'boolean') {
+                this._debugAI = data.debugAI;
+            }
         } catch {
             this._onScreenControlsOverride = null;
         }
@@ -92,11 +97,21 @@ export const UISettings = {
         return true;
     },
 
+    getDebugAI() {
+        return this._debugAI;
+    },
+
+    setDebugAI(enabled) {
+        this._debugAI = Boolean(enabled);
+        this._persist();
+    },
+
     _persist() {
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify({
                 onScreenControls: this._onScreenControlsOverride,
                 locale: this._locale,
+                debugAI: this._debugAI,
             }));
         } catch {
             /* private mode / quota — ignore */
@@ -107,6 +122,7 @@ export const UISettings = {
     reset() {
         this._onScreenControlsOverride = null;
         this._locale = DEFAULT_LOCALE;
+        this._debugAI = false;
         try {
             localStorage.removeItem(STORAGE_KEY);
         } catch {

@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: './', // Użycie ścieżek relatywnych rozwiązuje problem hostowania w podkatalogu
+  base: './', // Relative paths so the build works when hosted in a subdirectory
 });

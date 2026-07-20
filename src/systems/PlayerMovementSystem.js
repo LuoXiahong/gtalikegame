@@ -1,5 +1,5 @@
 /**
- * System ruchu gracza (pieszo)
+ * On-foot player movement from keyboard input.
  */
 import { InputSystem } from '../input/InputManager.js';
 
@@ -7,11 +7,9 @@ export const PlayerMovementSystem = {
     update(dt, entity) {
         if (!entity || entity.type !== 'player') return;
 
-        // 1. Obrót (snappier)
         if (InputSystem.keys.left) entity.transform.angle -= 6 * dt;
         if (InputSystem.keys.right) entity.transform.angle += 6 * dt;
 
-        // 2. Intencja ruchu
         let intentX = 0;
         let intentY = 0;
         let isMoving = false;
@@ -27,14 +25,12 @@ export const PlayerMovementSystem = {
             isMoving = true;
         }
 
-        // 3. Aplikacja do fizyki (Game-like feel)
         if (entity.physics) {
             if (isMoving) {
-                // Szybsza akceleracja (zbalansowana)
                 entity.physics.velX += intentX * entity.physics.speed * dt;
                 entity.physics.velY += intentY * entity.physics.speed * dt;
             } else {
-                // Dodatkowe, natychmiastowe hamowanie po puszczeniu klawiszy
+                // Extra hard stop when keys are released (game-like snap).
                 entity.physics.velX *= 0.3;
                 entity.physics.velY *= 0.3;
             }

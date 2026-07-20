@@ -1,6 +1,5 @@
 /**
- * PROCEDURAL ROAD TEXTURE GENERATOR SYSTEM (RoadTextureGenerator)
- * Generates high-quality procedural road textures using Canvas2D and THREE.CanvasTexture.
+ * RoadTextureGenerator — procedural road textures via Canvas2D + THREE.CanvasTexture.
  */
 import * as THREE from 'three';
 
@@ -28,11 +27,9 @@ export const RoadTextureGenerator = {
         const ctx = canvas.getContext ? canvas.getContext('2d') : null;
 
         if (ctx) {
-            // Fill background with core premium asphalt color
-            ctx.fillStyle = '#222428'; // Slightly lighter, richer asphalt grey
+            ctx.fillStyle = '#222428';
             ctx.fillRect(0, 0, 512, 512);
 
-            // Add deep multi-layered procedural grain and aggregate stones
             this.addAsphaltNoise(ctx, 512, 512);
 
             if (type === 'straight') {
@@ -49,14 +46,14 @@ export const RoadTextureGenerator = {
         const texture = new THREE.CanvasTexture(canvas);
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
-        // NearestFilter for crisp, stylish, premium retro pixel feel
+        // NearestFilter: crisp retro pixel look on mag
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.LinearMipmapLinearFilter;
         return texture;
     },
 
     addAsphaltNoise(ctx, width, height) {
-        // Layer 1: Large organic color variations (asphalt aging blotches)
+        // Large aging blotches
         for (let i = 0; i < 30; i++) {
             const rx = Math.random() * width;
             const ry = Math.random() * height;
@@ -71,7 +68,7 @@ export const RoadTextureGenerator = {
             ctx.fill();
         }
 
-        // Layer 2: Medium aggregate stones (simulating gravel texture in asphalt)
+        // Medium aggregate stones
         for (let i = 0; i < 800; i++) {
             const rx = Math.random() * width;
             const ry = Math.random() * height;
@@ -83,7 +80,7 @@ export const RoadTextureGenerator = {
             ctx.fill();
         }
 
-        // Layer 3: Sharp sand micro-pixels (very high-frequency grain)
+        // High-frequency sand grain
         const pixelCount = Math.round(width * height * 0.08);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
         for (let i = 0; i < pixelCount; i++) {
@@ -100,7 +97,7 @@ export const RoadTextureGenerator = {
     },
 
     drawStraightRoad(ctx, isVertical = true) {
-        // Leave clear asphalt near both ends so dashes stop short of intersections
+        // Clear asphalt near both ends so dashes stop short of intersections
         // (mirrors 2D Decals clearance). ~18% of a 50 m segment ≈ 9 m gap.
         const margin = 92;
         const dashStart = margin;
@@ -108,7 +105,6 @@ export const RoadTextureGenerator = {
 
         ctx.save();
 
-        // 1. Dark outline backing for painted line
         ctx.strokeStyle = 'rgba(10, 10, 12, 0.4)';
         ctx.lineWidth = 8;
         ctx.setLineDash([40, 40]);
@@ -123,7 +119,6 @@ export const RoadTextureGenerator = {
         }
         ctx.stroke();
 
-        // 2. Off-white dashed centerline
         ctx.strokeStyle = 'rgba(240, 242, 245, 0.9)';
         ctx.lineWidth = 6;
         ctx.setLineDash([40, 40]);
@@ -138,7 +133,7 @@ export const RoadTextureGenerator = {
         }
         ctx.stroke();
 
-        // 3. Paint wear / chipping (only along the dashed span)
+        // Paint wear only along the dashed span
         ctx.restore();
         ctx.save();
         ctx.fillStyle = '#222428';
@@ -152,23 +147,19 @@ export const RoadTextureGenerator = {
     },
 
     drawIntersection(ctx) {
-        // 1. Draw curved tire skid marks for dramatic street effect
         ctx.save();
         ctx.strokeStyle = 'rgba(5, 5, 8, 0.35)';
         ctx.lineWidth = 12;
         ctx.lineCap = 'round';
-        
-        // Curve 1 (bottom-right turning)
+
         ctx.beginPath();
         ctx.arc(512, 512, 220, Math.PI * 1.05, Math.PI * 1.45);
         ctx.stroke();
 
-        // Curve 2 (top-left turning)
         ctx.beginPath();
         ctx.arc(0, 0, 190, Math.PI * 0.05, Math.PI * 0.45);
         ctx.stroke();
 
-        // Straight skid (heavy brake)
         ctx.strokeStyle = 'rgba(5, 5, 8, 0.25)';
         ctx.lineWidth = 8;
         ctx.beginPath();
@@ -183,7 +174,6 @@ export const RoadTextureGenerator = {
     },
 
     drawCrosswalk(ctx) {
-        // Transparent-ish asphalt base matching road color, then zebra bars across width
         ctx.fillStyle = '#222428';
         ctx.fillRect(0, 0, 512, 512);
         this.addAsphaltNoise(ctx, 512, 512);
@@ -214,9 +204,8 @@ export const RoadTextureGenerator = {
 
     applyAsphaltDirt(ctx, allEdges = false) {
         ctx.save();
-        const dirtWidth = 85; // Wider, smoother rynsztok transition
+        const dirtWidth = 85; // Wider, smoother curb/gutter dirt falloff
 
-        // Left edge (curb shadow)
         const leftGrad = ctx.createLinearGradient(0, 0, dirtWidth, 0);
         leftGrad.addColorStop(0, 'rgba(10, 10, 12, 0.85)');
         leftGrad.addColorStop(0.35, 'rgba(10, 10, 12, 0.45)');
@@ -224,7 +213,6 @@ export const RoadTextureGenerator = {
         ctx.fillStyle = leftGrad;
         ctx.fillRect(0, 0, dirtWidth, 512);
 
-        // Right edge (curb shadow)
         const rightGrad = ctx.createLinearGradient(512, 0, 512 - dirtWidth, 0);
         rightGrad.addColorStop(0, 'rgba(10, 10, 12, 0.85)');
         rightGrad.addColorStop(0.35, 'rgba(10, 10, 12, 0.45)');
@@ -233,7 +221,6 @@ export const RoadTextureGenerator = {
         ctx.fillRect(512 - dirtWidth, 0, dirtWidth, 512);
 
         if (allEdges) {
-            // Top edge
             const topGrad = ctx.createLinearGradient(0, 0, 0, dirtWidth);
             topGrad.addColorStop(0, 'rgba(10, 10, 12, 0.85)');
             topGrad.addColorStop(0.35, 'rgba(10, 10, 12, 0.45)');
@@ -241,7 +228,6 @@ export const RoadTextureGenerator = {
             ctx.fillStyle = topGrad;
             ctx.fillRect(0, 0, 512, dirtWidth);
 
-            // Bottom edge
             const bottomGrad = ctx.createLinearGradient(0, 512, 0, 512 - dirtWidth);
             bottomGrad.addColorStop(0, 'rgba(10, 10, 12, 0.85)');
             bottomGrad.addColorStop(0.35, 'rgba(10, 10, 12, 0.45)');

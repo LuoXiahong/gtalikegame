@@ -1,5 +1,5 @@
 /**
- * MAIN - Punkt wejścia aplikacji
+ * Application entry point.
  */
 import { Game } from './core/Game.js';
 

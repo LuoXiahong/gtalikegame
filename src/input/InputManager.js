@@ -1,5 +1,5 @@
 /**
- * ZARZĄDZANIE WEJŚCIEM (Input System)
+ * Keyboard and on-screen HUD input.
  */
 export const InputSystem = {
     keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false, debugAI: false, viewToggle: false, zoomToggle: false, help: false },
@@ -54,7 +54,7 @@ export const InputSystem = {
             if (state && !this.keys.zoomToggle) this.zoomToggleJustPressed = true;
             this.keys.zoomToggle = state;
         }
-        // Slash (/) i Shift+Slash (?) — pomoc; NIE blokujemy propagacji (overlay obsługuje sam)
+        // Slash (/) and Shift+/ (?) — help; do not stopPropagation (overlay handles it)
         if (code === "Slash") {
             if (state && !this.keys.help) this.helpJustPressed = true;
             this.keys.help = state;

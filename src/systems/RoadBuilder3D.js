@@ -1,6 +1,5 @@
 /**
- * RoadBuilder3D
- * Odpowiedzialny za generowanie dróg, pasów i skrzyżowań 3D.
+ * RoadBuilder3D — 3D roads, lane markings, and intersections.
  */
 import * as THREE from 'three';
 import { WorldGrid } from '../world/WorldGrid.js';

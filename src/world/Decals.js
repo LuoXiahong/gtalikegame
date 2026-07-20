@@ -1,6 +1,5 @@
 /**
- * WORLD: Decals
- * Statyczne dekoracje podłoża (pasy, przejścia, ślady).
+ * Ground decorations (crosswalks, lane markings).
  */
 import { WorldGrid } from './WorldGrid.js';
 
@@ -11,9 +10,8 @@ export const Decals = {
         this.items = [];
         const centers = WorldGrid.getStreetCenters();
         const roadWidth = WorldGrid.STREET_WIDTH;
-        const offset = roadWidth / 2 + 50; // tuż przy krawędzi skrzyżowania / chodnika
+        const offset = roadWidth / 2 + 50; // just outside intersection / sidewalk edge
 
-        // Przejścia na każdym skrzyżowaniu siatki ulic
         centers.forEach(cx => {
             centers.forEach(cy => {
                 this.items.push(
@@ -25,7 +23,7 @@ export const Decals = {
             });
         });
 
-        // Pasy ruchu (przerywane) wzdłuż osi ulic
+        // Dashed lane lines along street axes (skip near intersections)
         centers.forEach(mid => {
             for (let y = 100; y < 3000; y += 200) {
                 const nearIntersection = centers.some(cy => Math.abs(y - cy) < offset + 100);

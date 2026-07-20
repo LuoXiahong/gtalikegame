@@ -55,9 +55,7 @@ export const AISystem = {
         return dist;
     },
 
-    /**
-     * Idle dozwolony wyłącznie na chodniku.
-     */
+    /** Idle only allowed on sidewalk. */
     tryIdle(npc, duration) {
         if (!PedestrianPaths.canStop(npc.transform.x, npc.transform.y)) {
             npc.ai.state = 'walk';
@@ -73,7 +71,7 @@ export const AISystem = {
     },
 
     /**
-     * Na jezdni / poza chodnikiem: iść (przez przejście lub do najbliższego chodnika). Nigdy stać.
+     * Off-sidewalk: keep moving (via waypoints or nearest curb). Never stand still.
      */
     updateMustKeepMoving(npc, dt) {
         const x = npc.transform.x;
@@ -82,7 +80,7 @@ export const AISystem = {
             return false;
         }
 
-        // Cel: kolejny waypoint (np. druga strona przejścia) albo najbliższy chodnik
+        // Next waypoint (e.g. far side of crosswalk) or nearest sidewalk.
         let tx;
         let ty;
         if (npc.ai.waypoints && npc.ai.waypoints.length > 0) {
@@ -95,13 +93,12 @@ export const AISystem = {
             ty = curb.y;
         }
 
-        // Na przejściu / jezdni idziemy trochę szybciej — nie ma postoju
+        // Slightly faster on road/crosswalk — no stopping there.
         const speed = npc.physics.speed * (PedestrianPaths.isOnCrosswalk(x, y) ? 1.2 : 1.15);
         const dist = this.moveToward(npc, tx, ty, speed, dt);
 
         if (dist < 10 && npc.ai.waypoints && npc.ai.waypoints.length > 0) {
             npc.ai.currentWaypointIndex = (npc.ai.currentWaypointIndex + 1) % npc.ai.waypoints.length;
-            // Po dojściu — idle tylko jeśli już na chodniku
             if (PedestrianPaths.canStop(npc.transform.x, npc.transform.y)) {
                 npc.ai.returningToSidewalk = false;
                 this.tryIdle(npc, 0.8 + Math.random());
@@ -135,7 +132,7 @@ export const AISystem = {
                 }
             }
 
-            // Absolutna reguła: na jezdni / przejściu nigdy nie stoimy
+            // Hard rule: never idle on road or crosswalk.
             if (npc.ai.state === 'idle' && !PedestrianPaths.canStop(npc.transform.x, npc.transform.y)) {
                 npc.ai.state = 'walk';
                 npc.ai.returningToSidewalk = true;
@@ -180,7 +177,6 @@ export const AISystem = {
                 npc.physics.velY = Math.sin(npc.transform.angle) * fleeSpeed * dt;
                 npc.visual.walkCycle += 20 * dt;
             } else {
-                // Idle — gwarantowane tylko na chodniku (sprawdzone wyżej)
                 npc.physics.velX = 0;
                 npc.physics.velY = 0;
                 npc.visual.walkCycle = 0;

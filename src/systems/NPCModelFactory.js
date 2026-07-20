@@ -1,7 +1,5 @@
 /**
- * SYSTEM / FACTORY: NPCModelFactory
- * Responsible for creating 3D capsule-like actor silhouettes for NPCs.
- * Period look: muted clothing palette + fedora.
+ * NPCModelFactory — boxy 3D NPC silhouettes (muted period clothing + fedora).
  */
 import * as THREE from 'three';
 
@@ -19,17 +17,13 @@ export const NPC_COLOR_PALETTE = [
 ];
 
 /**
- * Creates a boxy humanoid NPC model using Three.js primitives.
- * Base of the model is at Y = 0, pivot is centered horizontally.
- * Height is scaled exactly to WorldMetrics.NPC_HEIGHT (~1.8m).
- *
- * @param {string|number} [color] - Optional hex color code or CSS hex string. If not provided, a random color from the palette is selected.
- * @returns {THREE.Group} A Three.js Group containing the NPC meshes.
+ * Boxy humanoid NPC. Base at Y=0, pivot centered; height matches WorldMetrics.NPC_HEIGHT (~1.8m).
+ * @param {string|number} [color] - Hex number or CSS hex string; random palette color if omitted.
+ * @returns {THREE.Group}
  */
 export function createNPCModel(color) {
     const group = new THREE.Group();
 
-    // 1. Determine shirt/torso color
     let finalColor = color;
     if (finalColor === undefined || finalColor === null) {
         const randIdx = Math.floor(Math.random() * NPC_COLOR_PALETTE.length);
@@ -38,7 +32,7 @@ export function createNPCModel(color) {
         finalColor = parseInt(finalColor.replace('#', '0x'), 16);
     }
 
-    // Ciało (Torso): grubość (X) = 0.4m, wysokość (Y) = 1.4m, szerokość ramion (Z) = 0.6m
+    // Torso: depth X=0.4m, height Y=1.4m, shoulder width Z=0.6m
     const bodyGeom = new THREE.BoxGeometry(0.4, 1.4, 0.6);
     const bodyMat = new THREE.MeshStandardMaterial({
         color: finalColor,
@@ -49,7 +43,6 @@ export function createNPCModel(color) {
     body.position.y = 0.7;
     group.add(body);
 
-    // Głowa
     const headGeom = new THREE.BoxGeometry(0.4, 0.4, 0.4);
     const headMat = new THREE.MeshStandardMaterial({
         color: 0xf1c27d,

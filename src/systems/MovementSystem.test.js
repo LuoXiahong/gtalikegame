@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MovementSystem } from './MovementSystem.js';
 import { World } from '../world/World.js';
 
-// Mockowanie zależności
 vi.mock('../world/World.js', () => ({
     World: {
         width: 1000,
@@ -72,44 +71,44 @@ describe('MovementSystem', () => {
         expect(mockEntity.physics.speed).toBe(0);
     });
 
-    // --- TESTY REGRESYJNE ---
+    // --- REGRESSION ---
 
-    it('[REGRESJA] player speed powinno być zachowane po uderzeniu w granicę mapy', () => {
-        // Gracz pieszo: physics.speed to stała bazowa prędkości (np. 100),
-        // NIE powinna być zerowana przez granicę. Bez tej naprawy gracz
-        // trwale traci zdolność ruchu po pierwszym kontakcie ze ścianą.
-        mockEntity.type = 'player';
-        mockEntity.transform.width = 20;
-        mockEntity.transform.height = 20;
-        mockEntity.physics.speed = 100; // bazowa prędkość gracza
-
-        mockEntity.transform.x = 5;    // za granicą (WORLD_MARGIN = 50)
-        mockEntity.physics.velX = -20;
-        MovementSystem.update(0.1);
-
-        expect(mockEntity.transform.x).toBe(50);   // wciągnięty do marginesu
-        expect(mockEntity.physics.velX).toBe(0);    // velX skierowany w ścianę = 0
-        expect(mockEntity.physics.speed).toBe(100); // speed NIE zerowane — gracz może dalej chodzić
-    });
-
-    it('[REGRESJA] player może się poruszać po powrocie od granicy mapy', () => {
-        // Symulacja: gracz uderza w ścianę i w kolejnej klatce dostaje velX od input
+    it('[REGRESSION] player speed is preserved after hitting map boundary', () => {
+        // On foot, physics.speed is the base walk speed (e.g. 100) and must NOT be
+        // zeroed by the boundary clamp. Without this fix the player permanently loses
+        // movement after the first wall contact.
         mockEntity.type = 'player';
         mockEntity.transform.width = 20;
         mockEntity.transform.height = 20;
         mockEntity.physics.speed = 100;
 
-        // Klatka 1: uderzenie w lewą ścianę
+        mockEntity.transform.x = 5;    // past boundary (WORLD_MARGIN = 50)
+        mockEntity.physics.velX = -20;
+        MovementSystem.update(0.1);
+
+        expect(mockEntity.transform.x).toBe(50);   // clamped to margin
+        expect(mockEntity.physics.velX).toBe(0);    // wall-directed velX cleared
+        expect(mockEntity.physics.speed).toBe(100); // speed kept — player can still walk
+    });
+
+    it('[REGRESSION] player can move again after leaving map boundary', () => {
+        // Hit wall, then next frame receive velX from input
+        mockEntity.type = 'player';
+        mockEntity.transform.width = 20;
+        mockEntity.transform.height = 20;
+        mockEntity.physics.speed = 100;
+
+        // Frame 1: hit left wall
         mockEntity.transform.x = 5;
         mockEntity.physics.velX = -20;
         MovementSystem.update(0.1);
         expect(mockEntity.transform.x).toBe(50);
         expect(mockEntity.physics.speed).toBe(100);
 
-        // Klatka 2: input daje prędkość w prawo — gracz powinien ruszyć
+        // Frame 2: input gives rightward velocity — player should move
         mockEntity.physics.velX = 10;
         const xBefore = mockEntity.transform.x;
         MovementSystem.update(0.1);
-        expect(mockEntity.transform.x).toBeGreaterThan(xBefore); // gracz się poruszył
+        expect(mockEntity.transform.x).toBeGreaterThan(xBefore);
     });
 });

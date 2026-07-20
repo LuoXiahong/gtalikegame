@@ -1,34 +1,28 @@
 /**
- * System fizyki podstawowej (MovementSystem)
- * Odpowiada za: całkowanie prędkości do pozycji, tarcie, granice świata.
- * NIE zajmuje się wejściem (Input) - od tego są systemy dedykowane.
+ * Integrates velocity into position, applies friction, clamps to world bounds.
+ * Does not handle input — dedicated systems own that.
  */
 import { World } from '../world/World.js';
 
-// Minimalny margines od krawędzi świata (50px). Dzięki temu encja,
-// która już jest poza granicą, zostaje wciągnięta do środka.
+// 50px inset from world edges so entities already outside get pulled back in.
 const WORLD_MARGIN = 50;
 
 export const MovementSystem = {
     update(dt) {
-        // Aplikacja tarcia i aktualizacja pozycji dla wszystkich encji z komponentem fizyki
         World.entities.forEach(entity => {
             if (entity.physics) {
-                // Tarcie (friction)
                 entity.physics.velX *= entity.physics.friction;
                 entity.physics.velY *= entity.physics.friction;
 
-                // Zatrzymanie mikro-ruchów (optymalizacja)
+                // Kill micro-velocities to avoid endless tiny drift.
                 if (Math.abs(entity.physics.velX) < 0.1) entity.physics.velX = 0;
                 if (Math.abs(entity.physics.velY) < 0.1) entity.physics.velY = 0;
 
-                // Aktualizacja pozycji
                 entity.transform.x += entity.physics.velX;
                 entity.transform.y += entity.physics.velY;
 
-                // Granice świata — minimalny margines WORLD_MARGIN od każdej ściany.
-                // Używamy max(hw, WORLD_MARGIN) żeby encja, która jest już poza granicą,
-                // została wciągnięta do bezpiecznego obszaru wewnątrz.
+                // max(half-size, WORLD_MARGIN) so oversized or out-of-bounds entities
+                // are pulled into a safe inset rather than stuck outside.
                 const hw = Math.max((entity.transform.width  || 0) / 2, WORLD_MARGIN);
                 const hh = Math.max((entity.transform.height || 0) / 2, WORLD_MARGIN);
 

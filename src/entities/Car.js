@@ -5,18 +5,17 @@ export class Car extends Entity {
         super(id, 'car', x, y);
         this.transform.width = 90;
         this.transform.height = 45;
-        // Fizyka auta (arcade)
         this.physics = { 
             velX: 0, 
             velY: 0, 
-            speed: 0, // Bieżąca prędkość scalarna
-            maxSpeed: 500,         // Bardziej kontrolowalny maxSpeed
-            acceleration: 600,     // Szybsza akceleracja (arcade feel)
-            friction: 1.0,         // Fizyczne tarcie (MovementSystem) - wyłączone dla aut
-            rollingResistance: 0.97, // Szybsze naturalne zwalnianie
+            speed: 0, // Scalar speed (arcade driving)
+            maxSpeed: 500,
+            acceleration: 600,
+            friction: 1.0, // MovementSystem friction off for cars (1.0 = no decay)
+            rollingResistance: 0.97,
             brakingFriction: 0.90, 
-            brakeForce: 800,       // Gwałtowne hamowanie (arcade brake force)
-            steeringPower: 3.0     // Bardziej responsywne sterowanie
+            brakeForce: 800,
+            steeringPower: 3.0
         };
         this.visual.color = color;
         this.visual.z = 0.05; 

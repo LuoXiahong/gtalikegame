@@ -1,8 +1,7 @@
 import { EventBus } from '../core/EventBus.js';
 
 /**
- * Camera jako osobny byt
- * Render nie liczy już offsetów ręcznie wszędzie.
+ * Shared camera offset so render code does not recompute it ad hoc.
  */
 export const Camera = {
     x: 0,
@@ -32,10 +31,9 @@ export const Camera = {
                 return;
             }
 
-            // Prędkość wygładzania - im wyższa, tym szybciej kamera nadąża
+            // Higher = snappier follow
             const smoothing = 6.0; 
             
-            // Liniowa interpolacja (lerp) pozycji kamery
             this.x += (targetX - this.x) * Math.min(1, smoothing * dt);
             this.y += (targetY - this.y) * Math.min(1, smoothing * dt);
         }

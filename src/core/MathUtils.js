@@ -1,6 +1,5 @@
 /**
- * CORE: NARZĘDZIA MATEMATYCZNE (MathUtils)
- * Funkcje pomocnicze do obliczeń wektorowych i geometrycznych.
+ * MathUtils — vector / geometry helpers.
  */
 
 export function distanceBetween(a, b) {

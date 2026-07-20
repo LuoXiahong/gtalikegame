@@ -1,5 +1,5 @@
 /**
- * System kolizji (CollisionSystem)
+ * AABB collision resolution for controlled entity, buildings, cars, and NPCs.
  */
 import { World } from './World.js';
 import { VehicleSystem } from '../systems/VehicleSystem.js';
@@ -7,7 +7,7 @@ import { EventBus } from '../core/EventBus.js';
 
 export const CollisionSystem = {
     checkAABB(r1, r2) {
-        // r1: {x, y, width, height}, r2: {x, y, w, h}
+        // r1: center + width/height; r2: top-left + w/h
         return r1.x - r1.width / 2 < r2.x + r2.w &&
             r1.x + r1.width / 2 > r2.x &&
             r1.y - r1.height / 2 < r2.y + r2.h &&
@@ -21,7 +21,6 @@ export const CollisionSystem = {
 
         const controlled = VehicleSystem.getControlledEntity();
 
-        // 1. Kolizje sterowanego obiektu z Budynkami
         if (controlled) {
             World.buildings.forEach(b => {
                 const ent = controlled.transform;
@@ -29,7 +28,6 @@ export const CollisionSystem = {
                 const hh = ent.height / 2;
 
                 if (this.checkAABB(ent, b)) {
-                    // Oblicz nakładanie się (overlap) z każdej strony
                     const overlapLeft = (ent.x + hw) - b.x;
                     const overlapRight = (b.x + b.w) - (ent.x - hw);
                     const overlapTop = (ent.y + hh) - b.y;
@@ -54,7 +52,7 @@ export const CollisionSystem = {
             });
         }
 
-        // 2. Kolizje Gracza z Autami (tylko gdy gracz jest pieszo)
+        // On-foot player vs empty cars only
         if (controlled && controlled.type === 'player') {
             const cars = World.getEntitiesByType('car');
             const len = cars.length;
@@ -98,7 +96,7 @@ export const CollisionSystem = {
             }
         }
 
-        // 3. Kolizje sterowanego Auta z NPC
+        // Driving: knock NPCs when speed > 10
         if (controlled && controlled.type === 'car') {
             const npcs = World.getEntitiesByType('npc');
             const len = npcs.length;
@@ -118,11 +116,9 @@ export const CollisionSystem = {
                         const dy = npc.transform.y - controlled.transform.y;
                         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
                         
-                        // Odepchnięcie NPC
                         npc.transform.x += (dx / dist) * 30;
                         npc.transform.y += (dy / dist) * 30;
                         
-                        // Spowolnienie auta
                         controlled.physics.speed *= 0.8;
                         
                         EventBus.emit('npc_hit', { npc, car: controlled });

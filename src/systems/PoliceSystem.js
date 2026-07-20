@@ -1,6 +1,5 @@
 /**
- * System Policji (PoliceSystem)
- * Chase with steering + velocity inertia (no instant snap / “flying”).
+ * PoliceSystem — chase with steering + velocity inertia (no instant snap / “flying”).
  */
 import { World } from '../world/World.js';
 import { EventBus } from '../core/EventBus.js';

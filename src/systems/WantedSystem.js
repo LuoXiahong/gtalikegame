@@ -1,5 +1,5 @@
 /**
- * System Poziomu Poszukiwań (WantedSystem)
+ * Wanted-star level: rise on incidents, decay over time.
  */
 import { EventBus } from '../core/EventBus.js';
 import { Time } from '../core/Time.js';
@@ -8,7 +8,7 @@ export const WantedSystem = {
     stars: 0,
     maxStars: 5,
     timer: 0,
-    resetTime: 10, // sekundy do utraty 1 gwiazdki
+    resetTime: 10, // seconds until one star drops
     lastIncidentTime: 0,
 
     init() {
@@ -31,7 +31,7 @@ export const WantedSystem = {
     },
 
     handleIncident() {
-        // Debounce: zabezpieczenie przed nabijaniem max gwiazdek w 1 klatce
+        // Debounce: avoid maxing stars in a single frame
         if (Time.time - this.lastIncidentTime > 1.0) {
             if (this.stars < this.maxStars) {
                 this.stars++;

@@ -95,13 +95,13 @@ describe('VehiclePhysicsSystem', () => {
     it('should accelerate slower at higher speeds due to acceleration curve', () => {
         InputSystem.keys.up = true;
         
-        // 1. Przyspieszanie od zera
+        // 1. Accelerate from standstill
         mockCar.physics.speed = 0;
         VehiclePhysicsSystem.update(0.1, mockCar);
         const accelAtZero = mockCar.physics.speed;
         
-        // 2. Przyspieszanie od wyższej prędkości
-        mockCar.physics.speed = 300; // Połowa maxSpeed
+        // 2. Accelerate from higher speed
+        mockCar.physics.speed = 300; // half maxSpeed
         VehiclePhysicsSystem.update(0.1, mockCar);
         const accelAtHigh = mockCar.physics.speed - 300;
         

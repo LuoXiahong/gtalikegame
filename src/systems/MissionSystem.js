@@ -1,6 +1,5 @@
 /**
- * System misji (MissionSystem)
- * Event-driven + update loop for timers and zones
+ * Mission flow: event-driven stages plus update loop for timers/zones.
  */
 import { EventBus } from '../core/EventBus.js';
 import { GameState, GAME_STATES } from '../core/GameState.js';
@@ -48,7 +47,6 @@ export const MissionSystem = {
         this._onLocale = () => this.publishMissionText();
         EventBus.on('locale_change', this._onLocale);
 
-        // Stan początkowy
         setTimeout(() => this.publishMissionText(), 100);
     },
 
@@ -60,7 +58,7 @@ export const MissionSystem = {
         this._hurryActive = false;
     },
 
-    /** Aktualny tekst misji wg stage / timera / locale. */
+    /** Mission text for current stage / timer / locale. */
     getMissionText() {
         if (this._hurryActive) return I18n.t('mission.hurry');
         if (this.stage === 0) return I18n.t('mission.findNpc');

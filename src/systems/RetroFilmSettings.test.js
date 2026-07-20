@@ -95,4 +95,33 @@ describe('RetroFilmSettings', () => {
             contrast: 15,
         });
     });
+
+    it('persists settings to localStorage and reloads on init', () => {
+        RetroFilmSettings.set('grain', 12);
+        RetroFilmSettings.set('enabled', false);
+        const stored = JSON.parse(localStorage.getItem('gtalike_retro_settings'));
+        expect(stored.grain).toBe(12);
+        expect(stored.enabled).toBe(false);
+
+        RetroFilmSettings.reset();
+        expect(RetroFilmSettings.grain).toBe(35);
+        expect(localStorage.getItem('gtalike_retro_settings')).toBeNull();
+
+        localStorage.setItem('gtalike_retro_settings', JSON.stringify({
+            enabled: true,
+            intensity: 50,
+            vignette: 10,
+            flicker: 5,
+            jitter: 3,
+            grain: 7,
+            scratches: 9,
+            dust: 0,
+            sepia: 11,
+            contrast: 4,
+        }));
+        RetroFilmSettings.init();
+        expect(RetroFilmSettings.intensity).toBe(50);
+        expect(RetroFilmSettings.grain).toBe(7);
+        expect(RetroFilmSettings.sepia).toBe(11);
+    });
 });

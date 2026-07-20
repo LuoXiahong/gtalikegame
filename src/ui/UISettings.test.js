@@ -1,6 +1,3 @@
-/**
- * Testy: UISettings
- */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 
@@ -53,7 +50,7 @@ describe('UISettings', () => {
     });
 
     it('persists and reloads locale', async () => {
-        expect(UISettings.getLocale()).toBe('pl');
+        expect(UISettings.getLocale()).toBe('en');
         expect(UISettings.setLocale('de')).toBe(true);
         expect(UISettings.getLocale()).toBe('de');
         expect(JSON.parse(localStorage.getItem('gtalike_ui_settings')).locale).toBe('de');
@@ -66,6 +63,17 @@ describe('UISettings', () => {
 
     it('rejects unsupported locale codes', () => {
         expect(UISettings.setLocale('xx')).toBe(false);
-        expect(UISettings.getLocale()).toBe('pl');
+        expect(UISettings.getLocale()).toBe('en');
+    });
+
+    it('persists and reloads debugAI', async () => {
+        expect(UISettings.getDebugAI()).toBe(false);
+        UISettings.setDebugAI(true);
+        expect(JSON.parse(localStorage.getItem('gtalike_ui_settings')).debugAI).toBe(true);
+
+        vi.resetModules();
+        ({ UISettings } = await import('./UISettings.js'));
+        UISettings.init();
+        expect(UISettings.getDebugAI()).toBe(true);
     });
 });

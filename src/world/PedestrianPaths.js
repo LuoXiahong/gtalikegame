@@ -1,13 +1,12 @@
 /**
- * WORLD: PedestrianPaths
- * Pętle po chodnikach, przejścia przez jezdnię (zebry) + reguła: stop tylko na chodniku.
+ * Sidewalk loops, crosswalk routes, and the stop-only-on-sidewalk rule.
  */
 import { WorldGrid } from './WorldGrid.js';
 import { Tilemap, TILE_TYPES } from './Tilemap.js';
 import { Decals } from './Decals.js';
 import { World } from './World.js';
 
-/** Środek pasa chodnika (border bloku ma 100px) */
+/** Midline of the sidewalk ring (block border is 100px). */
 const SIDEWALK_INSET = 50;
 
 export const PedestrianPaths = {
@@ -63,7 +62,7 @@ export const PedestrianPaths = {
         return false;
     },
 
-    /** Idle / postój dozwolony TYLKO na chodniku — nigdy na jezdni ani na przejściu. */
+    /** Idle/stop allowed only on sidewalk — never on road or crosswalk. */
     canStop(x, y) {
         return this.isOnSidewalk(x, y);
     },
@@ -113,7 +112,7 @@ export const PedestrianPaths = {
     },
 
     /**
-     * Trasa przez przejście: róg chodnika A → środek zebvy → róg chodnika B.
+     * Crossing route: sidewalk corner A → crosswalk mid → corner B.
      * corner: 0=NW, 1=NE, 2=SE, 3=SW
      */
     getCrossingPath(rowA, colA, rowB, colB, cornerA, cornerB) {
@@ -127,26 +126,26 @@ export const PedestrianPaths = {
     },
 
     /**
-     * Patrol: pętla chodnika + opcjonalne przejście na sąsiedni blok i powrót.
+     * Patrol: local sidewalk loop, optionally out-and-back across a neighboring block.
      */
     buildPatrol(row, col, withCrossing = false) {
         const loop = this.getSidewalkLoop(row, col);
         if (!loop) return [];
         if (!withCrossing) return loop.map(p => ({ ...p }));
 
-        // Przejście na wschód lub południe, jeśli istnieje sąsiad
+        // Prefer east, else south, when a neighbor block exists.
         let cross = null;
         if (col + 1 < WorldGrid.GRID_COLS) {
-            // NE → NW sąsiada (przez ulicę pionową)
+            // NE → neighbor NW across the vertical street
             cross = this.getCrossingPath(row, col, row, col + 1, 1, 0);
         } else if (row + 1 < WorldGrid.GRID_ROWS) {
-            // SE → NE sąsiada (przez ulicę poziomą)
+            // SE → neighbor NE across the horizontal street
             cross = this.getCrossingPath(row, col, row + 1, col, 2, 1);
         }
 
         if (!cross) return loop.map(p => ({ ...p }));
 
-        // Pętla lokalna, potem przejście, krótki spacer u sąsiada, powrót
+        // Local loop → crossing → short neighbor stroll → return
         const neighborLoop = this.getSidewalkLoop(
             col + 1 < WorldGrid.GRID_COLS ? row : row + 1,
             col + 1 < WorldGrid.GRID_COLS ? col + 1 : col

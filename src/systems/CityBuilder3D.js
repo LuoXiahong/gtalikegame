@@ -1,6 +1,5 @@
 /**
- * CityBuilder3D
- * Generuje budynki, chodniki, drzewa i bilbordy w 3D.
+ * CityBuilder3D — buildings, sidewalks, trees, and billboards.
  */
 import * as THREE from 'three';
 import { WorldGrid } from '../world/WorldGrid.js';
@@ -13,7 +12,6 @@ export const CityBuilder3D = {
         const width = WorldGrid.TOTAL_WIDTH * SF;
         const height = WorldGrid.TOTAL_HEIGHT * SF;
 
-        // A. Ground plane
         const groundGeom = new THREE.PlaneGeometry(width, height);
         const groundMat = new THREE.MeshStandardMaterial({ color: 0x4a5a3a, roughness: 0.92, metalness: 0.05 });
         renderSystem.groundPlane = new THREE.Mesh(groundGeom, groundMat);
@@ -22,7 +20,6 @@ export const CityBuilder3D = {
         renderSystem.groundPlane.receiveShadow = true;
         renderSystem.scene.add(renderSystem.groundPlane);
 
-        // B. Asphalt plane under streets
         const asphaltGeom = new THREE.PlaneGeometry(width, height);
         const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.8, metalness: 0.2 });
         renderSystem.asphaltPlane = new THREE.Mesh(asphaltGeom, asphaltMat);
@@ -31,7 +28,6 @@ export const CityBuilder3D = {
         renderSystem.asphaltPlane.receiveShadow = true;
         renderSystem.scene.add(renderSystem.asphaltPlane);
 
-        // C. City blocks (sidewalks, building zones, procedural buildings)
         renderSystem.sidewalks = [];
         renderSystem.buildingZones = [];
         renderSystem.buildings = [];
@@ -46,7 +42,6 @@ export const CityBuilder3D = {
                 const posX = (b.x + b.w / 2) * SF;
                 const posZ = (b.y + b.h / 2) * SF;
 
-                // 1. Sidewalk platform
                 const swGeom = new THREE.BoxGeometry(b.w * SF, WorldMetrics.SIDEWALK_HEIGHT, b.h * SF);
                 const swMesh = new THREE.Mesh(swGeom, sidewalkMat);
                 swMesh.position.set(posX, WorldMetrics.SIDEWALK_HEIGHT / 2, posZ);
@@ -54,7 +49,6 @@ export const CityBuilder3D = {
                 renderSystem.scene.add(swMesh);
                 renderSystem.sidewalks.push(swMesh);
 
-                // 2. Building zone platform
                 const bzGeom = new THREE.BoxGeometry(300 * SF, 0.05, 300 * SF);
                 const bzMesh = new THREE.Mesh(bzGeom, buildingZoneMat);
                 bzMesh.position.set(posX, WorldMetrics.SIDEWALK_HEIGHT + 0.025, posZ);
@@ -62,7 +56,6 @@ export const CityBuilder3D = {
                 renderSystem.scene.add(bzMesh);
                 renderSystem.buildingZones.push(bzMesh);
 
-                // 3. Generate procedural buildings
                 const pattern = (r + c) % 3;
                 if (pattern === 0) {
                     this.createBuilding(renderSystem, { type: 'skyscraper', x: posX, z: posZ, height: 380 * SF, width: 120 * SF, depth: 120 * SF });
@@ -83,7 +76,6 @@ export const CityBuilder3D = {
             }
         }
 
-        // F. Generate trees on sidewalks
         renderSystem.trees = [];
         const treePositions = [];
         const treeOffsets = [
@@ -116,7 +108,6 @@ export const CityBuilder3D = {
             this.createTree(renderSystem, sizeType, pos.x, pos.z);
         }
 
-        // G. Generate billboards on shop roofs
         renderSystem.billboards = [];
         if (shops.length >= 2) {
             shops.sort(() => Math.random() - 0.5);

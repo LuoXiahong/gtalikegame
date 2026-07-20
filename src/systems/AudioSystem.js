@@ -1,6 +1,5 @@
 /**
- * System audio (AudioSystem)
- * Zero logiki gameplay w audio.
+ * Audio playback only — no gameplay logic.
  */
 import { EventBus } from '../core/EventBus.js';
 
@@ -11,7 +10,7 @@ export const AudioSystem = {
         this.reset();
         if (this._onAudioPlay) EventBus.off('audio_play', this._onAudioPlay);
 
-        // Bezpieczne tworzenie Audio, gdy wspierane
+        // Skip when Audio API is unavailable (e.g. some test envs)
         if (typeof Audio !== 'undefined') {
             this.sounds['step'] = new Audio('https://actions.google.com/sounds/v1/foley/footstep_on_wood.ogg');
             this.sounds['beep'] = new Audio('https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg');

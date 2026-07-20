@@ -1,6 +1,5 @@
 /**
- * UI System (HUD)
- * Warstwa UI - misje, dialogi, poszukiwania i prędkościomierz.
+ * UISystem (HUD) — missions, dialogue, wanted stars, speedometer, minimap.
  */
 import { EventBus } from '../core/EventBus.js';
 
@@ -12,7 +11,7 @@ import { VehicleSystem } from '../systems/VehicleSystem.js';
 import { UISettings } from './UISettings.js';
 import { I18n } from '../i18n/I18n.js';
 
-/** Minimap: top 20 + 130 + border ≈ 156 → tekst misji pod mapą */
+/** Minimap: top 20 + 130 + border ≈ 156 → mission text sits below map */
 const MISSION_TOP_PX = 162;
 
 const escapeHTML = (str) => {

@@ -1,7 +1,6 @@
 /**
- * RENDER SYNCHRONIZATION SYSTEM (RenderSync3D)
- * Synchronizes 2D logic entities with their corresponding 3D Three.js representations.
- * Uses the unified WorldMetrics scale (1u = 1m).
+ * Synchronizes 2D logic entities with Three.js meshes.
+ * Uses WorldMetrics scale (1u = 1m).
  */
 import * as THREE from 'three';
 import { World } from '../world/World.js';
@@ -41,7 +40,6 @@ export const RenderSync3D = {
         const activeIds = new Set();
         const SF = WorldMetrics.SCALE_FACTOR;
 
-        // 1. Sync all existing entities from game logic
         (World.entities || []).forEach(ent => {
             if (!ent.transform) return;
             activeIds.add(ent.id);
@@ -53,11 +51,10 @@ export const RenderSync3D = {
                 this.meshes.set(ent.id, mesh);
             }
 
-            // Map position: world2D.x -> world3D.x, world2D.y -> world3D.z
+            // world2D.x → world3D.x, world2D.y → world3D.z
             mesh.position.x = ent.transform.x * SF;
             mesh.position.z = ent.transform.y * SF;
 
-            // Calculate height (sidewalk vs street height)
             let groundY = 0;
             if (World.tilemap) {
                 const tileType = World.tilemap.getTileAt(ent.transform.x, ent.transform.y);
@@ -66,12 +63,11 @@ export const RenderSync3D = {
                 }
             }
 
-            // Kinematyka proceduralna (Procedural Walk Animation) dla aktorów (gracz/NPC) w ruchu
+            // Procedural walk bounce for moving player/NPC (amplitude 2.5 cm)
             let targetBounce = 0;
             if ((ent.type === 'player' || ent.type === 'npc') && ent.physics) {
                 const isMoving = Math.abs(ent.physics.velX) > 0.1 || Math.abs(ent.physics.velY) > 0.1;
                 if (isMoving) {
-                    // Trygonometryczne rytmiczne podskakiwanie imitujące krok (zmniejszone do 2.5cm)
                     targetBounce = Math.abs(Math.sin(Time.time * 10)) * 0.025;
                 }
             }
@@ -80,10 +76,9 @@ export const RenderSync3D = {
             ent.visual.walkBounce += (targetBounce - ent.visual.walkBounce) * 0.2;
             mesh.position.y = groundY + ent.visual.walkBounce;
 
-            // Map rotation: 2D rotation -> 3D yaw rotation (Y axis)
+            // 2D angle → 3D yaw (Y)
             mesh.rotation.y = -ent.transform.angle;
 
-            // Optional visibility toggle (e.g., hidden player when inside a vehicle)
             if (ent.visible === false) {
                 mesh.visible = false;
             } else {
@@ -91,7 +86,6 @@ export const RenderSync3D = {
             }
         });
 
-        // 2. Despawn and clean up removed entities
         for (const [id, mesh] of this.meshes.entries()) {
             if (!activeIds.has(id)) {
                 scene.remove(mesh);
@@ -100,7 +94,6 @@ export const RenderSync3D = {
             }
         }
 
-        // 3. Sync mission target zone visual indicator
         if (MissionSystem && MissionSystem.targetLocation) {
             const loc = MissionSystem.targetLocation;
             if (!this.targetMesh) {
@@ -128,8 +121,8 @@ export const RenderSync3D = {
         let group = new THREE.Group();
 
         if (ent.type === 'player') {
-            // Model Gracza o identycznej strukturze (boxy body & head), z unikalnym niebieskawym kolorem ubrania
-            group = createNPCModel(0x1a2744); // period navy (player accent)
+            // Same NPC body/head layout; navy accent for the player
+            group = createNPCModel(0x1a2744);
 
         } else if (ent.type === 'npc') {
             group = createNPCModel(ent.visual?.color);
@@ -140,7 +133,6 @@ export const RenderSync3D = {
             group = createVehicleModel(color, archetypeKey);
         }
 
-        // Enable shadows for all sub-meshes (T-701)
         group.traverse(child => {
             if (child.isMesh) {
                 child.castShadow = true;

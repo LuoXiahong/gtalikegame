@@ -1,25 +1,24 @@
 /**
- * CORE: KATALOG ZDARZEŃ (Events)
- * Słownik wszystkich zdarzeń emitowanych w systemie.
+ * Catalog of events emitted on the EventBus.
  */
 export const EVENTS = {
-    // Cykl życia i stan
+    // Lifecycle / state
     STATE_CHANGE: 'state_change',
 
-    // Interakcja z pojazdami
+    // Vehicles
     ENTER_VEHICLE: 'enter_vehicle',
     EXIT_VEHICLE: 'exit_vehicle',
     VEHICLE_ENTERED: 'vehicle_entered',
     VEHICLE_EXITED: 'vehicle_exited',
 
-    // Walka i zdarzenia w świecie
+    // Combat / world
     GUNSHOT: 'gunshot',
     EXPLOSION: 'explosion',
     NPC_HIT: 'npc_hit',
     PLAYER_NEAR_NPC: 'player_near_npc',
     PLAYER_NEAR_CAR: 'player_near_car',
 
-    // UI i Misje
+    // UI / missions
     UI_SHOW_DIALOGUE: 'ui_show_dialogue',
     UI_SHOW_ACTION_HINT: 'ui_show_action_hint',
     MISSION_UPDATE: 'mission_update',
@@ -33,7 +32,7 @@ export const EVENTS = {
     // Restart
     GAME_RESTART: 'game_restart',
 
-    // Lokalizacja / UI
+    // Locale / settings
     LOCALE_CHANGE: 'locale_change',
     UI_SETTINGS_CHANGE: 'ui_settings_change',
     RETRO_SETTINGS_CHANGE: 'retro_settings_change',

@@ -1,13 +1,12 @@
 /**
- * CORE: KONFIGURACJA GRY (GameConfig)
- * Centralny punkt konfiguracji wartości liczbowych (magic numbers).
+ * Central numeric tunables (magic numbers).
  */
 export const GameConfig = {
     SPAWN: {
         PLAYER_X: 1100,
         PLAYER_Y: 1100,
         CAR_X: 1100,
-        CAR_Y: 1220 // w zasięgu wejścia (VEHICLE_RADIUS=150)
+        CAR_Y: 1220 // within enter range (VEHICLE_RADIUS=150)
     },
     TRAFFIC: {
         MAX_CARS: 8,

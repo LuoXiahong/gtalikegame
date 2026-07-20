@@ -1,6 +1,5 @@
 /**
- * CORE: ŚWIAT (World Manager)
- * Centralne repozytorium danych środowiskowych.
+ * Central store for world / environment data.
  */
 import { Tilemap } from './Tilemap.js';
 import { Decals } from './Decals.js';
@@ -30,12 +29,12 @@ export const World = {
         this.decals = Decals;
         this.decals.init();
 
-        // Programowe rozmieszczenie 9 budynków w strefach budynków każdego z bloków 3x3
+        // One building per cell of the 3x3 block grid
         this.buildings = [];
         for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
             for (let c = 0; c < WorldGrid.GRID_COLS; c++) {
                 const b = WorldGrid.getBlockBounds(r, c);
-                // Zróżnicowane wysokości z: od 0.2 do 0.6 dla ciekawego skyline'u makiety
+                // Varied z heights 0.2–0.6 for a non-flat skyline
                 const zHeight = 0.2 + ((r * 3 + c) % 5) * 0.1;
                 this.buildings.push({
                     x: b.x + 100,

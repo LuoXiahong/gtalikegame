@@ -1,6 +1,5 @@
 /**
- * System Pojazdów (VehicleSystem)
- * Zarządza wsiadaniem, wysiadaniem i logiką posiadania pojazdu.
+ * Enter/exit vehicle ownership and control handoff.
  */
 import { EventBus } from '../core/EventBus.js';
 import { InputSystem } from '../input/InputManager.js';
@@ -29,7 +28,6 @@ export const VehicleSystem = {
         car.occupantId = player.id;
         player.visible = false;
 
-        // Zatrzymujemy gracza i samochód w miejscu
         if (player.physics) {
             player.physics.velX = 0;
             player.physics.velY = 0;
@@ -40,7 +38,7 @@ export const VehicleSystem = {
             car.physics.velY = 0;
         }
 
-        // Czyścimy wejście, by nie przenosiło się na samochód
+        // Clear held keys so they don't transfer to the car.
         InputSystem.resetAll();
 
         EventBus.emit('vehicle_entered', { carId: car.id });
@@ -56,11 +54,9 @@ export const VehicleSystem = {
         car.occupantId = null;
         player.visible = true;
 
-        // Ustawiamy gracza obok auta
         player.transform.x = car.transform.x + car.transform.width / 2 + 30;
         player.transform.y = car.transform.y;
 
-        // Zatrzymujemy auto i gracza po wyjściu
         if (car.physics) {
             car.physics.speed = 0;
             car.physics.velX = 0;
@@ -71,7 +67,7 @@ export const VehicleSystem = {
             player.physics.velY = 0;
         }
 
-        // Traffic AI: płynny powrót na trasę (bez teleportu) — retarget najbliższego segmentu
+        // Traffic AI: retarget nearest segment for a smooth return (no teleport).
         if (car.ai && car.ai.type === 'traffic') {
             car.ai.needsRetarget = true;
             car.ai.vx = 0;
@@ -82,7 +78,7 @@ export const VehicleSystem = {
             car.ai.recovering = true;
         }
 
-        // Czyścimy wejście, by gracz nie szedł samoczynnie
+        // Clear held keys so the player doesn't walk on their own.
         InputSystem.resetAll();
 
         EventBus.emit('vehicle_exited', { carId: car.id });

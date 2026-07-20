@@ -1,7 +1,5 @@
 /**
- * UI: KeyboardHelpOverlay
- * Nakładka z listą wszystkich klawiszy gry.
- * Otwierana przez ? lub / — zamykana przez te same klawisze, Esc lub kliknięcie tła.
+ * KeyboardHelpOverlay — full keybinding list (? / / to open; same keys, Esc, or backdrop to close).
  */
 import { EventBus } from '../core/EventBus.js';
 import { I18n } from '../i18n/I18n.js';

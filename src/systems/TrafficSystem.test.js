@@ -49,7 +49,6 @@ describe('TrafficSystem', () => {
         
         expect(car.ai).toBeDefined();
         expect(car.ai.type).toBe('traffic');
-        // Sprawdzamy czy auto ma jakąkolwiek prędkość (velX lub velY)
         expect(Math.abs(car.physics.velX) + Math.abs(car.physics.velY)).toBeGreaterThan(0);
     });
 
@@ -286,7 +285,7 @@ describe('TrafficSystem', () => {
         expect(car.ai.needsRetarget).toBe(false);
         expect(car.ai.recovering).toBe(true);
     });
-    it('should reduce speed gradually as obstacle approaches (lerp hamowania)', () => {
+    it('should reduce speed gradually as obstacle approaches (braking lerp)', () => {
         TrafficSystem.maxCars = 1;
         TrafficSystem.spawnRadius = 0;
         TrafficSystem.update(0.1);

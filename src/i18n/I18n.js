@@ -1,10 +1,10 @@
 /**
- * I18n — lokalizacja UI (pl, en, de, es, fr).
+ * I18n — UI localization (pl, en, de, es, fr).
  */
 import { EventBus } from '../core/EventBus.js';
 import { catalogs, SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES } from './locales.js';
 
-const DEFAULT_LOCALE = 'pl';
+const DEFAULT_LOCALE = 'en';
 
 function interpolate(template, params) {
     if (!params) return template;

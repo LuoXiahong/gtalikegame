@@ -1,12 +1,10 @@
 /**
- * WORLD: Waypoints
- * Sieć punktów definiujących ścieżki ruchu ulicznego.
- * Generowane z WorldGrid — pasy leżą na prawdziwych osiach ulic (1100 / 1800).
+ * Traffic path network from WorldGrid — lanes sit on real street axes (1100 / 1800).
  */
 import { WorldGrid } from './WorldGrid.js';
 
-const LANE_OFFSET = 35; // odstęp od środka ulicy (STREET_WIDTH=200 → bezpieczny pas)
-const PATH_MARGIN = WorldGrid.PADDING + 50; // 550 — zostajemy na asfalcie
+const LANE_OFFSET = 35; // Offset from street center (STREET_WIDTH=200 → safe lane)
+const PATH_MARGIN = WorldGrid.PADDING + 50; // 550 — stay on asphalt
 const PATH_MAX = 3000 - WorldGrid.PADDING - 50; // 2450
 
 function buildPaths() {
@@ -14,7 +12,7 @@ function buildPaths() {
     const paths = {};
 
     centers.forEach((cx, i) => {
-        // Pionowe: południe (+y) prawym pasem, północ (−y) lewym
+        // Vertical: south (+y) right lane, north (−y) left lane
         paths[`NS_${i}_S`] = [
             { x: cx + LANE_OFFSET, y: PATH_MARGIN },
             { x: cx + LANE_OFFSET, y: PATH_MAX }
@@ -26,7 +24,7 @@ function buildPaths() {
     });
 
     centers.forEach((cy, i) => {
-        // Poziome: wschód (+x) dolnym pasem, zachód (−x) górnym
+        // Horizontal: east (+x) lower lane, west (−x) upper lane
         paths[`EW_${i}_E`] = [
             { x: PATH_MARGIN, y: cy + LANE_OFFSET },
             { x: PATH_MAX, y: cy + LANE_OFFSET }

@@ -43,7 +43,6 @@ describe('RenderSync3D', () => {
     });
 
     it('should create dynamic meshes for player, npc, and car', () => {
-        // Dodaj gracza, npc i auto
         World.entities = [
             {
                 id: 'player1',
@@ -69,7 +68,6 @@ describe('RenderSync3D', () => {
 
         RenderSync3D.update(mockScene);
 
-        // Powinien dodać 3 meshe do sceny
         expect(mockScene.add).toHaveBeenCalledTimes(3);
         expect(RenderSync3D.meshes.size).toBe(3);
 
@@ -81,7 +79,7 @@ describe('RenderSync3D', () => {
         expect(npcMesh).toBeDefined();
         expect(carMesh).toBeDefined();
 
-        // Sprawdzenie współrzędnych i kątów (scaled)
+        // Scaled coordinates and angles
         expect(playerMesh.position.x).toBeCloseTo(100 * SF);
         expect(playerMesh.position.z).toBeCloseTo(200 * SF);
         expect(playerMesh.rotation.y).toBe(-1.5);
@@ -94,7 +92,7 @@ describe('RenderSync3D', () => {
         expect(carMesh.position.z).toBeCloseTo(600 * SF);
         expect(carMesh.rotation.y).toBe(0.5);
 
-        // Weryfikacja cieniowania i użycia MeshStandardMaterial
+        // Shadows + MeshStandardMaterial
         [playerMesh, npcMesh, carMesh].forEach(meshGroup => {
             meshGroup.traverse(child => {
                 if (child.isMesh) {
@@ -114,7 +112,6 @@ describe('RenderSync3D', () => {
         RenderSync3D.update(mockScene);
         expect(RenderSync3D.meshes.size).toBe(1);
 
-        // Usuń gracza z symulacji
         World.entities = [];
         RenderSync3D.update(mockScene);
 
@@ -127,13 +124,13 @@ describe('RenderSync3D', () => {
             { id: 'player1', type: 'player', transform: { x: 550, y: 550, angle: 0 }, visible: true }
         ];
 
-        // Mock, że gracz stoi na chodniku (kafelek o typie 2)
+        // Player on sidewalk (tile type 2)
         World.tilemap.getTileAt.mockReturnValue(2);
 
         RenderSync3D.update(mockScene);
 
         const playerMesh = RenderSync3D.meshes.get('player1');
-        expect(playerMesh.position.y).toBeCloseTo(WorldMetrics.SIDEWALK_HEIGHT); // Powinien być uniesiony o SIDEWALK_HEIGHT nad asfalt
+        expect(playerMesh.position.y).toBeCloseTo(WorldMetrics.SIDEWALK_HEIGHT);
     });
 
     it('should apply procedural walk bounce animation for moving characters', () => {
@@ -180,7 +177,6 @@ describe('RenderSync3D', () => {
         expect(RenderSync3D.targetMesh.position.x).toBeCloseTo(1500 * SF);
         expect(RenderSync3D.targetMesh.position.z).toBeCloseTo(1500 * SF);
 
-        // Usuń cel
         MissionSystem.targetLocation = null;
         RenderSync3D.update(mockScene);
 

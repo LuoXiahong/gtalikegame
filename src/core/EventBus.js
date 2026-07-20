@@ -1,6 +1,5 @@
 /**
- * CORE: SZYNA ZDARZEŃ (EventBus)
- * Rozwiązuje problem "twardych powiązań" (hard-coupling).
+ * EventBus — decouples systems (avoids hard-coupling).
  */
 export const EventBus = {
     listeners: {},

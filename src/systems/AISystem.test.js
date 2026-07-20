@@ -38,7 +38,7 @@ describe('AISystem', () => {
 
         World.getEntitiesByType.mockReturnValue([mockNPC]);
         
-        // Mock Math.random żeby kontrolować stany w testach
+        // Deterministic Math.random for state transitions
         vi.spyOn(Math, 'random').mockReturnValue(0.5); 
 
         // Capture callbacks
@@ -64,23 +64,23 @@ describe('AISystem', () => {
         
         expect(mockNPC.ai.state).toBe('walk');
         expect(mockNPC.visual.walkCycle).toBeGreaterThan(0);
-        // Sprawdzamy ruch w kierunku aktualnego punktu drogi (100, 0)
+        // Moving toward current waypoint (100, 0)
         expect(mockNPC.physics.velX).toBeGreaterThan(0);
         expect(mockNPC.physics.velY).toBe(0);
     });
 
     it('should switch waypoints and enter idle state when reaching target', () => {
         vi.spyOn(PedestrianPaths, 'canStop').mockReturnValue(true);
-        // Ustawiamy pozycję NPC blisko celu
+        // Place NPC near target
         mockNPC.ai.state = 'walk';
-        mockNPC.transform.x = 95; // dystans do (100, 0) wynosi 5 (< 10)
+        mockNPC.transform.x = 95; // distance to (100, 0) is 5 (< 10)
         mockNPC.transform.y = 0;
         
         AISystem.update(0.1);
         
         expect(mockNPC.ai.state).toBe('idle');
         expect(mockNPC.ai.timer).toBeGreaterThan(0);
-        expect(mockNPC.ai.currentWaypointIndex).toBe(1); // przełączył się na drugi punkt drogi
+        expect(mockNPC.ai.currentWaypointIndex).toBe(1); // advanced to second waypoint
         expect(mockNPC.physics.velX).toBe(0);
     });
 

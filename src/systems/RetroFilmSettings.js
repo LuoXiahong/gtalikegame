@@ -1,5 +1,6 @@
 /**
- * RetroFilmSettings — łagodniejsze domyślne wartości (czytelne postacie, jaśniejsze cienie).
+ * Retro film presets/settings — defaults favor readable characters and lifted shadows.
+ * Persisted in localStorage.
  */
 
 export const RETRO_PRESETS = {
@@ -54,6 +55,7 @@ export const RETRO_PRESETS = {
 };
 
 const DEFAULTS = { ...RETRO_PRESETS.classic };
+const STORAGE_KEY = 'gtalike_retro_settings';
 
 export const RETRO_PARAM_KEYS = [
     'intensity',
@@ -83,6 +85,16 @@ export const RetroFilmSettings = {
     sepia: DEFAULTS.sepia,
     contrast: DEFAULTS.contrast,
 
+    init() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return;
+            this.fromJSON(JSON.parse(raw));
+        } catch {
+            /* ignore corrupt / unavailable storage */
+        }
+    },
+
     isActive() {
         return this.enabled === true && this.intensity > 0;
     },
@@ -94,6 +106,7 @@ export const RetroFilmSettings = {
     set(key, value) {
         if (key === 'enabled') {
             this.enabled = Boolean(value);
+            this._persist();
             return;
         }
         if (!RETRO_PARAM_KEYS.includes(key)) return;
@@ -104,6 +117,7 @@ export const RetroFilmSettings = {
         } else {
             this[key] = clamp(num, 0, 100);
         }
+        this._persist();
     },
 
     applyPreset(name) {
@@ -113,6 +127,7 @@ export const RetroFilmSettings = {
         RETRO_PARAM_KEYS.forEach((k) => {
             this[k] = preset[k];
         });
+        this._persist();
         return true;
     },
 
@@ -150,7 +165,38 @@ export const RetroFilmSettings = {
         };
     },
 
+    fromJSON(data) {
+        if (!data || typeof data !== 'object') return;
+        if (typeof data.enabled === 'boolean') {
+            this.enabled = data.enabled;
+        }
+        RETRO_PARAM_KEYS.forEach((k) => {
+            if (typeof data[k] !== 'number' || Number.isNaN(data[k])) return;
+            if (k === 'contrast') {
+                this.contrast = clamp(data[k], -50, 100);
+            } else {
+                this[k] = clamp(data[k], 0, 100);
+            }
+        });
+    },
+
+    _persist() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.toJSON()));
+        } catch {
+            /* private mode / quota — ignore */
+        }
+    },
+
     reset() {
-        this.applyPreset('classic');
+        this.enabled = DEFAULTS.enabled;
+        RETRO_PARAM_KEYS.forEach((k) => {
+            this[k] = DEFAULTS[k];
+        });
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+        } catch {
+            /* ignore */
+        }
     },
 };

@@ -1,7 +1,6 @@
 /**
-* CORE: Game - Engine Orchestrator
-* Initializes systems, handles entity creation, and runs the main game loop.
-*/
+ * Game — engine orchestrator: systems, entities, main loop.
+ */
 import { Time } from './Time.js';
 import { EventBus } from './EventBus.js';
 import { GameConfig } from './GameConfig.js';
@@ -36,21 +35,24 @@ import { OptionsOverlay } from '../ui/OptionsOverlay.js';
 import { FilmGateOverlay } from '../ui/FilmGateOverlay.js';
 import { UISettings } from '../ui/UISettings.js';
 import { I18n } from '../i18n/I18n.js';
+import { RetroFilmSettings } from '../systems/RetroFilmSettings.js';
 
 export const Game = {
     is3D: true,
 
     init() {
         UISettings.init();
+        RetroFilmSettings.init();
         I18n.init(UISettings.getLocale());
 
         World.init();
         InputSystem.init();
         Camera.init();
         RenderSystem.init();
+        RenderSystem.debugAI = UISettings.getDebugAI();
         RenderSystem3D.init();
 
-        // Sync initial canvas visibility based on default render mode (is3D)
+        // Sync canvas visibility with default render mode (is3D)
         const canvas2D = document.getElementById('gameCanvas');
         const canvas3D = document.getElementById('gameCanvas3D');
         if (this.is3D) {
@@ -77,7 +79,6 @@ export const Game = {
         this._onRestart = () => this.restart();
         EventBus.on('game_restart', this._onRestart);
 
-        // Start in MENU state
         GameState.setState(GAME_STATES.MENU);
 
         requestAnimationFrame((ts) => this.loop(ts));
@@ -89,7 +90,7 @@ export const Game = {
 
         VehicleSystem.init(p1);
 
-        // NPCs na chodnikach; część z przejściem przez jezdnię na sąsiedni blok
+        // Sidewalk NPCs; some paths cross the street to a neighboring block
         const npcConfigs = [
             { id: 'npc1', row: 0, col: 0, corner: 0, color: '#3d3d3d', cross: false },
             { id: 'npc2', row: 0, col: 0, corner: 2, color: '#5c4033', cross: true },
@@ -140,10 +141,10 @@ export const Game = {
         if (currentState === GAME_STATES.PLAY && !paused) {
             if (InputSystem.consumeDebugAI()) {
                 RenderSystem.debugAI = !RenderSystem.debugAI;
+                UISettings.setDebugAI(RenderSystem.debugAI);
             }
             const controlled = VehicleSystem.getControlledEntity();
 
-            // 1. Process inputs and determine movement intentions
             if (controlled) {
                 if (controlled.type === 'player') {
                     PlayerMovementSystem.update(dt, controlled);
@@ -153,7 +154,6 @@ export const Game = {
                 }
             }
 
-            // 2. Update logic systems
             WantedSystem.update(dt);
             PoliceSystem.update(dt);
             TrafficSystem.update(dt);
@@ -162,10 +162,8 @@ export const Game = {
             MissionSystem.update(dt);
             InteractionSystem.update();
 
-            // 3. Resolve collisions
             CollisionSystem.update();
 
-            // 4. Update camera follow
             if (controlled) Camera.follow(controlled, dt);
         }
 
@@ -183,14 +181,12 @@ export const Game = {
             }
         }
 
-        // 5. Render active system
         if (this.is3D) {
             RenderSystem3D.update();
         } else {
             RenderSystem.update();
         }
 
-        // 6. Update UI elements (including canvas minimap)
         UISystem.update();
         FilmGateOverlay.update(timestamp);
 

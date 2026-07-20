@@ -39,11 +39,11 @@ describe('Tilemap', () => {
     });
 
     it('should generate tiles according to WorldGrid and padding', () => {
-        // (750, 750) jest w środku strefy budynku bloku [0, 0] (x: 600-900, y: 600-900)
+        // (750, 750) center of block [0, 0] building zone (x: 600-900, y: 600-900)
         expect(Tilemap.getTileAt(750, 750)).toBe(TILE_TYPES.BUILDING_ZONE);
-        // (550, 550) jest na chodniku bloku [0, 0] (kolumna 5: 500-600)
+        // (550, 550) on block [0, 0] sidewalk (column 5: 500-600)
         expect(Tilemap.getTileAt(550, 550)).toBe(TILE_TYPES.SIDEWALK);
-        // (150, 150) jest w zewnętrznym marginesie (trawa: 0-500)
+        // (150, 150) in outer padding (grass: 0-500)
         expect(Tilemap.getTileAt(150, 150)).toBe(TILE_TYPES.GRASS);
     });
 });

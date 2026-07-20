@@ -1,15 +1,12 @@
-/**
- * Testy: KeyboardHelpOverlay
- */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 
-// Helper: świeży DOM + świeża instancja overlaya per test
+// Fresh DOM + overlay instance per test
 function makeEnv() {
     const dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>');
     const doc = dom.window.document;
 
-    // Minimalna pula fake rAF (uruchamia callback synchronicznie)
+    // Fake rAF pool (runs callbacks synchronously via flushRAF)
     const rafCbs = [];
     const fakeRAF = (cb) => { rafCbs.push(cb); return 1; };
     const flushRAF = () => { const cbs = [...rafCbs]; rafCbs.length = 0; cbs.forEach(cb => cb()); };
@@ -27,8 +24,7 @@ describe('KeyboardHelpOverlay', () => {
         doc = env.doc;
         flushRAF = env.flushRAF;
 
-        // Dynamiczny import z wirtualnym środowiskiem — używamy fabryki z izolatem
-        // Zamiast re-importować (singleton problem), tworzymy obiekt ręcznie wg tego samego wzorca
+        // Build overlay manually (avoids singleton re-import issues) with pl-locale copy
         const KEYBINDINGS = [
             { key: 'W / ↑',   desc: 'Jedź do przodu / idź w górę' },
             { key: 'S / ↓',   desc: 'Jedź do tyłu / idź w dół' },
@@ -106,7 +102,7 @@ describe('KeyboardHelpOverlay', () => {
         overlay.init();
     });
 
-    it('powinien mieć metody: init, show, hide, toggle, isVisible', () => {
+    it('should expose init, show, hide, toggle, isVisible', () => {
         expect(typeof overlay.init).toBe('function');
         expect(typeof overlay.show).toBe('function');
         expect(typeof overlay.hide).toBe('function');
@@ -114,22 +110,22 @@ describe('KeyboardHelpOverlay', () => {
         expect(typeof overlay.isVisible).toBe('function');
     });
 
-    it('isVisible() zwraca false przed show()', () => {
+    it('isVisible() returns false before show()', () => {
         expect(overlay.isVisible()).toBe(false);
     });
 
-    it('show() ustawia _visible = true', () => {
+    it('show() sets _visible = true', () => {
         overlay.show();
         expect(overlay.isVisible()).toBe(true);
     });
 
-    it('hide() ustawia _visible = false', () => {
+    it('hide() sets _visible = false', () => {
         overlay.show();
         overlay.hide();
         expect(overlay.isVisible()).toBe(false);
     });
 
-    it('toggle() przełącza widoczność', () => {
+    it('toggle() flips visibility', () => {
         expect(overlay.isVisible()).toBe(false);
         overlay.toggle();
         expect(overlay.isVisible()).toBe(true);
@@ -137,41 +133,41 @@ describe('KeyboardHelpOverlay', () => {
         expect(overlay.isVisible()).toBe(false);
     });
 
-    it('show() wywołane drugi raz nie zmienia stanu', () => {
+    it('show() called twice does not change state', () => {
         overlay.show();
         overlay.show();
         expect(overlay.isVisible()).toBe(true);
     });
 
-    it('hide() wywołane gdy ukryty nie zmienia stanu', () => {
+    it('hide() when already hidden does not change state', () => {
         overlay.hide();
         expect(overlay.isVisible()).toBe(false);
     });
 
-    it('po init() tworzy element #keyboardHelpBackdrop w DOM', () => {
+    it('init() creates #keyboardHelpBackdrop in the DOM', () => {
         const backdrop = doc.getElementById('keyboardHelpBackdrop');
         expect(backdrop).not.toBeNull();
     });
 
-    it('po init() tworzy element #keyboardHelpPanel', () => {
+    it('init() creates #keyboardHelpPanel', () => {
         const panel = doc.getElementById('keyboardHelpPanel');
         expect(panel).not.toBeNull();
     });
 
-    it('po init() tabela klawiszy zawiera wiersze', () => {
+    it('init() key table contains rows', () => {
         const table = doc.getElementById('keyboardHelpTable');
         expect(table).not.toBeNull();
         expect(table.querySelectorAll('tr').length).toBeGreaterThan(0);
     });
 
-    it('show() + flushRAF dodaje klasę visible do backdropu', () => {
+    it('show() + flushRAF adds visible class to backdrop', () => {
         overlay.show();
         flushRAF();
         const backdrop = doc.getElementById('keyboardHelpBackdrop');
         expect(backdrop.classList.contains('visible')).toBe(true);
     });
 
-    it('hide() usuwa klasę visible z backdropu', () => {
+    it('hide() removes visible class from backdrop', () => {
         overlay.show();
         flushRAF();
         overlay.hide();
@@ -179,14 +175,14 @@ describe('KeyboardHelpOverlay', () => {
         expect(backdrop.classList.contains('visible')).toBe(false);
     });
 
-    it('tabela zawiera wiersz z opisem "Pomoc"', () => {
+    it('table contains a row with "Pomoc"', () => {
         const table = doc.getElementById('keyboardHelpTable');
         const rows = Array.from(table.querySelectorAll('tr'));
         const hasPomoc = rows.some(r => r.textContent.includes('Pomoc'));
         expect(hasPomoc).toBe(true);
     });
 
-    it('tabela zawiera wiersz z opisem "Zamknij"', () => {
+    it('table contains a row with "Zamknij"', () => {
         const table = doc.getElementById('keyboardHelpTable');
         const rows = Array.from(table.querySelectorAll('tr'));
         const hasEsc = rows.some(r => r.textContent.includes('Zamknij'));

@@ -37,7 +37,7 @@ export const RenderSystem3D = {
     retroFilmPass: null,
     isZoomedIn: false,
 
-    // 3D environment elements
+    // Environment meshes
     groundPlane: null,
     asphaltPlane: null,
     sidewalks: [],
@@ -51,7 +51,7 @@ export const RenderSystem3D = {
     // Contact shadow texture (T-702)
     contactShadowTexture: null,
 
-    // Movement and scale validation cube
+    // Scale/movement validation cube
     box5u: null,
 
     // Reference origin (matches start intersection)
@@ -59,7 +59,7 @@ export const RenderSystem3D = {
     originZ: 1100,
 
     /**
-     * Creates a circular contact shadow texture using Canvas
+     * Circular soft contact-shadow texture (Canvas).
      */
     createContactShadowTexture() {
         const canvas = document.createElement('canvas');
@@ -95,7 +95,6 @@ export const RenderSystem3D = {
         const width = parent.clientWidth || 800;
         const height = parent.clientHeight || 600;
 
-        // 1. Initialize WebGLRenderer
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -106,11 +105,10 @@ export const RenderSystem3D = {
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.info.autoReset = false;
 
-        // 2. Initialize Scene
         this.scene = new THREE.Scene();
         this.scene.fog = new THREE.Fog(clearColor, 200, 350);
 
-        // 3. Configure OrthographicCamera (isometric view)
+        // Orthographic isometric camera
         const aspect = width / height;
         const viewSize = 60;
 
@@ -126,7 +124,6 @@ export const RenderSystem3D = {
         this.camera.zoom = 1.0;
         this.camera.updateProjectionMatrix();
 
-        // 3C. Configure post-processing: Tilt-Shift + Retro Film
         this.composer = new EffectComposer(this.renderer);
         const renderPass = new RenderPass(this.scene, this.camera);
         this.composer.addPass(renderPass);
@@ -143,10 +140,8 @@ export const RenderSystem3D = {
         const outputPass = new OutputPass();
         this.composer.addPass(outputPass);
 
-        // 3B. Setup lighting and shadows
         this.setupLighting();
 
-        // 4. Handle resize event
         window.addEventListener('resize', () => {
             const w = parent.clientWidth || 800;
             const h = parent.clientHeight || 600;
@@ -164,11 +159,10 @@ export const RenderSystem3D = {
             this.camera.updateProjectionMatrix();
         });
 
-        // 5. Build environment via decomposed modules
         CityBuilder3D.buildCity(this);
         RoadBuilder3D.buildRoads(this);
 
-        // 6. Test movement & scale validation cube
+        // Scale/movement validation cube
         const SF = WorldMetrics.SCALE_FACTOR;
         const geom5u = new THREE.BoxGeometry(1.5, 1.5, 1.5);
         const mat5u = new THREE.MeshBasicMaterial({ color: 0xe74c3c });
@@ -210,7 +204,7 @@ export const RenderSystem3D = {
     },
 
     /**
-     * Synchronizuje uniformy i enabled passu retro z RetroFilmSettings.
+     * Sync retro pass uniforms/enabled from RetroFilmSettings.
      */
     applyRetroSettings() {
         if (!this.retroFilmPass) return;
@@ -221,7 +215,7 @@ export const RenderSystem3D = {
     setupLighting() {
         const SF = WorldMetrics.SCALE_FACTOR;
 
-        // Jaśniejszy fill — cienie mniej „dziurawe”, postacie czytelniejsze
+        // Brighter fill — less hollow shadows, readable characters
         const ambient = new THREE.AmbientLight(0x8585a0, 0.62);
         this.scene.add(ambient);
         this.ambientLight = ambient;
@@ -240,7 +234,7 @@ export const RenderSystem3D = {
         sun.shadow.bias = -0.0005;
         sun.shadow.mapSize.width = 2048;
         sun.shadow.mapSize.height = 2048;
-        // Słabsze rzucane cienie (Three r155+)
+        // Softer cast shadows (Three r155+)
         if (sun.shadow.intensity !== undefined) {
             sun.shadow.intensity = 0.55;
         }

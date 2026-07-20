@@ -1,6 +1,5 @@
 /**
- * UI: OptionsOverlay
- * Jedno okno opcji: język, sterowanie, debug AI, efekt retro. Otwierane klawiszem O.
+ * OptionsOverlay — language, controls, AI debug, retro film (open with O).
  */
 import { RetroFilmSettings, RETRO_PARAM_KEYS } from '../systems/RetroFilmSettings.js';
 import { RenderSystem } from '../systems/RenderSystem.js';
@@ -191,6 +190,7 @@ export const OptionsOverlay = {
 
     init() {
         UISettings.init();
+        RetroFilmSettings.init();
         I18n.init(UISettings.getLocale());
 
         const style = document.createElement('style');
@@ -277,6 +277,7 @@ export const OptionsOverlay = {
         this._debugAIEl.checked = Boolean(RenderSystem.debugAI);
         this._debugAIEl.addEventListener('change', () => {
             RenderSystem.debugAI = this._debugAIEl.checked;
+            UISettings.setDebugAI(this._debugAIEl.checked);
             EventBus.emit('ui_settings_change', {
                 debugAI: RenderSystem.debugAI,
             });

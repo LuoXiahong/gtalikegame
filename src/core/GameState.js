@@ -1,6 +1,5 @@
 /**
- * CORE: GameState
- * Zarządza stanami aplikacji (Menu, Gra, Koniec gry).
+ * GameState — app states (Menu, Play, end screens).
  */
 import { EventBus } from './EventBus.js';
 

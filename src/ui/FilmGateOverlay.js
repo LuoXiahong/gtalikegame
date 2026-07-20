@@ -1,7 +1,6 @@
 /**
- * FilmGateOverlay
- * Ramka kinoskopu: licznik klatek + lampka tally (jak w demo HTML).
- * Widoczna gdy efekt retro jest aktywny.
+ * FilmGateOverlay — film-gate chrome: frame counter + tally lamp (like the HTML demo).
+ * Visible while the retro effect is active.
  */
 import { EventBus } from '../core/EventBus.js';
 import { RetroFilmSettings } from '../systems/RetroFilmSettings.js';
@@ -103,7 +102,7 @@ export const FilmGateOverlay = {
         }
     },
 
-    /** Wywołuj z pętli gry (~co klatkę renderu). */
+    /** Call from the game loop (~once per render frame). */
     update(timeMs) {
         if (!this._active) return;
         const interval = 1000 / 18;

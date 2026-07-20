@@ -1,7 +1,6 @@
 /**
- * RetroFilmShader
- * Efekt taśmy (jitter, rysy, ziarno, winieta) bez niszczenia czytelności postaci:
- * łagodna sepia, miękki kontrast, podniesione cienie.
+ * Film-stock post effect (jitter, scratches, grain, vignette) tuned to keep characters readable:
+ * mild sepia, soft contrast, lifted shadows.
  */
 export const RetroFilmShader = {
     uniforms: {
@@ -68,7 +67,7 @@ export const RetroFilmShader = {
             float i = intensity;
             float frame = floor(time * max(fps, 1.0));
 
-            // Drganie bramki
+            // Gate jitter
             float jAmt = jitter * i;
             float jx = (hash(vec2(frame, 1.71)) - 0.5) * jAmt * 0.022;
             float jy = (hash(vec2(frame, 9.33)) - 0.5) * jAmt * 0.013;
@@ -83,27 +82,25 @@ export const RetroFilmShader = {
 
             vec3 col = texture2D(tDiffuse, uv).rgb;
 
-            // --- Łagodne tonowanie: zachowaj kolory postaci ---
-            // Sepia jako ciepły tint, nie pełna monochromia (max ~55% mix)
+            // Warm tint only — keep character colors (max ~55% sepia mix)
             float sepMix = sepia * i * 0.55;
             float luma = dot(col, vec3(0.299, 0.587, 0.114));
             vec3 warm = vec3(luma * 1.05, luma * 0.98, luma * 0.82);
             col = mix(col, warm, sepMix);
 
-            // Lekka desaturacja (nie zabija barw NPC/gracza)
+            // Light desaturation so NPC/player hues survive
             float satAmt = mix(1.0, 0.85, sepia * i * 0.5);
             float l2 = dot(col, vec3(0.299, 0.587, 0.114));
             col = mix(vec3(l2), col, satAmt);
 
-            // Miękki kontrast + PODNIESIENIE CIENI (nie zgniataj czerni)
+            // Soft contrast + shadow lift so blacks aren't crushed
             float cAmt = 1.0 + contrast * i * 0.45;
             col = (col - 0.5) * cAmt + 0.5;
-            // Shadow lift: ciemne partie wracają w górę
             float lift = 0.10 * i * (0.55 + contrast * 0.25);
             col = col + lift * (1.0 - smoothstep(0.0, 0.45, col));
             col = clamp(col, 0.0, 1.0);
 
-            // Migotanie — płytkie, min. jasność wysoka żeby postacie nie znikały
+            // Shallow flicker; floor brightness so characters don't vanish
             float flick = 1.0 - flicker * i * hash(vec2(frame, 3.1)) * 0.28;
             if (hash(vec2(frame, 7.7)) < flicker * i * 0.08) {
                 flick = 1.0 - flicker * i * 0.35;
@@ -111,7 +108,6 @@ export const RetroFilmShader = {
             flick = max(0.78, flick);
             col *= flick;
 
-            // Ziarno (overlay, umiarkowane)
             if (grain > 0.001) {
                 float n = hash(floor(uv * vec2(320.0, 240.0) + frame * 13.0));
                 float v = 0.5 + (n * 2.0 - 1.0) * (100.0 / 255.0) * grain;
@@ -119,7 +115,6 @@ export const RetroFilmShader = {
                 col = mix(col, overlay(col, vec3(clamp(v, 0.0, 1.0))), gAlpha);
             }
 
-            // Cienkie rysy
             if (scratches > 0.001) {
                 for (int n = 0; n < 8; n++) {
                     float nf = float(n);
@@ -153,22 +148,20 @@ export const RetroFilmShader = {
                 }
             }
 
-            // Winieta — łagodniejsza, nie gasi środka kadru
+            // Mild vignette — avoid killing the frame center
             float breathe = 0.85 + (1.0 - flick) * 0.35;
             float dist = length(vUv - 0.5) / 0.7071;
             float vig = smoothstep(0.42, 1.15, dist);
             col *= 1.0 - min(0.55, vig * vignette * 0.55 * breathe) * i;
 
-            // Wash migotania — bardzo lekki
             float wash = min(0.18, (1.0 - flick) * 0.35) * i;
             col *= 1.0 - wash;
 
-            // Ramka bramki
             float edgeX = smoothstep(0.0, 0.006, vUv.x) * smoothstep(0.0, 0.006, 1.0 - vUv.x);
             float edgeY = smoothstep(0.0, 0.008, vUv.y) * smoothstep(0.0, 0.008, 1.0 - vUv.y);
             col *= mix(1.0, edgeX * edgeY, 0.45 * i);
 
-            // Perforacja (wąska, nie zabiera dużo kadru)
+            // Narrow sprocket strip — limited frame loss
             float strip = 0.022;
             if (vUv.x < strip || vUv.x > 1.0 - strip) {
                 col *= 0.25;

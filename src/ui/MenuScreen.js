@@ -1,6 +1,5 @@
 /**
- * UI: MenuScreen
- * Zarządza ekranami tytułowymi i komunikatami końca gry.
+ * MenuScreen — title and end-of-game screens.
  */
 import { EventBus } from '../core/EventBus.js';
 import { GameState, GAME_STATES } from '../core/GameState.js';
