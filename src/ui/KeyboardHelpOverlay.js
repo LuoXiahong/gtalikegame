@@ -3,21 +3,23 @@
  * Nakładka z listą wszystkich klawiszy gry.
  * Otwierana przez ? lub / — zamykana przez te same klawisze, Esc lub kliknięcie tła.
  */
+import { EventBus } from '../core/EventBus.js';
+import { I18n } from '../i18n/I18n.js';
 
-const KEYBINDINGS = [
-    { key: 'W / ↑',       desc: 'Jedź do przodu / idź w górę' },
-    { key: 'S / ↓',       desc: 'Jedź do tyłu / idź w dół' },
-    { key: 'A / ←',       desc: 'Skręć / obróć w lewo' },
-    { key: 'D / →',       desc: 'Skręć / obróć w prawo' },
-    { key: 'F',           desc: 'Wejdź / wysiądź z pojazdu' },
-    { key: 'Spacja',      desc: 'Strzał' },
-    { key: 'E',           desc: 'Eksplozja' },
-    { key: 'V',           desc: 'Przełącz widok 2D / 3D' },
-    { key: 'Z',           desc: 'Zoom kamery (przybliż / oddal)' },
-    { key: '` (backtick)',desc: 'Tryb debug AI' },
-    { key: 'O',           desc: 'Opcje (sterowanie + efekt taśmy)' },
-    { key: '? lub /',     desc: 'Pomoc — pokaż / ukryj ten ekran' },
-    { key: 'Esc',         desc: 'Zamknij ten ekran' },
+const KEYBINDING_DEFS = [
+    { key: 'W / ↑', descKey: 'help.key.moveUp' },
+    { key: 'S / ↓', descKey: 'help.key.moveDown' },
+    { key: 'A / ←', descKey: 'help.key.turnLeft' },
+    { key: 'D / →', descKey: 'help.key.turnRight' },
+    { key: 'F', descKey: 'help.key.vehicle' },
+    { key: 'Spacja / Space', descKey: 'help.key.shoot' },
+    { key: 'E', descKey: 'help.key.explode' },
+    { key: 'V', descKey: 'help.key.view' },
+    { key: 'Z', descKey: 'help.key.zoom' },
+    { key: '` (backtick)', descKey: 'help.key.debugAI' },
+    { key: 'O', descKey: 'help.key.options' },
+    { key: '? / /', descKey: 'help.key.help' },
+    { key: 'Esc', descKey: 'help.key.esc' },
 ];
 
 const CSS = `
@@ -121,14 +123,15 @@ const CSS = `
 export const KeyboardHelpOverlay = {
     _backdrop: null,
     _visible: false,
+    _titleEl: null,
+    _hintEl: null,
+    _descEls: null,
 
     init() {
-        // Wstrzyknięcie stylów
         const style = document.createElement('style');
         style.textContent = CSS;
         document.head.appendChild(style);
 
-        // Budowanie DOM
         const backdrop = document.createElement('div');
         backdrop.id = 'keyboardHelpBackdrop';
 
@@ -137,23 +140,27 @@ export const KeyboardHelpOverlay = {
 
         const title = document.createElement('div');
         title.id = 'keyboardHelpTitle';
-        title.textContent = 'Sterowanie';
+        this._titleEl = title;
 
         const table = document.createElement('table');
         table.id = 'keyboardHelpTable';
 
-        KEYBINDINGS.forEach(({ key, desc }) => {
+        this._descEls = [];
+        KEYBINDING_DEFS.forEach(({ key, descKey }) => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><span class="kbd-key">${key}</span></td>
-                <td class="kbd-desc">${desc}</td>
-            `;
+            const tdKey = document.createElement('td');
+            tdKey.innerHTML = `<span class="kbd-key">${key}</span>`;
+            const tdDesc = document.createElement('td');
+            tdDesc.className = 'kbd-desc';
+            tr.appendChild(tdKey);
+            tr.appendChild(tdDesc);
             table.appendChild(tr);
+            this._descEls.push({ el: tdDesc, descKey });
         });
 
         const hint = document.createElement('div');
         hint.id = 'keyboardHelpHint';
-        hint.textContent = 'Naciśnij ? / / lub Esc aby zamknąć';
+        this._hintEl = hint;
 
         panel.appendChild(title);
         panel.appendChild(table);
@@ -162,12 +169,10 @@ export const KeyboardHelpOverlay = {
         document.body.appendChild(backdrop);
         this._backdrop = backdrop;
 
-        // Zamknięcie przez kliknięcie tła (poza panelem)
         backdrop.addEventListener('click', (e) => {
             if (e.target === backdrop) this.hide();
         });
 
-        // Obsługa klawiszy: ? / / / Esc
         document.addEventListener('keydown', (e) => {
             if (e.key === '?' || e.key === '/') {
                 e.preventDefault();
@@ -177,12 +182,23 @@ export const KeyboardHelpOverlay = {
                 this.hide();
             }
         });
+
+        EventBus.on('locale_change', () => this.applyLabels());
+        this.applyLabels();
+    },
+
+    applyLabels() {
+        if (this._titleEl) this._titleEl.textContent = I18n.t('help.title');
+        if (this._hintEl) this._hintEl.textContent = I18n.t('help.closeHint');
+        (this._descEls || []).forEach(({ el, descKey }) => {
+            el.textContent = I18n.t(descKey);
+        });
     },
 
     show() {
         if (this._visible) return;
+        this.applyLabels();
         this._visible = true;
-        // rAF żeby transition zadziałało po display
         requestAnimationFrame(() => {
             this._backdrop.classList.add('visible');
         });

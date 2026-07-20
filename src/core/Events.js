@@ -31,5 +31,10 @@ export const EVENTS = {
     AUDIO_PLAY: 'audio_play',
 
     // Restart
-    GAME_RESTART: 'game_restart'
+    GAME_RESTART: 'game_restart',
+
+    // Lokalizacja / UI
+    LOCALE_CHANGE: 'locale_change',
+    UI_SETTINGS_CHANGE: 'ui_settings_change',
+    RETRO_SETTINGS_CHANGE: 'retro_settings_change',
 };

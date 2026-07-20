@@ -13,7 +13,7 @@ describe('RetroFilmSettings', () => {
         expect(RetroFilmSettings.enabled).toBe(true);
         expect(RetroFilmSettings.intensity).toBe(RETRO_PRESETS.classic.intensity);
         expect(RetroFilmSettings.sepia).toBe(35);
-        expect(RetroFilmSettings.jitter).toBe(25);
+        expect(RetroFilmSettings.jitter).toBe(8);
         expect(RetroFilmSettings.dust).toBe(0);
         expect(RetroFilmSettings.scratches).toBe(40);
         expect(RetroFilmSettings.contrast).toBe(15);
@@ -69,7 +69,7 @@ describe('RetroFilmSettings', () => {
 
         expect(uniforms.intensity.value).toBeCloseTo(0.85);
         expect(uniforms.vignette.value).toBeCloseTo(0.40);
-        expect(uniforms.jitter.value).toBeCloseTo(0.25);
+        expect(uniforms.jitter.value).toBeCloseTo(0.08);
         expect(uniforms.scratches.value).toBeCloseTo(0.40);
         expect(uniforms.dust.value).toBe(0);
         expect(uniforms.sepia.value).toBeCloseTo(0.35);
@@ -87,7 +87,7 @@ describe('RetroFilmSettings', () => {
             intensity: 85,
             vignette: 40,
             flicker: 25,
-            jitter: 25,
+            jitter: 8,
             grain: 35,
             scratches: 40,
             dust: 0,

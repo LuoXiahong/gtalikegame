@@ -5,24 +5,28 @@
 import { EventBus } from '../core/EventBus.js';
 import { GameState, GAME_STATES } from '../core/GameState.js';
 import { World } from '../world/World.js';
+import { I18n } from '../i18n/I18n.js';
 
 export const MissionSystem = {
     stage: 0,
     timer: 0,
     timerActive: false,
     targetLocation: null,
+    _hurryActive: false,
 
     init() {
         this.reset();
         if (this._onNearNpc) EventBus.off('player_near_npc', this._onNearNpc);
         if (this._onNearCar) EventBus.off('player_near_car', this._onNearCar);
+        if (this._onLocale) EventBus.off('locale_change', this._onLocale);
 
         this._onNearNpc = () => {
             if (this.stage === 0) {
                 this.stage = 1;
                 this.timer = 45;
                 this.timerActive = true;
-                EventBus.emit('mission_update', 'Mission: Go to Car');
+                this._hurryActive = false;
+                this.publishMissionText();
                 EventBus.emit('audio_play', 'beep');
             }
         };
@@ -33,15 +37,19 @@ export const MissionSystem = {
                 this.stage = 2;
                 this.timer = 60;
                 this.timerActive = true;
+                this._hurryActive = false;
                 this.targetLocation = { x: 3000, y: 3000, radius: 150 };
-                EventBus.emit('mission_update', 'Mission: Deliver Car to Safehouse');
+                this.publishMissionText();
                 EventBus.emit('audio_play', 'beep');
             }
         };
         EventBus.on('player_near_car', this._onNearCar);
 
+        this._onLocale = () => this.publishMissionText();
+        EventBus.on('locale_change', this._onLocale);
+
         // Stan początkowy
-        setTimeout(() => EventBus.emit('mission_update', 'Mission: Find NPC'), 100);
+        setTimeout(() => this.publishMissionText(), 100);
     },
 
     reset() {
@@ -49,6 +57,31 @@ export const MissionSystem = {
         this.timer = 0;
         this.timerActive = false;
         this.targetLocation = null;
+        this._hurryActive = false;
+    },
+
+    /** Aktualny tekst misji wg stage / timera / locale. */
+    getMissionText() {
+        if (this._hurryActive) return I18n.t('mission.hurry');
+        if (this.stage === 0) return I18n.t('mission.findNpc');
+        if (this.stage === 1) {
+            if (this.timerActive) {
+                return I18n.t('mission.goToCarTimed', { s: Math.ceil(this.timer) });
+            }
+            return I18n.t('mission.goToCar');
+        }
+        if (this.stage === 2) {
+            if (this.timerActive) {
+                return I18n.t('mission.deliverTimed', { s: Math.ceil(this.timer) });
+            }
+            return I18n.t('mission.deliver');
+        }
+        if (this.stage >= 3) return I18n.t('mission.complete');
+        return '';
+    },
+
+    publishMissionText() {
+        EventBus.emit('mission_update', this.getMissionText());
     },
 
     update(dt) {
@@ -60,13 +93,11 @@ export const MissionSystem = {
             // Pressure: escalate wanted level
             EventBus.emit('npc_hit'); // Trigger WantedSystem incident
             this.timer = 10; // Repeat pressure every 10s
-            EventBus.emit('mission_update', 'HURRY UP! Police is coming!');
+            this._hurryActive = true;
+            this.publishMissionText();
         } else {
-            const timeStr = Math.ceil(this.timer);
-            let msg = '';
-            if (this.stage === 1) msg = `Mission: Go to Car (${timeStr}s)`;
-            if (this.stage === 2) msg = `Mission: Deliver Car (${timeStr}s)`;
-            if (msg) EventBus.emit('mission_update', msg);
+            this._hurryActive = false;
+            this.publishMissionText();
         }
 
         if (this.stage === 2 && this.targetLocation) {
@@ -76,12 +107,13 @@ export const MissionSystem = {
                 const dx = p.transform.x - this.targetLocation.x;
                 const dy = p.transform.y - this.targetLocation.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                
+
                 if (dist < this.targetLocation.radius) {
                     this.stage = 3;
                     this.timerActive = false;
+                    this._hurryActive = false;
                     this.targetLocation = null;
-                    EventBus.emit('mission_update', 'MISSION COMPLETE');
+                    this.publishMissionText();
                     EventBus.emit('audio_play', 'success');
                     GameState.setState(GAME_STATES.MISSION_PASSED);
                 }

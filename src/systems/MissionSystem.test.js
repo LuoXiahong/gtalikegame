@@ -3,6 +3,7 @@ import { MissionSystem } from './MissionSystem.js';
 import { EventBus } from '../core/EventBus.js';
 import { GameState, GAME_STATES } from '../core/GameState.js';
 import { World } from '../world/World.js';
+import { I18n } from '../i18n/I18n.js';
 
 vi.mock('../world/World.js', () => ({
     World: {
@@ -13,6 +14,7 @@ vi.mock('../world/World.js', () => ({
 describe('MissionSystem', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        I18n.init('pl');
         MissionSystem.init();
     });
 
@@ -47,7 +49,7 @@ describe('MissionSystem', () => {
         EventBus.emit('player_near_npc');
         MissionSystem.timer = 0.05;
         MissionSystem.update(0.1);
-        
+
         expect(spy).toHaveBeenCalledWith('npc_hit');
         expect(MissionSystem.timer).toBe(10); // Reset for repeat pressure
     });
@@ -55,7 +57,7 @@ describe('MissionSystem', () => {
     it('should complete mission when in target zone in stage 2', () => {
         EventBus.emit('player_near_npc');
         EventBus.emit('player_near_car');
-        
+
         World.getEntitiesByType.mockReturnValue([{
             transform: { x: 3000, y: 3000 }
         }]);
@@ -77,5 +79,17 @@ describe('MissionSystem', () => {
         expect(MissionSystem.stage).toBe(0);
         expect(MissionSystem.timerActive).toBe(false);
         expect(MissionSystem.targetLocation).toBeNull();
+    });
+
+    it('should localize mission text and refresh on locale_change', () => {
+        expect(MissionSystem.getMissionText()).toBe('Misja: Znajdź NPC');
+        const spy = vi.fn();
+        EventBus.on('mission_update', spy);
+
+        I18n.setLocale('en');
+        expect(spy).toHaveBeenCalledWith('Mission: Find NPC');
+
+        EventBus.emit('player_near_npc');
+        expect(MissionSystem.getMissionText()).toMatch(/Mission: Go to Car \(45s\)/);
     });
 });

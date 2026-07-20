@@ -6,12 +6,14 @@ import { EventBus } from '../core/EventBus.js';
 import { InputSystem } from '../input/InputManager.js';
 import { VehicleSystem } from './VehicleSystem.js';
 import { GameConfig } from '../core/GameConfig.js';
+import { I18n } from '../i18n/I18n.js';
 
 export const InteractionSystem = {
     lastDialogue: undefined,
     lastHint: undefined,
     lastNearNPC: undefined,
     lastNearCar: undefined,
+    _localeBound: false,
 
     reset() {
         this.lastDialogue = undefined;
@@ -20,7 +22,17 @@ export const InteractionSystem = {
         this.lastNearCar = undefined;
     },
 
+    _ensureLocaleListener() {
+        if (this._localeBound) return;
+        this._localeBound = true;
+        EventBus.on('locale_change', () => {
+            this.lastDialogue = undefined;
+            this.lastHint = undefined;
+        });
+    },
+
     update() {
+        this._ensureLocaleListener();
         const players = World.getEntitiesByType('player');
         if (players.length === 0) return;
         const p = players[0];
@@ -72,7 +84,7 @@ export const InteractionSystem = {
         }
         this.lastNearNPC = nearNPCId;
 
-        const dialogue = nearNPCId ? 'NPC: Hej!' : null;
+        const dialogue = nearNPCId ? I18n.t('interact.npcHello') : null;
         if (dialogue !== this.lastDialogue) {
             EventBus.emit('ui_show_dialogue', dialogue);
             this.lastDialogue = dialogue;
@@ -96,7 +108,7 @@ export const InteractionSystem = {
                 EventBus.emit('player_near_car', { carId: carInZone.id });
                 this.lastNearCar = carInZone.id;
             }
-            const hint = 'Naciśnij F aby wsiąść';
+            const hint = I18n.t('interact.enterVehicle');
             if (hint !== this.lastHint) {
                 EventBus.emit('ui_show_action_hint', hint);
                 this.lastHint = hint;

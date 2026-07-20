@@ -129,4 +129,13 @@ describe('UISystem Speedometer & Minimap Logic', () => {
         EventBus.emit('ui_settings_change', {});
         expect(mockMobileHUD.style.display).toBe('grid');
     });
+
+    it('renders mission progress under the minimap', () => {
+        UISystem.init();
+        EventBus.emit('mission_update', 'Misja: Znajdź NPC');
+        expect(mockUiLayer.innerHTML).toContain('id="missionProgress"');
+        expect(mockUiLayer.innerHTML).toContain('top:162px');
+        expect(mockUiLayer.innerHTML).toContain('Misja: Znajdź NPC');
+        expect(mockUiLayer.innerHTML).not.toContain('top:25px');
+    });
 });

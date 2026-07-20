@@ -32,7 +32,7 @@ export const RETRO_PRESETS = {
         intensity: 85,
         vignette: 40,
         flicker: 25,
-        jitter: 25,
+        jitter: 8,
         grain: 35,
         scratches: 40,
         dust: 0,

@@ -10,7 +10,7 @@ export const RetroFilmShader = {
         intensity: { value: 1.0 },
         vignette: { value: 0.40 },
         flicker: { value: 0.25 },
-        jitter: { value: 0.25 },
+        jitter: { value: 0.08 },
         grain: { value: 0.35 },
         scratches: { value: 0.40 },
         dust: { value: 0.0 },

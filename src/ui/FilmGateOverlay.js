@@ -5,6 +5,7 @@
  */
 import { EventBus } from '../core/EventBus.js';
 import { RetroFilmSettings } from '../systems/RetroFilmSettings.js';
+import { I18n } from '../i18n/I18n.js';
 
 const CSS = `
 #filmGateChrome {
@@ -71,18 +72,24 @@ export const FilmGateOverlay = {
 
         const counter = document.createElement('div');
         counter.id = 'filmFrameCounter';
-        counter.textContent = 'KL. 000000';
+        this._root = root;
+        this._counter = counter;
+        this._tally = tally;
+        this._updateCounterText();
 
         root.appendChild(tally);
         root.appendChild(counter);
         container.appendChild(root);
 
-        this._root = root;
-        this._counter = counter;
-        this._tally = tally;
-
         this.sync();
         EventBus.on('retro_settings_change', () => this.sync());
+        EventBus.on('locale_change', () => this._updateCounterText());
+    },
+
+    _updateCounterText() {
+        if (!this._counter) return;
+        const prefix = I18n.t('film.frame');
+        this._counter.textContent = `${prefix} ${String(this._frame % 1000000).padStart(6, '0')}`;
     },
 
     sync() {
@@ -103,9 +110,7 @@ export const FilmGateOverlay = {
         if (timeMs - this._lastStep >= interval) {
             this._lastStep = timeMs;
             this._frame++;
-            if (this._counter) {
-                this._counter.textContent = 'KL. ' + String(this._frame % 1000000).padStart(6, '0');
-            }
+            this._updateCounterText();
             if (this._tally) {
                 const flick = 0.5 + Math.random() * 0.5;
                 this._tally.style.opacity = String(0.55 + flick * 0.4);

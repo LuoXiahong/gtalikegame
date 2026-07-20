@@ -9,6 +9,18 @@ A lightweight, high-performance, and responsive GTA-like game engine written in 
 
 The project relies on "Low effort / High impact" philosophy (clever PS2-style tricks over heavy simulation) to construct a living city simulation, featuring both a classic 2D canvas top-down mode and a modern 3D rendering mode utilizing Three.js.
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/street-intersection.png" alt="Noir street intersection with vintage cars and player" width="48%" />
+  &nbsp;
+  <img src="docs/screenshots/city-overview.png" alt="Isometric city overview with long shadows" width="48%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/traffic-block.png" alt="City block with traffic and retro film effect" width="72%" />
+</p>
+
 ---
 
 ## 📁 Directory Structure

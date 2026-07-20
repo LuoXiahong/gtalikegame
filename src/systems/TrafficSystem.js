@@ -26,6 +26,8 @@ const DRIFT_DURATION_MAX = 2.4;
 const DRIFT_ANGLE_MIN = 0.25;
 const DRIFT_ANGLE_MAX = 0.5;
 const RECOVER_DONE_DIST = 35;
+/** Max position correction per frame — avoids visible teleports when cars meet */
+const MAX_SEPARATION_PER_FRAME = 2.5;
 
 function wrapAngle(a) {
     while (a > Math.PI) a -= Math.PI * 2;
@@ -35,6 +37,51 @@ function wrapAngle(a) {
 
 function clamp(v, lo, hi) {
     return Math.max(lo, Math.min(hi, v));
+}
+
+/**
+ * Minimum translation to separate axis-aligned boxes (centers + half-extents).
+ * @returns {{ pushX: number, pushY: number, penetration: number } | null}
+ */
+function aabbSeparation(ax, ay, ahw, ahh, bx, by, bhw, bhh) {
+    const overlapLeft = (ax + ahw) - (bx - bhw);
+    const overlapRight = (bx + bhw) - (ax - ahw);
+    const overlapTop = (ay + ahh) - (by - bhh);
+    const overlapBottom = (by + bhh) - (ay - ahh);
+    if (overlapLeft <= 0 || overlapRight <= 0 || overlapTop <= 0 || overlapBottom <= 0) {
+        return null;
+    }
+    const penetration = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+    if (penetration === overlapLeft) return { pushX: -overlapLeft, pushY: 0, penetration };
+    if (penetration === overlapRight) return { pushX: overlapRight, pushY: 0, penetration };
+    if (penetration === overlapTop) return { pushX: 0, pushY: -overlapTop, penetration };
+    return { pushX: 0, pushY: overlapBottom, penetration };
+}
+
+/**
+ * Soft vehicle separation along center-to-center (avoids vertical "jumps" on same lane).
+ * @returns {{ pushX: number, pushY: number } | null}
+ */
+function radialSeparation(ax, ay, ahw, ahh, bx, by, bhw, bhh) {
+    const box = aabbSeparation(ax, ay, ahw, ahh, bx, by, bhw, bhh);
+    if (!box) return null;
+    const dx = ax - bx;
+    const dy = ay - by;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 1e-4) {
+        return { pushX: box.penetration, pushY: 0 };
+    }
+    return {
+        pushX: (dx / dist) * box.penetration,
+        pushY: (dy / dist) * box.penetration,
+    };
+}
+
+function capSeparation(pushX, pushY, maxStep) {
+    const mag = Math.hypot(pushX, pushY);
+    if (mag <= maxStep || mag < 1e-6) return { pushX, pushY };
+    const s = maxStep / mag;
+    return { pushX: pushX * s, pushY: pushY * s };
 }
 
 export const TrafficSystem = {
@@ -416,70 +463,92 @@ export const TrafficSystem = {
             approachSpeed *= 0.5;
             car.ai.vx *= 0.85;
             car.ai.vy *= 0.85;
+            car.ai.currentSpeed *= 0.85;
         }
 
-        // Predictive collision using intended step
+        // Soft collision: separate only when already overlapping; block step when next pose would hit.
         const nextX = car.transform.x + Math.cos(car.transform.angle) * approachSpeed * dt;
         const nextY = car.transform.y + Math.sin(car.transform.angle) * approachSpeed * dt;
-        
+
         const hw = car.transform.width / 2;
         const hh = car.transform.height / 2;
-        
-        let collisionOccurred = false;
+        const cx = car.transform.x;
+        const cy = car.transform.y;
+
+        let blocked = false;
         let pushX = 0;
         let pushY = 0;
-        
+
         if (World.buildings && World.buildings.length > 0) {
             for (const b of World.buildings) {
-                if (nextX - hw < b.x + b.w &&
-                    nextX + hw > b.x &&
-                    nextY - hh < b.y + b.h &&
-                    nextY + hh > b.y) {
-                    
-                    collisionOccurred = true;
-                    car.ai.driftTimer = 0;
-                    car.ai.driftAngle = 0;
-                    car.ai.recovering = true;
+                const bcx = b.x + b.w / 2;
+                const bcy = b.y + b.h / 2;
+                const bhw = b.w / 2;
+                const bhh = b.h / 2;
+
+                const currentSep = aabbSeparation(cx, cy, hw, hh, bcx, bcy, bhw, bhh);
+                const nextHit = aabbSeparation(nextX, nextY, hw, hh, bcx, bcy, bhw, bhh);
+                if (!currentSep && !nextHit) continue;
+
+                blocked = true;
+                car.ai.driftTimer = 0;
+                car.ai.driftAngle = 0;
+                car.ai.recovering = true;
+
+                if (currentSep) {
+                    const capped = capSeparation(currentSep.pushX, currentSep.pushY, MAX_SEPARATION_PER_FRAME);
+                    pushX = capped.pushX;
+                    pushY = capped.pushY;
+                } else {
+                    // Approaching wall: nudge gently back toward lane instead of teleporting
                     const { nearX, nearY } = this.projectOnSegment(car, prevNode, target);
-                    const bdx = nearX - car.transform.x;
-                    const bdy = nearY - car.transform.y;
+                    const bdx = nearX - cx;
+                    const bdy = nearY - cy;
                     const bdist = Math.sqrt(bdx * bdx + bdy * bdy) || 1;
-                    pushX = (bdx / bdist) * 8;
-                    pushY = (bdy / bdist) * 8;
-                    break;
+                    const capped = capSeparation(
+                        (bdx / bdist) * MAX_SEPARATION_PER_FRAME,
+                        (bdy / bdist) * MAX_SEPARATION_PER_FRAME,
+                        MAX_SEPARATION_PER_FRAME
+                    );
+                    pushX = capped.pushX;
+                    pushY = capped.pushY;
                 }
+                break;
             }
         }
-        
-        if (!collisionOccurred) {
+
+        if (!blocked) {
             const others = this.cachedCarsAndPlayers || World.entities.filter(e => e.type === 'car' || e.type === 'player');
             for (const other of others) {
                 if (other === car) continue;
                 const ohw = (other.transform.width || 40) / 2;
                 const ohh = (other.transform.height || 40) / 2;
-                
-                if (nextX - hw < other.transform.x + ohw &&
-                    nextX + hw > other.transform.x - ohw &&
-                    nextY - hh < other.transform.y + ohh &&
-                    nextY + hh > other.transform.y - ohh) {
-                    
-                    collisionOccurred = true;
-                    const cdx = car.transform.x - other.transform.x;
-                    const cdy = car.transform.y - other.transform.y;
-                    const cdist = Math.sqrt(cdx * cdx + cdy * cdy) || 1;
-                    pushX = (cdx / cdist) * 8;
-                    pushY = (cdy / cdist) * 8;
-                    break;
+                const ox = other.transform.x;
+                const oy = other.transform.y;
+
+                const currentSep = radialSeparation(cx, cy, hw, hh, ox, oy, ohw, ohh);
+                const nextHit = aabbSeparation(nextX, nextY, hw, hh, ox, oy, ohw, ohh);
+                if (!currentSep && !nextHit) continue;
+
+                blocked = true;
+                if (currentSep) {
+                    const capped = capSeparation(currentSep.pushX, currentSep.pushY, MAX_SEPARATION_PER_FRAME);
+                    pushX = capped.pushX;
+                    pushY = capped.pushY;
                 }
+                // Predictive-only hit: no teleport — just brake (handled below)
+                break;
             }
         }
-        
-        if (collisionOccurred) {
-            car.ai.vx *= 0.2;
-            car.ai.vy *= 0.2;
-            car.ai.currentSpeed *= 0.2;
-            car.transform.x += pushX;
-            car.transform.y += pushY;
+
+        if (blocked) {
+            car.ai.vx *= 0.35;
+            car.ai.vy *= 0.35;
+            car.ai.currentSpeed *= 0.35;
+            if (pushX !== 0 || pushY !== 0) {
+                car.transform.x += pushX;
+                car.transform.y += pushY;
+            }
             car.physics.velX = 0;
             car.physics.velY = 0;
         } else {

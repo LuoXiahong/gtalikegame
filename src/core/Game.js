@@ -34,11 +34,16 @@ import { MenuScreen } from '../ui/MenuScreen.js';
 import { KeyboardHelpOverlay } from '../ui/KeyboardHelpOverlay.js';
 import { OptionsOverlay } from '../ui/OptionsOverlay.js';
 import { FilmGateOverlay } from '../ui/FilmGateOverlay.js';
+import { UISettings } from '../ui/UISettings.js';
+import { I18n } from '../i18n/I18n.js';
 
 export const Game = {
     is3D: true,
 
     init() {
+        UISettings.init();
+        I18n.init(UISettings.getLocale());
+
         World.init();
         InputSystem.init();
         Camera.init();

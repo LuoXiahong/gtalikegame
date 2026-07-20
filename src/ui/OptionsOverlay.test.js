@@ -7,6 +7,9 @@ import { JSDOM } from 'jsdom';
 describe('OptionsOverlay', () => {
     let OptionsOverlay;
     let RetroFilmSettings;
+    let RenderSystem;
+    let UISettings;
+    let I18n;
     let EventBus;
     let dom;
 
@@ -29,8 +32,14 @@ describe('OptionsOverlay', () => {
         vi.resetModules();
         ({ EventBus } = await import('../core/EventBus.js'));
         ({ RetroFilmSettings } = await import('../systems/RetroFilmSettings.js'));
+        ({ RenderSystem } = await import('../systems/RenderSystem.js'));
+        ({ UISettings } = await import('./UISettings.js'));
+        ({ I18n } = await import('../i18n/I18n.js'));
         EventBus.clear();
         RetroFilmSettings.reset();
+        UISettings.reset();
+        RenderSystem.debugAI = false;
+        I18n.init('pl');
 
         ({ OptionsOverlay } = await import('./OptionsOverlay.js'));
         OptionsOverlay.init();
@@ -38,6 +47,7 @@ describe('OptionsOverlay', () => {
 
     afterEach(() => {
         if (EventBus) EventBus.clear();
+        if (UISettings) UISettings.reset();
         delete globalThis.window;
         delete globalThis.document;
         delete globalThis.localStorage;
@@ -47,19 +57,20 @@ describe('OptionsOverlay', () => {
         delete globalThis.requestAnimationFrame;
     });
 
-    it('should mount backdrop and panel into the DOM', () => {
+    it('should mount unified options: language, controls, debug, film', () => {
         expect(document.getElementById('optionsBackdrop')).toBeTruthy();
         expect(document.getElementById('optionsPanel')).toBeTruthy();
+        expect(document.getElementById('opt_locale')).toBeTruthy();
         expect(document.getElementById('opt_onscreen_controls')).toBeTruthy();
+        expect(document.getElementById('opt_debug_ai')).toBeTruthy();
         expect(document.getElementById('opt_enabled')).toBeTruthy();
         expect(document.getElementById('opt_intensity')).toBeTruthy();
         expect(document.getElementById('opt_sepia')).toBeTruthy();
+        const locale = document.getElementById('opt_locale');
+        expect([...locale.options].map((o) => o.value)).toEqual(['pl', 'en', 'de', 'es', 'fr']);
     });
 
-    it('should toggle on-screen controls and emit ui_settings_change', async () => {
-        const { UISettings } = await import('./UISettings.js');
-        UISettings.reset();
-
+    it('should toggle on-screen controls and emit ui_settings_change', () => {
         const spy = vi.fn();
         EventBus.on('ui_settings_change', spy);
 
@@ -71,6 +82,28 @@ describe('OptionsOverlay', () => {
 
         expect(UISettings.showOnScreenControls).toBe(true);
         expect(spy).toHaveBeenCalled();
+    });
+
+    it('should toggle AI debug mode from options', () => {
+        const toggle = document.getElementById('opt_debug_ai');
+        expect(toggle.checked).toBe(false);
+        toggle.checked = true;
+        toggle.dispatchEvent(new Event('change', { bubbles: true }));
+        expect(RenderSystem.debugAI).toBe(true);
+    });
+
+    it('should change language, persist and emit locale_change', () => {
+        const spy = vi.fn();
+        EventBus.on('locale_change', spy);
+
+        const select = document.getElementById('opt_locale');
+        select.value = 'en';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+
+        expect(I18n.getLocale()).toBe('en');
+        expect(UISettings.getLocale()).toBe('en');
+        expect(document.getElementById('optionsTitle').textContent).toBe('Options');
+        expect(spy).toHaveBeenCalledWith({ locale: 'en' });
     });
 
     it('should toggle visibility with show/hide', () => {

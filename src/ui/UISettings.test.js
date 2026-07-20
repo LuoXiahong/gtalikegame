@@ -51,4 +51,21 @@ describe('UISettings', () => {
         UISettings.init();
         expect(UISettings.showOnScreenControls).toBe(true);
     });
+
+    it('persists and reloads locale', async () => {
+        expect(UISettings.getLocale()).toBe('pl');
+        expect(UISettings.setLocale('de')).toBe(true);
+        expect(UISettings.getLocale()).toBe('de');
+        expect(JSON.parse(localStorage.getItem('gtalike_ui_settings')).locale).toBe('de');
+
+        vi.resetModules();
+        ({ UISettings } = await import('./UISettings.js'));
+        UISettings.init();
+        expect(UISettings.getLocale()).toBe('de');
+    });
+
+    it('rejects unsupported locale codes', () => {
+        expect(UISettings.setLocale('xx')).toBe(false);
+        expect(UISettings.getLocale()).toBe('pl');
+    });
 });

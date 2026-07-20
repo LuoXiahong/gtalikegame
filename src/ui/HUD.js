@@ -10,6 +10,10 @@ import { World } from '../world/World.js';
 import { Tilemap, TILE_COLORS } from '../world/Tilemap.js';
 import { VehicleSystem } from '../systems/VehicleSystem.js';
 import { UISettings } from './UISettings.js';
+import { I18n } from '../i18n/I18n.js';
+
+/** Minimap: top 20 + 130 + border ≈ 156 → tekst misji pod mapą */
+const MISSION_TOP_PX = 162;
 
 const escapeHTML = (str) => {
     if (!str) return '';
@@ -57,6 +61,11 @@ export const UISystem = {
 
         EventBus.on('ui_settings_change', () => {
             this.syncOnScreenControls();
+            this.lastStateHash = null;
+            this.updateDOM();
+        });
+
+        EventBus.on('locale_change', () => {
             this.lastStateHash = null;
             this.updateDOM();
         });
@@ -127,7 +136,8 @@ export const UISystem = {
     updateDOM() {
         const kmh = Math.round(this.speedValue * 0.3);
         const onScreenPad = UISettings.showOnScreenControls;
-        const stateHash = `${this.missionText}|${this.currentDialogue}|${this.actionHint}|${this.wantedStars}|${this.isBlinking}|${this.showSpeed}|${kmh}|${onScreenPad}`;
+        const kmhLabel = I18n.t('hud.kmh');
+        const stateHash = `${this.missionText}|${this.currentDialogue}|${this.actionHint}|${this.wantedStars}|${this.isBlinking}|${this.showSpeed}|${kmh}|${onScreenPad}|${I18n.getLocale()}`;
         if (this.lastStateHash === stateHash) return;
         this.lastStateHash = stateHash;
 
@@ -137,7 +147,7 @@ export const UISystem = {
 
         if (this.missionText) {
             const safeMission = escapeHTML(this.missionText);
-            html += `<div style="position:absolute; top:25px; left:25px; font-size:20px; font-weight:bold; color:white; font-family: system-ui, -apple-system, sans-serif; letter-spacing:0.5px; ${shadowStyle}">${safeMission}</div>`;
+            html += `<div id="missionProgress" style="position:absolute; top:${MISSION_TOP_PX}px; left:20px; max-width:140px; font-size:13px; font-weight:bold; color:white; font-family: system-ui, -apple-system, sans-serif; letter-spacing:0.3px; line-height:1.35; ${shadowStyle}">${safeMission}</div>`;
         }
         if (this.currentDialogue) {
             const safeDialogue = escapeHTML(this.currentDialogue);
@@ -164,7 +174,7 @@ export const UISystem = {
             const speedPos = onScreenPad
                 ? 'bottom:25px; right:25px;'
                 : 'bottom:25px; left:25px;';
-            html += `<div id="speedometer" style="position:absolute; ${speedPos} font-size:24px; font-weight:bold; color:#2ecc71; font-family: monospace; letter-spacing:1px; ${shadowStyle}">${kmh} KM/H</div>`;
+            html += `<div id="speedometer" style="position:absolute; ${speedPos} font-size:24px; font-weight:bold; color:#2ecc71; font-family: monospace; letter-spacing:1px; ${shadowStyle}">${kmh} ${kmhLabel}</div>`;
         }
         this.layer.innerHTML = html;
     },

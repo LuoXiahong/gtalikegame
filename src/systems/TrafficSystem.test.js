@@ -55,18 +55,28 @@ describe('TrafficSystem', () => {
 
     it('should stop car when obstacle is ahead', () => {
         TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
         TrafficSystem.update(0.1); // spawn
-        TrafficSystem.update(0.1); // update logic & angle
-        const car = World.entities[0];
-        
-        // Przeszkoda 100px przed autem (zależy od ścieżki, car.transform.angle jest już ustawione po pierwszym update)
-        const obstacle = new Entity('obs', 'player', car.transform.x + Math.cos(car.transform.angle) * 100, car.transform.y + Math.sin(car.transform.angle) * 100);
-        
+        const car = World.getEntitiesByType('car')[0];
+
+        // Deterministic lane + heading so the obstacle stays in the forward sensor cone
+        car.ai.pathName = 'EW_0_E';
+        car.ai.targetIndex = 1;
+        car.ai.pathDir = 1;
+        const y = Waypoints.paths.EW_0_E[0].y;
+        car.transform.x = 1000;
+        car.transform.y = y;
+        car.transform.angle = 0;
+        car.ai.vx = 120;
+        car.ai.vy = 0;
+        car.ai.currentSpeed = 120;
+        car.ai.maxSpeed = 120;
+
+        const obstacle = new Entity('obs', 'player', car.transform.x + 90, car.transform.y);
         World.entities.push(obstacle);
-        
-        // Update a few times to let currentSpeed slow down
-        for(let i=0; i<100; i++) TrafficSystem.update(0.1);
-        
+
+        for (let i = 0; i < 40; i++) TrafficSystem.update(0.1);
+
         expect(car.ai.currentSpeed).toBeLessThan(1);
     });
 
@@ -409,7 +419,42 @@ describe('TrafficSystem', () => {
 
         expect(car.ai.currentSpeed).toBeLessThan(100);
         expect(car.physics.velX).toBe(0);
+        // Soft MTV separation away from the other car — not a large teleport
         expect(car.transform.x).toBeLessThan(originalX);
+        expect(originalX - car.transform.x).toBeLessThanOrEqual(2.5 + 1e-6);
+    });
+
+    it('should brake without teleporting when only the next step would hit another car', () => {
+        TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.update(0.1);
+        const car = World.getEntitiesByType('car')[0];
+
+        car.ai.pathName = 'EW_0_E';
+        car.ai.targetIndex = 1;
+        car.ai.vx = 200;
+        car.ai.vy = 0;
+        const y = Waypoints.paths.EW_0_E[0].y;
+        car.transform.x = 1000;
+        car.transform.y = y;
+        car.transform.angle = 0;
+        car.transform.width = 40;
+        car.transform.height = 40;
+        car.ai.currentSpeed = 200;
+        car.ai.maxSpeed = 200;
+
+        // Close ahead but not overlapping yet; next step at high speed would collide
+        World.entities.push({
+            type: 'car',
+            transform: { x: 1045, y: y, width: 40, height: 40 }
+        });
+
+        const originalX = car.transform.x;
+        const originalY = car.transform.y;
+        TrafficSystem.update(0.05);
+
+        expect(car.ai.currentSpeed).toBeLessThan(200);
+        expect(Math.hypot(car.transform.x - originalX, car.transform.y - originalY)).toBeLessThan(1);
     });
 
     it('should start a drift with some probability and then recover', () => {
