@@ -5,15 +5,18 @@ import * as THREE from 'three';
 describe('FacadeGenerator', () => {
     beforeEach(() => {
         FacadeGenerator.textures.clear();
+        FacadeGenerator.emissiveTextures.clear();
     });
 
     it('should initialize and populate textures', () => {
         FacadeGenerator.init();
         expect(FacadeGenerator.textures.size).toBe(4);
+        expect(FacadeGenerator.emissiveTextures.size).toBe(4);
         expect(FacadeGenerator.textures.has('residential')).toBe(true);
         expect(FacadeGenerator.textures.has('skyscraper')).toBe(true);
         expect(FacadeGenerator.textures.has('shop_front')).toBe(true);
         expect(FacadeGenerator.textures.has('shop_side')).toBe(true);
+        expect(FacadeGenerator.emissiveTextures.has('residential')).toBe(true);
     });
 
     it('should create valid THREE.CanvasTexture objects', () => {
@@ -22,5 +25,6 @@ describe('FacadeGenerator', () => {
         expect(texture.wrapS).toBe(THREE.RepeatWrapping);
         expect(texture.wrapT).toBe(THREE.RepeatWrapping);
         expect(texture.magFilter).toBe(THREE.NearestFilter);
+        expect(texture.userData.emissiveMap).toBeInstanceOf(THREE.CanvasTexture);
     });
 });

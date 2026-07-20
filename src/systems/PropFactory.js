@@ -37,37 +37,47 @@ export function createProp(type) {
 
 function addLampPost(group) {
     const poleMat = new THREE.MeshStandardMaterial({
-        color: 0x4a4a4a,
-        roughness: 0.55,
-        metalness: 0.65
+        color: 0xb0b0b8,
+        roughness: 0.28,
+        metalness: 0.85,
+        envMapIntensity: 1.2
     });
-    const pole = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.06, 0.08, 3.2, 6),
+    // Base plinth so the pole reads grounded from the isometric view
+    const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22, 0.28, 0.35, 8),
         poleMat
     );
-    pole.position.y = 1.6;
+    base.position.y = 0.17;
+    group.add(base);
+
+    const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.09, 0.13, 5.2, 8),
+        poleMat
+    );
+    pole.position.y = 2.6;
     pole.castShadow = true;
     group.add(pole);
 
     const arm = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, 0.06, 0.06),
+        new THREE.BoxGeometry(0.9, 0.09, 0.09),
         poleMat
     );
-    arm.position.set(0.2, 3.05, 0);
+    arm.position.set(0.35, 5.05, 0);
     group.add(arm);
 
     const globeMat = new THREE.MeshStandardMaterial({
         color: 0xffe6a0,
-        roughness: 0.35,
-        metalness: 0.1,
+        roughness: 0.4,
+        metalness: 0.05,
         emissive: 0xffcc66,
-        emissiveIntensity: 0.5
+        emissiveIntensity: 0.7
     });
-    const globe = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), globeMat);
-    globe.position.set(0.4, 2.95, 0);
+    const globe = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 10), globeMat);
+    globe.position.set(0.75, 4.9, 0);
     group.add(globe);
 
-    const light = new THREE.PointLight(0xffcc66, 0.85, 10, 2);
+    // Subtle warm pool on the sidewalk
+    const light = new THREE.PointLight(0xffb84d, 0.7, 10, 2);
     light.position.copy(globe.position);
     light.castShadow = false;
     light.userData.isStreetLight = true;

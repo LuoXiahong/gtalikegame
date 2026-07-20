@@ -31,17 +31,17 @@ export const RoadTextureGenerator = {
         return this.roughnessTextures.get(type);
     },
 
-    /** Deterministic-ish wet patch list for albedo + roughness alignment. */
-    generateWetPatches(count = 7) {
+    /** Sparse subtle wet stains (albedo + mild roughness only — no mirror puddles). */
+    generateWetPatches(count = 3) {
         const patches = [];
         for (let i = 0; i < count; i++) {
             patches.push({
                 x: 40 + Math.random() * 432,
                 y: 40 + Math.random() * 432,
-                rx: 18 + Math.random() * 42,
-                ry: 10 + Math.random() * 28,
+                rx: 12 + Math.random() * 22,
+                ry: 8 + Math.random() * 16,
                 rot: Math.random() * Math.PI,
-                dark: Math.random() < 0.55
+                dark: Math.random() < 0.65
             });
         }
         return patches;
@@ -52,25 +52,30 @@ export const RoadTextureGenerator = {
         canvas.width = 512;
         canvas.height = 512;
         const ctx = canvas.getContext ? canvas.getContext('2d') : null;
-        const patches = this.generateWetPatches(type === 'crosswalk' ? 4 : 8);
+        const patches = this.generateWetPatches(type === 'crosswalk' ? 2 : 4);
 
         if (ctx) {
-            ctx.fillStyle = '#222428';
-            ctx.fillRect(0, 0, 512, 512);
-
-            this.addAsphaltNoise(ctx, 512, 512);
-
-            if (type === 'straight') {
-                this.drawStraightRoad(ctx, true);
-                this.applyAsphaltDirt(ctx, false); // curb dirt on left/right only
-            } else if (type === 'intersection') {
-                // No edge dirt: all 4 sides connect to roads — keep asphalt uniform
-                this.drawIntersection(ctx);
-            } else if (type === 'crosswalk') {
+            if (type === 'crosswalk') {
+                // Transparent overlay: stripes only, underlying asphalt shows through
+                ctx.clearRect(0, 0, 512, 512);
                 this.drawCrosswalk(ctx);
-            }
+            } else {
+                ctx.fillStyle = '#222428';
+                ctx.fillRect(0, 0, 512, 512);
 
-            this.addWetPatchesAlbedo(ctx, patches);
+                this.addAsphaltNoise(ctx, 512, 512);
+
+                if (type === 'straight') {
+                    this.drawStraightRoad(ctx, true);
+                    this.applyAsphaltDirt(ctx, false); // curb dirt on left/right only
+                } else if (type === 'intersection') {
+                    this.drawIntersection(ctx);
+                    // Corner gutter dirt continues the curb bands from straight roads
+                    this.applyCornerDirt(ctx);
+                }
+
+                this.addWetPatchesAlbedo(ctx, patches);
+            }
         }
 
         const texture = new THREE.CanvasTexture(canvas);
@@ -127,13 +132,14 @@ export const RoadTextureGenerator = {
             ctx.translate(p.x, p.y);
             ctx.rotate(p.rot);
             const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(p.rx, p.ry));
+            // Very subtle stain — never bright rings
             if (p.dark) {
-                grad.addColorStop(0, 'rgba(8, 10, 14, 0.22)');
-                grad.addColorStop(0.55, 'rgba(12, 14, 18, 0.1)');
+                grad.addColorStop(0, 'rgba(8, 10, 14, 0.1)');
+                grad.addColorStop(0.6, 'rgba(12, 14, 18, 0.04)');
                 grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
             } else {
-                grad.addColorStop(0, 'rgba(90, 100, 110, 0.14)');
-                grad.addColorStop(0.55, 'rgba(70, 80, 90, 0.06)');
+                grad.addColorStop(0, 'rgba(55, 60, 68, 0.08)');
+                grad.addColorStop(0.6, 'rgba(40, 45, 50, 0.03)');
                 grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
             }
             ctx.fillStyle = grad;
@@ -151,10 +157,10 @@ export const RoadTextureGenerator = {
             ctx.save();
             ctx.translate(p.x, p.y);
             ctx.rotate(p.rot);
-            // Dark = low roughness (wet / reflective)
+            // Stay mostly rough (no near-zero roughness → env mirror blobs)
             const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(p.rx, p.ry));
-            grad.addColorStop(0, 'rgb(18, 18, 18)');
-            grad.addColorStop(0.45, 'rgb(55, 55, 55)');
+            grad.addColorStop(0, 'rgb(165, 165, 165)');
+            grad.addColorStop(0.55, 'rgb(200, 200, 200)');
             grad.addColorStop(1, 'rgba(230, 230, 230, 0)');
             ctx.fillStyle = grad;
             ctx.beginPath();
@@ -260,9 +266,10 @@ export const RoadTextureGenerator = {
     },
 
     drawIntersection(ctx) {
+        // Faint tire-wear arcs — kept subtle so they don't read as pasted shadows
         ctx.save();
-        ctx.strokeStyle = 'rgba(5, 5, 8, 0.35)';
-        ctx.lineWidth = 12;
+        ctx.strokeStyle = 'rgba(5, 5, 8, 0.12)';
+        ctx.lineWidth = 8;
         ctx.lineCap = 'round';
 
         ctx.beginPath();
@@ -273,8 +280,8 @@ export const RoadTextureGenerator = {
         ctx.arc(0, 0, 190, Math.PI * 0.05, Math.PI * 0.45);
         ctx.stroke();
 
-        ctx.strokeStyle = 'rgba(5, 5, 8, 0.25)';
-        ctx.lineWidth = 8;
+        ctx.strokeStyle = 'rgba(5, 5, 8, 0.08)';
+        ctx.lineWidth = 6;
         ctx.beginPath();
         ctx.moveTo(180, 150);
         ctx.lineTo(180, 360);
@@ -286,11 +293,27 @@ export const RoadTextureGenerator = {
         // Zebras live on exit-road approaches (RoadBuilder3D), not inside the junction.
     },
 
-    drawCrosswalk(ctx) {
-        ctx.fillStyle = '#222428';
-        ctx.fillRect(0, 0, 512, 512);
-        this.addAsphaltNoise(ctx, 512, 512);
+    /**
+     * Dark gutter dirt in the 4 corners — quarter-discs centered on the sidewalk
+     * corners, with the exact same width (85px) and falloff as applyAsphaltDirt,
+     * so the curb band continues seamlessly from straight tiles.
+     */
+    applyCornerDirt(ctx) {
+        ctx.save();
+        const R = 85; // must match dirtWidth in applyAsphaltDirt
+        const corners = [[0, 0], [512, 0], [0, 512], [512, 512]];
+        for (const [cx, cy] of corners) {
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+            grad.addColorStop(0, 'rgba(10, 10, 12, 0.85)');
+            grad.addColorStop(0.35, 'rgba(10, 10, 12, 0.45)');
+            grad.addColorStop(1, 'rgba(10, 10, 12, 0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+        }
+        ctx.restore();
+    },
 
+    drawCrosswalk(ctx) {
         const stripeCount = 5;
         const stripeW = 48;
         const gap = (512 - stripeCount * stripeW) / (stripeCount + 1);
@@ -303,9 +326,9 @@ export const RoadTextureGenerator = {
             ctx.fillRect(x + 1, y + 1, stripeW, stripeH);
             ctx.fillStyle = 'rgba(240, 242, 245, 0.9)';
             ctx.fillRect(x, y, stripeW, stripeH);
-            ctx.fillStyle = '#222428';
+            // Paint wear: punch holes so the road below shows through
             for (let c = 0; c < 4; c++) {
-                ctx.fillRect(
+                ctx.clearRect(
                     x + Math.random() * (stripeW - 2),
                     y + Math.random() * (stripeH - 2),
                     1 + Math.random() * 2,

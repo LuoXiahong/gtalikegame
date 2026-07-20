@@ -91,19 +91,6 @@ vi.mock('three/addons/postprocessing/OutputPass.js', () => {
     };
 });
 
-vi.mock('three/addons/postprocessing/UnrealBloomPass.js', () => {
-    return {
-        UnrealBloomPass: class {
-            constructor(resolution, strength, radius, threshold) {
-                this.resolution = resolution;
-                this.strength = strength;
-                this.radius = radius;
-                this.threshold = threshold;
-            }
-        }
-    };
-});
-
 vi.mock('three/addons/environments/RoomEnvironment.js', () => {
     return {
         RoomEnvironment: class {
@@ -158,12 +145,10 @@ describe('RenderSystem3D', () => {
 
         // Fog + post-processing + IBL environment
         expect(RenderSystem3D.scene.fog).toBeDefined();
-        expect(RenderSystem3D.scene.fog.near).toBe(60);
-        expect(RenderSystem3D.scene.fog.far).toBe(220);
+        expect(RenderSystem3D.scene.fog.near).toBe(200);
+        expect(RenderSystem3D.scene.fog.far).toBe(350);
         expect(RenderSystem3D.scene.environment).toBeDefined();
         expect(RenderSystem3D.composer).toBeDefined();
-        expect(RenderSystem3D.bloomPass).toBeDefined();
-        expect(RenderSystem3D.bloomPass.threshold).toBeCloseTo(0.85);
         expect(RenderSystem3D.tiltShiftPass).toBeDefined();
         expect(RenderSystem3D.retroFilmPass).toBeDefined();
         expect(RenderSystem3D.retroFilmPass.uniforms.intensity).toBeDefined();
@@ -181,10 +166,11 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.trees.length).toBeGreaterThanOrEqual(18);
         expect(RenderSystem3D.trees.length).toBeLessThanOrEqual(25);
         expect(RenderSystem3D.billboards.length).toBe(2);
-        expect(RenderSystem3D.props.length).toBeGreaterThanOrEqual(14);
-        expect(RenderSystem3D.props.length).toBeLessThanOrEqual(19);
+        expect(RenderSystem3D.props.length).toBeGreaterThanOrEqual(18);
+        expect(RenderSystem3D.props.length).toBeLessThanOrEqual(22);
         expect(RenderSystem3D.streetLights.length).toBeGreaterThan(0);
         expect(RenderSystem3D.streetLights.length).toBeLessThanOrEqual(16);
+        expect(RenderSystem3D.box5u.visible).toBe(false);
     });
 
     it('should assign emissive maps to facade materials', () => {
@@ -195,7 +181,9 @@ describe('RenderSystem3D', () => {
         });
         const mesh = resBuilding.children.find(c => c.isMesh && c.geometry.type === 'BoxGeometry');
         expect(mesh.material[0].emissiveMap).toBeDefined();
-        expect(mesh.material[0].emissiveIntensity).toBeCloseTo(0.55);
+        expect(mesh.material[0].emissiveIntensity).toBeCloseTo(0.4);
+        // Emissive map must not be the albedo (avoids glowing bricks / road bloom)
+        expect(mesh.material[0].emissiveMap).not.toBe(mesh.material[0].map);
     });
 
     it('should use roughnessMap on road lane meshes', () => {
@@ -203,6 +191,7 @@ describe('RenderSystem3D', () => {
         const lane = RenderSystem3D.laneMarkings[0];
         expect(lane.material.roughnessMap).toBeDefined();
         expect(lane.material.roughness).toBe(1);
+        expect(lane.material.envMapIntensity).toBe(0);
     });
 
     it('should handle update cycles and sync camera', () => {

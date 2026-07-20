@@ -11,7 +11,6 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { World } from '../world/World.js';
@@ -37,7 +36,6 @@ export const RenderSystem3D = {
     camera: null,
     composer: null,
     tiltShiftPass: null,
-    bloomPass: null,
     retroFilmPass: null,
     isZoomedIn: false,
 
@@ -95,7 +93,7 @@ export const RenderSystem3D = {
         this.renderer.info.autoReset = false;
 
         this.scene = new THREE.Scene();
-        this.scene.fog = new THREE.Fog(clearColor, 60, 220);
+        this.scene.fog = new THREE.Fog(clearColor, 200, 350);
 
         // Orthographic isometric camera
         const aspect = width / height;
@@ -116,9 +114,6 @@ export const RenderSystem3D = {
         this.composer = new EffectComposer(this.renderer);
         const renderPass = new RenderPass(this.scene, this.camera);
         this.composer.addPass(renderPass);
-
-        this.bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 0.4, 0.2, 0.85);
-        this.composer.addPass(this.bloomPass);
 
         this.tiltShiftPass = new ShaderPass(TiltShiftShader);
         this.composer.addPass(this.tiltShiftPass);
@@ -161,6 +156,7 @@ export const RenderSystem3D = {
         const mat5u = new THREE.MeshBasicMaterial({ color: 0xe74c3c });
         this.box5u = new THREE.Mesh(geom5u, mat5u);
         this.box5u.position.set(this.originX * SF, 1.5 / 2, (this.originZ + 200) * SF);
+        this.box5u.visible = false; // debug scale cube — keep out of play view
         this.scene.add(this.box5u);
     },
 

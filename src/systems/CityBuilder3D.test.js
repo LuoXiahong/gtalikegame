@@ -20,7 +20,7 @@ describe('CityBuilder3D', () => {
         expect(mockRenderSystem.sidewalks.length).toBeGreaterThan(0);
         expect(mockRenderSystem.buildings.length).toBeGreaterThan(0);
         expect(mockRenderSystem.trees.length).toBeGreaterThan(0);
-        expect(mockRenderSystem.props.length).toBeGreaterThanOrEqual(14);
+        expect(mockRenderSystem.props.length).toBeGreaterThanOrEqual(18);
         expect(mockRenderSystem.streetLights.length).toBeGreaterThan(0);
     });
 
@@ -29,6 +29,7 @@ describe('CityBuilder3D', () => {
         const mat = CityBuilder3D.createFaceMaterial('residential', 10, 20, 0x9c4a3a);
         expect(mat.map).toBeDefined();
         expect(mat.emissiveMap).toBeDefined();
-        expect(mat.emissiveIntensity).toBeCloseTo(0.55);
+        expect(mat.emissiveIntensity).toBeCloseTo(0.4);
+        expect(mat.emissiveMap).not.toBe(mat.map);
     });
 });

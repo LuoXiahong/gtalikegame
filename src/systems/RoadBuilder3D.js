@@ -53,7 +53,8 @@ export const RoadBuilder3D = {
             map: texture,
             roughnessMap,
             roughness: 1.0,
-            metalness: 0.0
+            metalness: 0.0,
+            envMapIntensity: 0
         });
 
         const mesh = new THREE.Mesh(geom, mat);
@@ -92,7 +93,8 @@ export const RoadBuilder3D = {
             map: texture,
             roughnessMap,
             roughness: 1.0,
-            metalness: 0.0
+            metalness: 0.0,
+            envMapIntensity: 0
         });
 
         const mesh = new THREE.Mesh(geom, mat);
@@ -117,12 +119,14 @@ export const RoadBuilder3D = {
         // Width across the roadway, depth along the approach (rotate for E/W)
         const geom = new THREE.PlaneGeometry(roadW, depth);
         const texture = RoadTextureGenerator.getTexture('crosswalk');
-        const roughnessMap = RoadTextureGenerator.getRoughnessTexture('crosswalk');
+        // Transparent overlay: only the stripes render, asphalt below stays visible
         const mat = new THREE.MeshStandardMaterial({
             map: texture,
-            roughnessMap,
-            roughness: 1.0,
-            metalness: 0.0
+            transparent: true,
+            depthWrite: false,
+            roughness: 0.85,
+            metalness: 0.0,
+            envMapIntensity: 0
         });
 
         const mesh = new THREE.Mesh(geom, mat);

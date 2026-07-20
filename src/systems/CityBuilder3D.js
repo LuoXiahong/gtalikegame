@@ -14,7 +14,12 @@ export const CityBuilder3D = {
         const height = WorldGrid.TOTAL_HEIGHT * SF;
 
         const groundGeom = new THREE.PlaneGeometry(width, height);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x4a5a3a, roughness: 0.92, metalness: 0.05 });
+        const groundMat = new THREE.MeshStandardMaterial({
+            color: 0x4a5a3a,
+            roughness: 0.95,
+            metalness: 0.0,
+            envMapIntensity: 0
+        });
         renderSystem.groundPlane = new THREE.Mesh(groundGeom, groundMat);
         renderSystem.groundPlane.rotation.x = -Math.PI / 2;
         renderSystem.groundPlane.position.set(width / 2, 0, height / 2);
@@ -22,7 +27,12 @@ export const CityBuilder3D = {
         renderSystem.scene.add(renderSystem.groundPlane);
 
         const asphaltGeom = new THREE.PlaneGeometry(width, height);
-        const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.8, metalness: 0.2 });
+        const asphaltMat = new THREE.MeshStandardMaterial({
+            color: 0x1e272e,
+            roughness: 0.95,
+            metalness: 0.0,
+            envMapIntensity: 0
+        });
         renderSystem.asphaltPlane = new THREE.Mesh(asphaltGeom, asphaltMat);
         renderSystem.asphaltPlane.rotation.x = -Math.PI / 2;
         renderSystem.asphaltPlane.position.set(width / 2, 0.001, height / 2);
@@ -34,8 +44,18 @@ export const CityBuilder3D = {
         renderSystem.buildings = [];
         const shops = [];
 
-        const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x8a8478, roughness: 0.92, metalness: 0.05 });
-        const buildingZoneMat = new THREE.MeshStandardMaterial({ color: 0x6b6558, roughness: 0.92, metalness: 0.05 });
+        const sidewalkMat = new THREE.MeshStandardMaterial({
+            color: 0x8a8478,
+            roughness: 0.95,
+            metalness: 0.0,
+            envMapIntensity: 0.15
+        });
+        const buildingZoneMat = new THREE.MeshStandardMaterial({
+            color: 0x6b6558,
+            roughness: 0.95,
+            metalness: 0.0,
+            envMapIntensity: 0.15
+        });
 
         for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
             for (let c = 0; c < WorldGrid.GRID_COLS; c++) {
@@ -152,14 +172,14 @@ export const CityBuilder3D = {
         }
 
         candidates.sort(() => Math.random() - 0.5);
-        const totalProps = Math.floor(Math.random() * 6) + 14; // 14–19
+        const totalProps = Math.floor(Math.random() * 5) + 18; // 18–22
         let lampCount = 0;
         const maxLamps = 16;
 
         for (let i = 0; i < Math.min(totalProps, candidates.length); i++) {
             const pos = candidates[i];
             let type;
-            if (lampCount < maxLamps && Math.random() < 0.4) {
+            if (lampCount < maxLamps && Math.random() < 0.55) {
                 type = 'lampPost';
                 lampCount++;
             } else {
@@ -304,9 +324,15 @@ export const CityBuilder3D = {
             return new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.8, metalness: 0.1 });
         }
         const texture = originalTexture.clone();
+        const emOriginal = FacadeGenerator.emissiveTextures.get(textureType);
+        const emissiveMap = emOriginal ? emOriginal.clone() : null;
 
         const repeatY = (textureType === 'shop_front' || textureType === 'shop_side') ? 1 : faceHeight / 5.0;
-        texture.repeat.set(faceWidth / 5.0, repeatY);
+        const repeatX = faceWidth / 5.0;
+        texture.repeat.set(repeatX, repeatY);
+        if (emissiveMap) {
+            emissiveMap.repeat.set(repeatX, repeatY);
+        }
 
         const color = new THREE.Color(baseColor);
         const tint = 0.95 + Math.random() * 0.1;
@@ -317,9 +343,11 @@ export const CityBuilder3D = {
             color: color,
             roughness: 0.8,
             metalness: textureType === 'skyscraper' ? 0.08 : 0.05,
+            // Window-only emissive map (black elsewhere) — gentle glow, no bloom needed
             emissive: 0xffffff,
-            emissiveMap: texture,
-            emissiveIntensity: 0.55
+            emissiveMap: emissiveMap,
+            emissiveIntensity: emissiveMap ? 0.4 : 0,
+            envMapIntensity: 0.35
         });
     },
 
@@ -488,9 +516,7 @@ export const CityBuilder3D = {
         const leafColor = greenShades[Math.floor(Math.random() * greenShades.length)];
 
         const trunkMat = new THREE.MeshStandardMaterial({ color: 0x795548, roughness: 0.9, metalness: 0.0 });
-        const trunkEdgeMat = new THREE.LineBasicMaterial({ color: 0x3d271d });
-        const leafMat = new THREE.MeshStandardMaterial({ color: leafColor, roughness: 0.8, metalness: 0.0 });
-        const leafEdgeMat = new THREE.LineBasicMaterial({ color: 0x145a32 });
+        const leafMat = new THREE.MeshStandardMaterial({ color: leafColor, roughness: 0.8, metalness: 0.0, flatShading: true });
 
         if (sizeType === 'shrub') {
             const trunkGeom = new THREE.CylinderGeometry(0.15, 0.15, 0.6, 5);
@@ -500,22 +526,12 @@ export const CityBuilder3D = {
             trunk.receiveShadow = true;
             group.add(trunk);
 
-            const trunkEdges = new THREE.EdgesGeometry(trunkGeom);
-            const trunkLine = new THREE.LineSegments(trunkEdges, trunkEdgeMat);
-            trunkLine.position.copy(trunk.position);
-            group.add(trunkLine);
-
             const leafGeom = new THREE.SphereGeometry(0.8, 6, 6);
             const leaf = new THREE.Mesh(leafGeom, leafMat);
             leaf.position.y = 0.8;
             leaf.castShadow = true;
             leaf.receiveShadow = true;
             group.add(leaf);
-
-            const leafEdges = new THREE.EdgesGeometry(leafGeom);
-            const leafLine = new THREE.LineSegments(leafEdges, leafEdgeMat);
-            leafLine.position.copy(leaf.position);
-            group.add(leafLine);
         } else {
             const trunkGeom = new THREE.CylinderGeometry(0.2, 0.2, 1.6, 6);
             const trunk = new THREE.Mesh(trunkGeom, trunkMat);
@@ -524,11 +540,6 @@ export const CityBuilder3D = {
             trunk.receiveShadow = true;
             group.add(trunk);
 
-            const trunkEdges = new THREE.EdgesGeometry(trunkGeom);
-            const trunkLine = new THREE.LineSegments(trunkEdges, trunkEdgeMat);
-            trunkLine.position.copy(trunk.position);
-            group.add(trunkLine);
-
             const leafGeom1 = new THREE.SphereGeometry(1.4, 8, 8);
             const leaf1 = new THREE.Mesh(leafGeom1, leafMat);
             leaf1.position.y = 2.0;
@@ -536,22 +547,12 @@ export const CityBuilder3D = {
             leaf1.receiveShadow = true;
             group.add(leaf1);
 
-            const leafEdges1 = new THREE.EdgesGeometry(leafGeom1);
-            const leafLine1 = new THREE.LineSegments(leafEdges1, leafEdgeMat);
-            leafLine1.position.copy(leaf1.position);
-            group.add(leafLine1);
-
             const leafGeom2 = new THREE.SphereGeometry(1.0, 8, 8);
             const leaf2 = new THREE.Mesh(leafGeom2, leafMat);
             leaf2.position.y = 2.8;
             leaf2.castShadow = true;
             leaf2.receiveShadow = true;
             group.add(leaf2);
-
-            const leafEdges2 = new THREE.EdgesGeometry(leafGeom2);
-            const leafLine2 = new THREE.LineSegments(leafEdges2, leafEdgeMat);
-            leafLine2.position.copy(leaf2.position);
-            group.add(leafLine2);
         }
 
         renderSystem.scene.add(group);

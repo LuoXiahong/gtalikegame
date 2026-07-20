@@ -25,6 +25,7 @@ describe('PropFactory', () => {
         expect(lights[0]).toBeInstanceOf(THREE.PointLight);
         expect(lights[0].userData.isStreetLight).toBe(true);
         expect(lights[0].distance).toBe(10);
+        expect(lights[0].intensity).toBeCloseTo(0.7);
         expect(lights[0].castShadow).toBe(false);
     });
 
