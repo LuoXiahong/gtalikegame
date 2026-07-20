@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { AISystem } from './AISystem.js';
 import { World } from '../world/World.js';
 import { EventBus } from '../core/EventBus.js';
+import { PedestrianPaths } from '../world/PedestrianPaths.js';
 
 vi.mock('../world/World.js', () => ({
     World: {
@@ -11,7 +12,8 @@ vi.mock('../world/World.js', () => ({
 
 vi.mock('../core/EventBus.js', () => ({
     EventBus: {
-        on: vi.fn()
+        on: vi.fn(),
+        off: vi.fn()
     }
 }));
 
@@ -68,6 +70,7 @@ describe('AISystem', () => {
     });
 
     it('should switch waypoints and enter idle state when reaching target', () => {
+        vi.spyOn(PedestrianPaths, 'canStop').mockReturnValue(true);
         // Ustawiamy pozycję NPC blisko celu
         mockNPC.ai.state = 'walk';
         mockNPC.transform.x = 95; // dystans do (100, 0) wynosi 5 (< 10)
@@ -79,6 +82,21 @@ describe('AISystem', () => {
         expect(mockNPC.ai.timer).toBeGreaterThan(0);
         expect(mockNPC.ai.currentWaypointIndex).toBe(1); // przełączył się na drugi punkt drogi
         expect(mockNPC.physics.velX).toBe(0);
+    });
+
+    it('should not idle on the road — keep walking instead', () => {
+        vi.spyOn(PedestrianPaths, 'canStop').mockReturnValue(false);
+        vi.spyOn(PedestrianPaths, 'isOnCrosswalk').mockReturnValue(false);
+        vi.spyOn(PedestrianPaths, 'nearestSidewalkPoint').mockReturnValue({ x: 200, y: 0 });
+
+        mockNPC.ai.state = 'walk';
+        mockNPC.transform.x = 95;
+        mockNPC.transform.y = 0;
+
+        AISystem.update(0.1);
+
+        expect(mockNPC.ai.state).not.toBe('idle');
+        expect(Math.abs(mockNPC.physics.velX) + Math.abs(mockNPC.physics.velY)).toBeGreaterThan(0);
     });
 
     it('should change to flee state on gunshot event within range', () => {

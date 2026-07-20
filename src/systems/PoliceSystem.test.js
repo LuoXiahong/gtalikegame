@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PoliceSystem } from './PoliceSystem.js';
 import { EventBus } from '../core/EventBus.js';
+import { GameState, GAME_STATES } from '../core/GameState.js';
 import { World } from '../world/World.js';
 import { VehicleSystem } from './VehicleSystem.js';
 
@@ -59,34 +60,60 @@ describe('PoliceSystem', () => {
         PoliceSystem.update(0.1);
 
         const police = PoliceSystem.policeCars[0];
-        // Move player away
         const player = World.getEntitiesByType('player')[0];
         player.transform.x = 2000;
         player.transform.y = 0;
 
+        const angleBefore = police.transform.angle;
         PoliceSystem.update(0.1);
-        
-        // Police should accelerate
+
         expect(police.physics.speed).toBeGreaterThan(0);
-        // Angle should be roughly towards player
-        expect(police.transform.angle).toBeCloseTo(Math.atan2(player.transform.y - police.transform.y, player.transform.x - police.transform.x));
+        // Soft steer — angle moves toward player, not snaps instantly
+        const desired = Math.atan2(player.transform.y - police.transform.y, player.transform.x - police.transform.x);
+        const errBefore = Math.abs(Math.atan2(Math.sin(desired - angleBefore), Math.cos(desired - angleBefore)));
+        const errAfter = Math.abs(Math.atan2(Math.sin(desired - police.transform.angle), Math.cos(desired - police.transform.angle)));
+        expect(errAfter).toBeLessThanOrEqual(errBefore);
     });
-    it('should include dt in velocity calculation', () => {
+
+    it('should apply inertial velocity (not instant heading snap)', () => {
         EventBus.emit('wanted_level_change', { stars: 2 });
         PoliceSystem.update(0.1);
         const police = PoliceSystem.policeCars[0];
-        
-        const dt = 0.5;
-        PoliceSystem.update(dt);
-        
-        const expectedVelX = Math.cos(police.transform.angle) * police.physics.speed * dt;
-        expect(police.physics.velX).toBeCloseTo(expectedVelX);
+        police.ai.vx = 100;
+        police.ai.vy = 0;
+        police.transform.angle = 0;
+        police.physics.speed = 100;
+
+        const player = World.getEntitiesByType('player')[0];
+        player.transform.x = police.transform.x;
+        player.transform.y = police.transform.y + 500;
+
+        PoliceSystem.update(0.05);
+
+        expect(police.ai.vx).toBeGreaterThan(0); // remnant of previous direction
+        expect(Math.abs(police.physics.velX)).toBeGreaterThan(0);
     });
 
     it('should reset state correctly', () => {
         PoliceSystem.isActive = true;
         PoliceSystem.policeCars = [{}];
         PoliceSystem.reset();
+        expect(PoliceSystem.isActive).toBe(false);
+        expect(PoliceSystem.policeCars.length).toBe(0);
+    });
+
+    it('should arrest player when police reaches catch radius', () => {
+        EventBus.emit('wanted_level_change', { stars: 2 });
+        PoliceSystem.update(0.1);
+
+        const police = PoliceSystem.policeCars[0];
+        const player = World.getEntitiesByType('player')[0];
+        police.transform.x = player.transform.x;
+        police.transform.y = player.transform.y;
+
+        PoliceSystem.update(0.1);
+
+        expect(GameState.getState()).toBe(GAME_STATES.WASTED);
         expect(PoliceSystem.isActive).toBe(false);
         expect(PoliceSystem.policeCars.length).toBe(0);
     });

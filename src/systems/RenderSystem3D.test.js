@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
 import { RenderSystem3D } from './RenderSystem3D.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
+import { RetroFilmSettings } from './RetroFilmSettings.js';
+import { EventBus } from '../core/EventBus.js';
 
 // Mockowanie Three.js WebGLRenderer, ponieważ JSDOM nie posiada wsparcia dla WebGL
 vi.mock('three', async () => {
@@ -62,6 +64,14 @@ vi.mock('three/addons/postprocessing/ShaderPass.js', () => {
         ShaderPass: class {
             constructor(shader) {
                 this.shader = shader;
+                this.enabled = true;
+                // Klon uniformów jak w Three.js ShaderPass
+                this.uniforms = {};
+                if (shader && shader.uniforms) {
+                    for (const key of Object.keys(shader.uniforms)) {
+                        this.uniforms[key] = { value: shader.uniforms[key].value };
+                    }
+                }
             }
         }
     };
@@ -89,6 +99,8 @@ describe('RenderSystem3D', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        EventBus.clear();
+        RetroFilmSettings.reset();
         
         // Przygotowanie mocków DOM
         mockParent = {
@@ -126,6 +138,9 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.scene.fog.far).toBe(350);
         expect(RenderSystem3D.composer).toBeDefined();
         expect(RenderSystem3D.tiltShiftPass).toBeDefined();
+        expect(RenderSystem3D.retroFilmPass).toBeDefined();
+        expect(RenderSystem3D.retroFilmPass.uniforms.intensity).toBeDefined();
+        expect(RenderSystem3D.retroFilmPass.enabled).toBe(true);
 
         // Sprawdzenie czy poprawnie stworzyliśmy podłoża, chodniki, budynki i pasy drogowe
         expect(RenderSystem3D.groundPlane).toBeDefined();
@@ -153,6 +168,23 @@ describe('RenderSystem3D', () => {
 
         // Renderer powinien wywołać render()
         expect(RenderSystem3D.renderer.render).toHaveBeenCalled();
+    });
+
+    it('should sync retro film pass with settings and disable when off', () => {
+        RenderSystem3D.init();
+        expect(RenderSystem3D.retroFilmPass.enabled).toBe(true);
+        expect(RenderSystem3D.retroFilmPass.uniforms.sepia.value).toBeCloseTo(0.35);
+
+        RetroFilmSettings.applyPreset('off');
+        EventBus.emit('retro_settings_change', RetroFilmSettings.toJSON());
+
+        expect(RenderSystem3D.retroFilmPass.enabled).toBe(false);
+        expect(RenderSystem3D.retroFilmPass.uniforms.intensity.value).toBe(0);
+
+        RetroFilmSettings.applyPreset('subtle');
+        RenderSystem3D.applyRetroSettings();
+        expect(RenderSystem3D.retroFilmPass.enabled).toBe(true);
+        expect(RenderSystem3D.retroFilmPass.uniforms.vignette.value).toBeCloseTo(0.25);
     });
 
     it('should create custom building types via createBuilding', () => {

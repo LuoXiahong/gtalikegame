@@ -1,14 +1,29 @@
 /**
  * System Policji (PoliceSystem)
+ * Chase with steering + velocity inertia (no instant snap / “flying”).
  */
 import { World } from '../world/World.js';
 import { EventBus } from '../core/EventBus.js';
+import { GameState, GAME_STATES } from '../core/GameState.js';
+import { GameConfig } from '../core/GameConfig.js';
+import { Waypoints } from '../world/Waypoints.js';
 import { Car } from '../entities/Car.js';
 import { VehicleSystem } from './VehicleSystem.js';
 
+function wrapAngle(a) {
+    while (a > Math.PI) a -= Math.PI * 2;
+    while (a < -Math.PI) a += Math.PI * 2;
+    return a;
+}
+
+function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+}
+
 export const PoliceSystem = {
     policeCars: [],
-    spawnDistance: 1000,
+    spawnDistance: GameConfig.POLICE.SPAWN_DISTANCE,
+    catchRadius: GameConfig.POLICE.CATCH_RADIUS,
     isActive: false,
 
     init() {
@@ -37,24 +52,67 @@ export const PoliceSystem = {
         this.despawnAll();
         this.policeCars = [];
         this.isActive = false;
+        this.spawnDistance = GameConfig.POLICE.SPAWN_DISTANCE;
+        this.catchRadius = GameConfig.POLICE.CATCH_RADIUS;
+    },
+
+    /**
+     * Spawn on a road waypoint in a ring around the player (not in buildings / mid-air weirdness).
+     */
+    findRoadSpawnNear(target) {
+        const minD = this.spawnDistance * 0.7;
+        const maxD = this.spawnDistance * 1.3;
+        const candidates = [];
+
+        for (const path of Object.values(Waypoints.paths)) {
+            for (let i = 0; i < path.length - 1; i++) {
+                const a = path[i];
+                const b = path[i + 1];
+                for (let s = 0; s <= 8; s++) {
+                    const t = s / 8;
+                    const x = a.x + (b.x - a.x) * t;
+                    const y = a.y + (b.y - a.y) * t;
+                    const dist = Math.hypot(x - target.transform.x, y - target.transform.y);
+                    if (dist >= minD && dist <= maxD) {
+                        candidates.push({ x, y });
+                    }
+                }
+            }
+        }
+
+        if (candidates.length > 0) {
+            return candidates[Math.floor(Math.random() * candidates.length)];
+        }
+
+        // Fallback: offset along a street axis
+        const angle = Math.random() * Math.PI * 2;
+        return {
+            x: target.transform.x + Math.cos(angle) * this.spawnDistance,
+            y: target.transform.y + Math.sin(angle) * this.spawnDistance
+        };
     },
 
     spawnPoliceIfNeeded() {
-        // Dopuszczamy 1 auto policyjne na razie dla prostoty (można skalować ze stars)
         if (this.policeCars.length === 0) {
             const target = VehicleSystem.getControlledEntity() || World.getEntitiesByType('player')[0];
             if (!target) return;
 
-            // Spawn z dala od gracza
-            const angle = Math.random() * Math.PI * 2;
-            const px = target.transform.x + Math.cos(angle) * this.spawnDistance;
-            const py = target.transform.y + Math.sin(angle) * this.spawnDistance;
-
-            const policeCar = new Car('police_' + Date.now(), px, py, '#2980b9');
+            const pos = this.findRoadSpawnNear(target);
+            const policeCar = new Car('police_' + Date.now(), pos.x, pos.y, '#2980b9');
             policeCar.isPolice = true;
-            policeCar.physics.maxSpeed = 650; // Policja jest trochę szybsza
-            policeCar.physics.acceleration = 500;
-            
+            policeCar.physics.maxSpeed = GameConfig.POLICE.MAX_SPEED;
+            policeCar.physics.acceleration = GameConfig.POLICE.ACCELERATION;
+            policeCar.physics.speed = 0;
+            policeCar.ai = {
+                type: 'police',
+                vx: 0,
+                vy: 0
+            };
+
+            const dx = target.transform.x - pos.x;
+            const dy = target.transform.y - pos.y;
+            policeCar.transform.angle = Math.atan2(dy, dx);
+
             World.addEntity(policeCar);
             this.policeCars.push(policeCar);
         }
@@ -68,8 +126,13 @@ export const PoliceSystem = {
     },
 
     cleanUpDestroyedCars() {
-        // Usuwamy z tablicy auta, których nie ma już w World.entities
         this.policeCars = this.policeCars.filter(car => World.entities.includes(car));
+    },
+
+    arrestPlayer() {
+        this.isActive = false;
+        this.despawnAll();
+        GameState.setState(GAME_STATES.WASTED);
     },
 
     update(dt) {
@@ -81,24 +144,48 @@ export const PoliceSystem = {
         const target = VehicleSystem.getControlledEntity() || World.getEntitiesByType('player')[0];
         if (!target) return;
 
-        this.policeCars.forEach(policeCar => {
-            if (!World.entities.includes(policeCar)) return;
+        const steerRate = GameConfig.POLICE.STEER_RATE;
+        const velInertia = GameConfig.POLICE.VEL_INERTIA;
+
+        for (const policeCar of this.policeCars) {
+            if (!World.entities.includes(policeCar)) continue;
 
             const dx = target.transform.x - policeCar.transform.x;
             const dy = target.transform.y - policeCar.transform.y;
-            
-            // Proste skierowanie przodu w stronę gracza
-            const targetAngle = Math.atan2(dy, dx);
-            policeCar.transform.angle = targetAngle;
-            
-            // Przyspieszenie
-            if (policeCar.physics.speed < policeCar.physics.maxSpeed) {
-                policeCar.physics.speed += policeCar.physics.acceleration * dt;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < this.catchRadius) {
+                this.arrestPlayer();
+                return;
             }
 
-            // Aplikacja wektora prędkości (UWAGA: wymagane mnożenie przez dt dla MovementSystem)
-            policeCar.physics.velX = Math.cos(policeCar.transform.angle) * policeCar.physics.speed * dt;
-            policeCar.physics.velY = Math.sin(policeCar.transform.angle) * policeCar.physics.speed * dt;
-        });
+            // Soft steer toward player
+            const desiredAngle = Math.atan2(dy, dx);
+            let diff = wrapAngle(desiredAngle - policeCar.transform.angle);
+            const maxStep = steerRate * dt;
+            diff = clamp(diff, -maxStep, maxStep);
+            policeCar.transform.angle = wrapAngle(policeCar.transform.angle + diff);
+
+            // Accelerate scalar speed
+            const p = policeCar.physics;
+            if (p.speed < p.maxSpeed) {
+                p.speed += p.acceleration * dt;
+            }
+            if (p.speed > p.maxSpeed) p.speed = p.maxSpeed;
+
+            // Slow a bit while turning hard
+            const turnFactor = 1 - Math.min(Math.abs(diff) / (maxStep || 1), 1) * 0.35;
+            const cruise = p.speed * turnFactor;
+
+            if (!policeCar.ai) policeCar.ai = { type: 'police', vx: 0, vy: 0 };
+            const desiredVx = Math.cos(policeCar.transform.angle) * cruise;
+            const desiredVy = Math.sin(policeCar.transform.angle) * cruise;
+            const blend = 1 - Math.exp(-velInertia * dt);
+            policeCar.ai.vx += (desiredVx - policeCar.ai.vx) * blend;
+            policeCar.ai.vy += (desiredVy - policeCar.ai.vy) * blend;
+
+            p.velX = policeCar.ai.vx * dt;
+            p.velY = policeCar.ai.vy * dt;
+        }
     }
 };

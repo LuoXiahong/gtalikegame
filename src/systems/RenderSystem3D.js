@@ -22,6 +22,9 @@ import { InputSystem } from '../input/InputManager.js';
 import { VehicleSystem } from './VehicleSystem.js';
 
 import { TiltShiftShader } from './TiltShiftShader.js';
+import { RetroFilmShader } from './RetroFilmShader.js';
+import { RetroFilmSettings } from './RetroFilmSettings.js';
+import { EventBus } from '../core/EventBus.js';
 import { CityBuilder3D } from './CityBuilder3D.js';
 import { RoadBuilder3D } from './RoadBuilder3D.js';
 
@@ -31,6 +34,7 @@ export const RenderSystem3D = {
     camera: null,
     composer: null,
     tiltShiftPass: null,
+    retroFilmPass: null,
     isZoomedIn: false,
 
     // 3D environment elements
@@ -122,13 +126,19 @@ export const RenderSystem3D = {
         this.camera.zoom = 1.0;
         this.camera.updateProjectionMatrix();
 
-        // 3C. Configure post-processing with Tilt-Shift (T-704)
+        // 3C. Configure post-processing: Tilt-Shift + Retro Film
         this.composer = new EffectComposer(this.renderer);
         const renderPass = new RenderPass(this.scene, this.camera);
         this.composer.addPass(renderPass);
 
         this.tiltShiftPass = new ShaderPass(TiltShiftShader);
         this.composer.addPass(this.tiltShiftPass);
+
+        this.retroFilmPass = new ShaderPass(RetroFilmShader);
+        this.composer.addPass(this.retroFilmPass);
+        this.applyRetroSettings();
+
+        EventBus.on('retro_settings_change', () => this.applyRetroSettings());
 
         const outputPass = new OutputPass();
         this.composer.addPass(outputPass);
@@ -199,16 +209,28 @@ export const RenderSystem3D = {
         return CityBuilder3D.createTree(this, sizeType, x, z);
     },
 
+    /**
+     * Synchronizuje uniformy i enabled passu retro z RetroFilmSettings.
+     */
+    applyRetroSettings() {
+        if (!this.retroFilmPass) return;
+        RetroFilmSettings.applyToUniforms(this.retroFilmPass.uniforms);
+        this.retroFilmPass.enabled = RetroFilmSettings.isActive();
+    },
+
     setupLighting() {
         const SF = WorldMetrics.SCALE_FACTOR;
 
-        const ambient = new THREE.AmbientLight(0x8585a0, 0.45);
+        // Jaśniejszy fill — cienie mniej „dziurawe”, postacie czytelniejsze
+        const ambient = new THREE.AmbientLight(0x8585a0, 0.62);
         this.scene.add(ambient);
+        this.ambientLight = ambient;
 
-        const hemiLight = new THREE.HemisphereLight(0xa4b3c6, 0x786e64, 0.55);
+        const hemiLight = new THREE.HemisphereLight(0xa4b3c6, 0x8a8078, 0.72);
         this.scene.add(hemiLight);
+        this.hemiLight = hemiLight;
 
-        const sun = new THREE.DirectionalLight(0xfff5e6, 1.55);
+        const sun = new THREE.DirectionalLight(0xfff5e6, 1.35);
         sun.position.set(600 * SF, 550 * SF, 400 * SF);
 
         sun.target.position.set(1500 * SF, 0, 1500 * SF);
@@ -218,6 +240,10 @@ export const RenderSystem3D = {
         sun.shadow.bias = -0.0005;
         sun.shadow.mapSize.width = 2048;
         sun.shadow.mapSize.height = 2048;
+        // Słabsze rzucane cienie (Three r155+)
+        if (sun.shadow.intensity !== undefined) {
+            sun.shadow.intensity = 0.55;
+        }
 
         const d = 1600 * SF;
         sun.shadow.camera.left = -d;
@@ -228,6 +254,7 @@ export const RenderSystem3D = {
         sun.shadow.camera.far = 300;
 
         this.scene.add(sun);
+        this.sunLight = sun;
     },
 
     update() {
@@ -280,6 +307,11 @@ export const RenderSystem3D = {
         this.camera.lookAt(sFocusX, 0, sFocusZ);
 
         RenderSync3D.update(this.scene);
+
+        if (this.retroFilmPass && this.retroFilmPass.enabled && this.retroFilmPass.uniforms?.time) {
+            this.retroFilmPass.uniforms.time.value = performance.now() * 0.001;
+        }
+
         if (this.composer) {
             this.composer.render();
         } else {

@@ -3,6 +3,7 @@
  * Event-driven + update loop for timers and zones
  */
 import { EventBus } from '../core/EventBus.js';
+import { GameState, GAME_STATES } from '../core/GameState.js';
 import { World } from '../world/World.js';
 
 export const MissionSystem = {
@@ -82,6 +83,7 @@ export const MissionSystem = {
                     this.targetLocation = null;
                     EventBus.emit('mission_update', 'MISSION COMPLETE');
                     EventBus.emit('audio_play', 'success');
+                    GameState.setState(GAME_STATES.MISSION_PASSED);
                 }
             }
         }

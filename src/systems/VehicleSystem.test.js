@@ -6,7 +6,8 @@ import { InputSystem } from '../input/InputManager.js';
 vi.mock('../core/EventBus.js', () => ({
     EventBus: {
         emit: vi.fn(),
-        on: vi.fn()
+        on: vi.fn(),
+        off: vi.fn()
     }
 }));
 
@@ -89,11 +90,15 @@ describe('VehicleSystem', () => {
         expect(EventBus.emit).toHaveBeenCalledWith('vehicle_exited', { carId: mockCar.id });
     });
 
-    it('should not enter if car is already occupied', () => {
-        mockCar.occupied = true;
+    it('should mark traffic car for smooth retarget on exit', () => {
+        mockCar.ai = { type: 'traffic', needsRetarget: false, vx: 50, vy: 20, currentSpeed: 40 };
         VehicleSystem.init(mockPlayer);
         VehicleSystem.enterVehicle({ player: mockPlayer, car: mockCar });
+        VehicleSystem.exitVehicle({ player: mockPlayer });
 
-        expect(VehicleSystem.getControlledEntity()).toBe(mockPlayer);
+        expect(mockCar.ai.needsRetarget).toBe(true);
+        expect(mockCar.ai.recovering).toBe(true);
+        expect(mockCar.ai.vx).toBe(0);
+        expect(mockCar.ai.vy).toBe(0);
     });
 });

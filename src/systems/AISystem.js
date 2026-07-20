@@ -1,86 +1,162 @@
 import { World } from '../world/World.js';
 import { EventBus } from '../core/EventBus.js';
+import { GameConfig } from '../core/GameConfig.js';
+import { PedestrianPaths } from '../world/PedestrianPaths.js';
 
 export const AISystem = {
     init() {
-        EventBus.on('gunshot', (data) => {
+        if (this._onGunshot) EventBus.off('gunshot', this._onGunshot);
+        if (this._onExplosion) EventBus.off('explosion', this._onExplosion);
+
+        this._onGunshot = (data) => {
             const npcs = World.getEntitiesByType('npc');
             npcs.forEach(npc => {
                 const dx = npc.transform.x - data.x;
                 const dy = npc.transform.y - data.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
-                if (dist < 600) { // Gunshot hearing/scare range
+                if (dist < GameConfig.AI.GUNSHOT_HEARING_RANGE) {
                     npc.ai.state = 'flee';
-                    npc.ai.timer = 5 + Math.random() * 3; // Flee for a few seconds
-                    // Set flee direction away from the source with small random angle variation
+                    npc.ai.timer = 5 + Math.random() * 3;
+                    npc.ai.returningToSidewalk = false;
                     npc.transform.angle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.5;
                 }
             });
-        });
+        };
+        EventBus.on('gunshot', this._onGunshot);
 
-        EventBus.on('explosion', (data) => {
+        this._onExplosion = (data) => {
             const npcs = World.getEntitiesByType('npc');
             npcs.forEach(npc => {
                 const dx = npc.transform.x - data.x;
                 const dy = npc.transform.y - data.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
-                const radius = data.radius || 1000;
+                const radius = data.radius || GameConfig.AI.EXPLOSION_DEFAULT_RADIUS;
                 if (dist < radius) {
                     npc.ai.state = 'flee';
-                    npc.ai.timer = 8 + Math.random() * 5; // Long fear duration after explosion
+                    npc.ai.timer = 8 + Math.random() * 5;
+                    npc.ai.returningToSidewalk = false;
                     npc.transform.angle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.8;
                 }
             });
-        });
+        };
+        EventBus.on('explosion', this._onExplosion);
+    },
+
+    moveToward(npc, tx, ty, speed, dt) {
+        const dx = tx - npc.transform.x;
+        const dy = ty - npc.transform.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        npc.transform.angle = Math.atan2(dy, dx);
+        npc.physics.velX = (dx / dist) * speed * dt;
+        npc.physics.velY = (dy / dist) * speed * dt;
+        npc.visual.walkCycle += (speed > npc.physics.speed ? 20 : 10) * dt;
+        return dist;
+    },
+
+    /**
+     * Idle dozwolony wyłącznie na chodniku.
+     */
+    tryIdle(npc, duration) {
+        if (!PedestrianPaths.canStop(npc.transform.x, npc.transform.y)) {
+            npc.ai.state = 'walk';
+            npc.ai.timer = 0;
+            return false;
+        }
+        npc.ai.state = 'idle';
+        npc.ai.timer = duration;
+        npc.physics.velX = 0;
+        npc.physics.velY = 0;
+        npc.visual.walkCycle = 0;
+        return true;
+    },
+
+    /**
+     * Na jezdni / poza chodnikiem: iść (przez przejście lub do najbliższego chodnika). Nigdy stać.
+     */
+    updateMustKeepMoving(npc, dt) {
+        const x = npc.transform.x;
+        const y = npc.transform.y;
+        if (PedestrianPaths.canStop(x, y) && !npc.ai.returningToSidewalk) {
+            return false;
+        }
+
+        // Cel: kolejny waypoint (np. druga strona przejścia) albo najbliższy chodnik
+        let tx;
+        let ty;
+        if (npc.ai.waypoints && npc.ai.waypoints.length > 0) {
+            const target = npc.ai.waypoints[npc.ai.currentWaypointIndex];
+            tx = target.x;
+            ty = target.y;
+        } else {
+            const curb = PedestrianPaths.nearestSidewalkPoint(x, y);
+            tx = curb.x;
+            ty = curb.y;
+        }
+
+        // Na przejściu / jezdni idziemy trochę szybciej — nie ma postoju
+        const speed = npc.physics.speed * (PedestrianPaths.isOnCrosswalk(x, y) ? 1.2 : 1.15);
+        const dist = this.moveToward(npc, tx, ty, speed, dt);
+
+        if (dist < 10 && npc.ai.waypoints && npc.ai.waypoints.length > 0) {
+            npc.ai.currentWaypointIndex = (npc.ai.currentWaypointIndex + 1) % npc.ai.waypoints.length;
+            // Po dojściu — idle tylko jeśli już na chodniku
+            if (PedestrianPaths.canStop(npc.transform.x, npc.transform.y)) {
+                npc.ai.returningToSidewalk = false;
+                this.tryIdle(npc, 0.8 + Math.random());
+            }
+        } else if (PedestrianPaths.canStop(npc.transform.x, npc.transform.y)) {
+            npc.ai.returningToSidewalk = false;
+        } else {
+            npc.ai.returningToSidewalk = true;
+            npc.ai.state = 'walk';
+        }
+        return true;
     },
 
     update(dt) {
         const npcs = World.getEntitiesByType('npc');
 
         npcs.forEach(npc => {
+            if (!npc.ai) return;
+
             if (npc.ai.timer > 0) {
                 npc.ai.timer -= dt;
             }
 
-            // FSM state transitions
             if (npc.ai.timer <= 0) {
                 if (npc.ai.state === 'idle') {
                     npc.ai.state = 'walk';
                 } else if (npc.ai.state === 'flee') {
-                    // Rest in idle state for a brief moment after panicking
-                    npc.ai.state = 'idle';
-                    npc.ai.timer = 1 + Math.random() * 2;
-                    npc.physics.velX = 0;
-                    npc.physics.velY = 0;
+                    npc.ai.state = 'walk';
+                    npc.ai.returningToSidewalk = true;
+                    npc.ai.timer = 0;
                 }
             }
 
-            // Movement logic & behaviors
+            // Absolutna reguła: na jezdni / przejściu nigdy nie stoimy
+            if (npc.ai.state === 'idle' && !PedestrianPaths.canStop(npc.transform.x, npc.transform.y)) {
+                npc.ai.state = 'walk';
+                npc.ai.returningToSidewalk = true;
+            }
+
+            if (npc.ai.state !== 'flee') {
+                if (this.updateMustKeepMoving(npc, dt)) {
+                    return;
+                }
+            }
+
             if (npc.ai.state === 'walk') {
                 if (npc.ai.waypoints && npc.ai.waypoints.length > 0) {
                     const target = npc.ai.waypoints[npc.ai.currentWaypointIndex];
-                    const dx = target.x - npc.transform.x;
-                    const dy = target.y - npc.transform.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const dist = this.moveToward(npc, target.x, target.y, npc.physics.speed, dt);
 
                     if (dist < 10) {
-                        // Destination reached! Rest in idle before next waypoint
-                        npc.ai.state = 'idle';
-                        npc.ai.timer = 1 + Math.random() * 2;
-                        npc.physics.velX = 0;
-                        npc.physics.velY = 0;
                         npc.ai.currentWaypointIndex = (npc.ai.currentWaypointIndex + 1) % npc.ai.waypoints.length;
-                    } else {
-                        // Move towards the active waypoint
-                        npc.transform.angle = Math.atan2(dy, dx);
-                        npc.physics.velX = Math.cos(npc.transform.angle) * npc.physics.speed * dt;
-                        npc.physics.velY = Math.sin(npc.transform.angle) * npc.physics.speed * dt;
-                        npc.visual.walkCycle += 10 * dt;
+                        this.tryIdle(npc, 1 + Math.random() * 2);
                     }
                 } else {
-                    // Fallback random patrol movement if waypoints are not defined
                     if (npc.ai.timer <= 0) {
                         npc.transform.angle = Math.random() * Math.PI * 2;
                         npc.ai.timer = 2 + Math.random() * 3;
@@ -90,13 +166,21 @@ export const AISystem = {
                     npc.visual.walkCycle += 10 * dt;
                 }
             } else if (npc.ai.state === 'flee') {
-                // Sprintflee movement away from threat
                 const fleeSpeed = npc.physics.speed * 2.5;
+                if (PedestrianPaths.isOnRoad(npc.transform.x, npc.transform.y)
+                    && !PedestrianPaths.isOnCrosswalk(npc.transform.x, npc.transform.y)) {
+                    const curb = PedestrianPaths.nearestSidewalkPoint(npc.transform.x, npc.transform.y);
+                    const toCurb = Math.atan2(curb.y - npc.transform.y, curb.x - npc.transform.x);
+                    let diff = toCurb - npc.transform.angle;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    npc.transform.angle += diff * 0.35;
+                }
                 npc.physics.velX = Math.cos(npc.transform.angle) * fleeSpeed * dt;
                 npc.physics.velY = Math.sin(npc.transform.angle) * fleeSpeed * dt;
                 npc.visual.walkCycle += 20 * dt;
             } else {
-                // Standing idle
+                // Idle — gwarantowane tylko na chodniku (sprawdzone wyżej)
                 npc.physics.velX = 0;
                 npc.physics.velY = 0;
                 npc.visual.walkCycle = 0;

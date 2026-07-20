@@ -11,8 +11,14 @@ export const VehicleSystem = {
     init(player) {
         this.controlledEntity = player;
 
-        EventBus.on('enter_vehicle', (data) => this.enterVehicle(data));
-        EventBus.on('exit_vehicle', (data) => this.exitVehicle(data));
+        if (this._onEnter) EventBus.off('enter_vehicle', this._onEnter);
+        if (this._onExit) EventBus.off('exit_vehicle', this._onExit);
+
+        this._onEnter = (data) => this.enterVehicle(data);
+        this._onExit = (data) => this.exitVehicle(data);
+
+        EventBus.on('enter_vehicle', this._onEnter);
+        EventBus.on('exit_vehicle', this._onExit);
     },
 
     enterVehicle({ player, car }) {
@@ -63,6 +69,17 @@ export const VehicleSystem = {
         if (player.physics) {
             player.physics.velX = 0;
             player.physics.velY = 0;
+        }
+
+        // Traffic AI: płynny powrót na trasę (bez teleportu) — retarget najbliższego segmentu
+        if (car.ai && car.ai.type === 'traffic') {
+            car.ai.needsRetarget = true;
+            car.ai.vx = 0;
+            car.ai.vy = 0;
+            car.ai.currentSpeed = 0;
+            car.ai.driftTimer = 0;
+            car.ai.driftAngle = 0;
+            car.ai.recovering = true;
         }
 
         // Czyścimy wejście, by gracz nie szedł samoczynnie

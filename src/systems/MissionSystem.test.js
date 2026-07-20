@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MissionSystem } from './MissionSystem.js';
 import { EventBus } from '../core/EventBus.js';
+import { GameState, GAME_STATES } from '../core/GameState.js';
 import { World } from '../world/World.js';
 
 vi.mock('../world/World.js', () => ({
@@ -59,9 +60,12 @@ describe('MissionSystem', () => {
             transform: { x: 3000, y: 3000 }
         }]);
 
+        const spy = vi.spyOn(EventBus, 'emit');
         MissionSystem.update(0.1);
         expect(MissionSystem.stage).toBe(3);
         expect(MissionSystem.timerActive).toBe(false);
+        expect(spy).toHaveBeenCalledWith('audio_play', 'success');
+        expect(GameState.getState()).toBe(GAME_STATES.MISSION_PASSED);
     });
 
     it('should reset state correctly', () => {

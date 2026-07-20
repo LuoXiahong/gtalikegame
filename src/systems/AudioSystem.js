@@ -17,6 +17,7 @@ export const AudioSystem = {
             this.sounds['beep'] = new Audio('https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg');
             this.sounds['gunshot'] = new Audio('https://actions.google.com/sounds/v1/weapons/firearm_shot.ogg');
             this.sounds['explosion'] = new Audio('https://actions.google.com/sounds/v1/foley/explosion.ogg');
+            this.sounds['success'] = new Audio('https://actions.google.com/sounds/v1/cartoon/congrats.ogg');
         }
 
         this._onAudioPlay = (name) => {

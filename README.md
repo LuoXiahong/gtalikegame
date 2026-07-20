@@ -23,10 +23,6 @@ The project relies on "Low effort / High impact" philosophy (clever PS2-style tr
 │   ├── input/              # Input management (InputManager)
 │   ├── ui/                 # UI layers (HUD, MenuScreen)
 │   └── main.js             # Application entry point / bootstrap
-├── meta/
-│   ├── tasks/              # Project tracking and task files (T-XXX-*.md)
-│   ├── reports/            # Strategic reports and feedback
-│   └── artifacts/          # Prototypes and architectural reviews
 └── .github/
     └── workflows/          # CI/CD workflows (GitHub Pages deployment)
 ```

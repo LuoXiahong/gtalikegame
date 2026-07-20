@@ -4,6 +4,7 @@
 */
 import { Time } from './Time.js';
 import { EventBus } from './EventBus.js';
+import { GameConfig } from './GameConfig.js';
 import { World } from '../world/World.js';
 import { Camera } from '../world/Camera.js';
 import { InputSystem } from '../input/InputManager.js';
@@ -17,6 +18,7 @@ import { TrafficSystem } from '../systems/TrafficSystem.js';
 import { CollisionSystem } from '../world/CollisionSystem.js';
 import { RenderSystem } from '../systems/RenderSystem.js';
 import { RenderSystem3D } from '../systems/RenderSystem3D.js';
+import { RenderSync3D } from '../systems/RenderSync3D.js';
 import { AudioSystem } from '../systems/AudioSystem.js';
 import { MissionSystem } from '../systems/MissionSystem.js';
 import { WantedSystem } from '../systems/WantedSystem.js';
@@ -25,10 +27,13 @@ import { UISystem } from '../ui/HUD.js';
 import { Player } from '../entities/Player.js';
 import { NPC } from '../entities/NPC.js';
 import { Car } from '../entities/Car.js';
+import { PedestrianPaths } from '../world/PedestrianPaths.js';
 
 import { GameState, GAME_STATES } from './GameState.js';
 import { MenuScreen } from '../ui/MenuScreen.js';
 import { KeyboardHelpOverlay } from '../ui/KeyboardHelpOverlay.js';
+import { OptionsOverlay } from '../ui/OptionsOverlay.js';
+import { FilmGateOverlay } from '../ui/FilmGateOverlay.js';
 
 export const Game = {
     is3D: true,
@@ -58,33 +63,14 @@ export const Game = {
         PoliceSystem.init();
         AISystem.init();
         KeyboardHelpOverlay.init();
+        OptionsOverlay.init();
+        FilmGateOverlay.init();
 
-        // Spawn player at start intersection
-        const p1 = new Player(1100, 1100);
-        World.addEntity(p1);
+        this.spawnEntities();
 
-        VehicleSystem.init(p1);
-
-        // Spawn 10 starting NPCs on sidewalks around the 3x3 grid
-        const npcConfigs = [
-            { id: 'npc1', x: 1000, y: 1000, color: '#8e44ad' },
-            { id: 'npc2', x: 1200, y: 1000, color: '#27ae60' },
-            { id: 'npc3', x: 1000, y: 1200, color: '#c0392b' },
-            { id: 'npc4', x: 1200, y: 1200, color: '#f1c40f' },
-            { id: 'npc5', x: 1700, y: 1000, color: '#e67e22' },
-            { id: 'npc6', x: 1900, y: 1000, color: '#1abc9c' },
-            { id: 'npc7', x: 1000, y: 1700, color: '#9b59b6' },
-            { id: 'npc8', x: 1200, y: 1700, color: '#3498db' },
-            { id: 'npc9', x: 1700, y: 1700, color: '#e74c3c' },
-            { id: 'npc10', x: 1900, y: 1700, color: '#2ecc71' }
-        ];
-
-        npcConfigs.forEach(cfg => {
-            World.addEntity(new NPC(cfg.id, cfg.x, cfg.y, cfg.color));
-        });
-
-        // Spawn starting parked vehicle near the player
-        World.addEntity(new Car('car1', 1100, 1300, '#c0392b'));
+        if (this._onRestart) EventBus.off('game_restart', this._onRestart);
+        this._onRestart = () => this.restart();
+        EventBus.on('game_restart', this._onRestart);
 
         // Start in MENU state
         GameState.setState(GAME_STATES.MENU);
@@ -92,12 +78,61 @@ export const Game = {
         requestAnimationFrame((ts) => this.loop(ts));
     },
 
+    spawnEntities() {
+        const p1 = new Player(GameConfig.SPAWN.PLAYER_X, GameConfig.SPAWN.PLAYER_Y);
+        World.addEntity(p1);
+
+        VehicleSystem.init(p1);
+
+        // NPCs na chodnikach; część z przejściem przez jezdnię na sąsiedni blok
+        const npcConfigs = [
+            { id: 'npc1', row: 0, col: 0, corner: 0, color: '#8e44ad', cross: false },
+            { id: 'npc2', row: 0, col: 0, corner: 2, color: '#27ae60', cross: true },
+            { id: 'npc3', row: 0, col: 1, corner: 0, color: '#c0392b', cross: true },
+            { id: 'npc4', row: 0, col: 1, corner: 1, color: '#f1c40f', cross: false },
+            { id: 'npc5', row: 0, col: 2, corner: 0, color: '#e67e22', cross: true },
+            { id: 'npc6', row: 1, col: 0, corner: 1, color: '#1abc9c', cross: false },
+            { id: 'npc7', row: 1, col: 1, corner: 0, color: '#9b59b6', cross: true },
+            { id: 'npc8', row: 1, col: 2, corner: 3, color: '#3498db', cross: false },
+            { id: 'npc9', row: 2, col: 0, corner: 2, color: '#e74c3c', cross: true },
+            { id: 'npc10', row: 2, col: 2, corner: 1, color: '#2ecc71', cross: false }
+        ];
+
+        npcConfigs.forEach(cfg => {
+            const patrol = PedestrianPaths.buildPatrol(cfg.row, cfg.col, cfg.cross);
+            const start = patrol[cfg.corner % Math.min(4, patrol.length)];
+            World.addEntity(new NPC(cfg.id, start.x, start.y, cfg.color, patrol));
+        });
+
+        World.addEntity(new Car('car1', GameConfig.SPAWN.CAR_X, GameConfig.SPAWN.CAR_Y, '#c0392b'));
+    },
+
+    restart() {
+        RenderSync3D.reset(RenderSystem3D.scene);
+        World.init();
+        PoliceSystem.reset();
+        WantedSystem.reset();
+        MissionSystem.init();
+        InteractionSystem.reset();
+        InputSystem.resetAll();
+        this.spawnEntities();
+        EventBus.emit('ui_show_dialogue', null);
+        EventBus.emit('ui_show_action_hint', null);
+        EventBus.emit('speed_update', 0);
+        EventBus.emit('vehicle_exited', { carId: null });
+    },
+
+    isPausedByOverlay() {
+        return KeyboardHelpOverlay.isVisible() || OptionsOverlay.isVisible();
+    },
+
     loop(timestamp) {
         Time.update(timestamp);
         const dt = Time.delta;
         const currentState = GameState.getState();
+        const paused = this.isPausedByOverlay();
 
-        if (currentState === GAME_STATES.PLAY) {
+        if (currentState === GAME_STATES.PLAY && !paused) {
             if (InputSystem.consumeDebugAI()) {
                 RenderSystem.debugAI = !RenderSystem.debugAI;
             }
@@ -152,6 +187,7 @@ export const Game = {
 
         // 6. Update UI elements (including canvas minimap)
         UISystem.update();
+        FilmGateOverlay.update(timestamp);
 
         requestAnimationFrame((ts) => this.loop(ts));
     }

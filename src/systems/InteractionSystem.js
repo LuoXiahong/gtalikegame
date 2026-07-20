@@ -5,6 +5,7 @@ import { World } from '../world/World.js';
 import { EventBus } from '../core/EventBus.js';
 import { InputSystem } from '../input/InputManager.js';
 import { VehicleSystem } from './VehicleSystem.js';
+import { GameConfig } from '../core/GameConfig.js';
 
 export const InteractionSystem = {
     lastDialogue: undefined,
@@ -36,7 +37,11 @@ export const InteractionSystem = {
                 EventBus.emit('audio_play', 'gunshot');
             }
             if (isExplodePressed) {
-                EventBus.emit('explosion', { x: p.transform.x, y: p.transform.y, radius: 1000 });
+                EventBus.emit('explosion', {
+                    x: p.transform.x,
+                    y: p.transform.y,
+                    radius: GameConfig.AI.EXPLOSION_DEFAULT_RADIUS
+                });
                 EventBus.emit('audio_play', 'explosion');
             }
         }
@@ -81,7 +86,7 @@ export const InteractionSystem = {
             const dy = p.transform.y - car.transform.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
-            if (dist < 150) { // Zwiększony promień dla aut
+            if (dist < GameConfig.INTERACTION.VEHICLE_RADIUS) {
                 carInZone = car;
             }
         });

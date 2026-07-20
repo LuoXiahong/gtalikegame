@@ -52,8 +52,10 @@ describe('WantedSystem', () => {
     it('should reset state correctly', () => {
         WantedSystem.stars = 3;
         WantedSystem.timer = 5;
+        const spy = vi.spyOn(EventBus, 'emit');
         WantedSystem.reset();
         expect(WantedSystem.stars).toBe(0);
         expect(WantedSystem.timer).toBe(0);
+        expect(spy).toHaveBeenCalledWith('wanted_reset');
     });
 });

@@ -21,9 +21,13 @@ export const WantedSystem = {
     },
 
     reset() {
+        const hadStars = this.stars > 0;
         this.stars = 0;
         this.timer = 0;
         this.lastIncidentTime = -9999;
+        if (hadStars) {
+            EventBus.emit('wanted_reset');
+        }
     },
 
     handleIncident() {

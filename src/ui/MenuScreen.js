@@ -25,6 +25,9 @@ export const MenuScreen = {
     handleEnter() {
         const state = GameState.getState();
         if (state === GAME_STATES.MENU || state === GAME_STATES.WASTED || state === GAME_STATES.MISSION_PASSED) {
+            if (state === GAME_STATES.WASTED || state === GAME_STATES.MISSION_PASSED) {
+                EventBus.emit('game_restart');
+            }
             GameState.setState(GAME_STATES.PLAY);
         }
     },
@@ -56,7 +59,7 @@ export const MenuScreen = {
                 <h1 style="font-size: 48px; margin-bottom: 20px; color: #f1c40f; text-shadow: 2px 2px #000;">GTA JS</h1>
                 <p style="font-size: 24px; animation: blink 1s infinite;">PRESS ENTER TO START</p>
                 <div style="margin-top: 40px; font-size: 14px; color: #bdc3c7;">
-                    WASD - Move | F - Enter/Exit Vehicle | Mouse - Aim/Shoot
+                    WASD - Move | F - Enter/Exit Vehicle | Space - Shoot
                 </div>
             `;
         } else if (state === GAME_STATES.WASTED) {

@@ -139,7 +139,7 @@ export const CityBuilder3D = {
             color: 0x000000,
             map: renderSystem.contactShadowTexture,
             transparent: true,
-            opacity: 0.85,
+            opacity: 0.45,
             depthWrite: false
         });
         const shadowMesh = new THREE.Mesh(shadowGeom, shadowMat);

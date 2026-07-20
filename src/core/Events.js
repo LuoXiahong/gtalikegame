@@ -28,5 +28,8 @@ export const EVENTS = {
     WANTED_RESET: 'wanted_reset',
 
     // Audio
-    AUDIO_PLAY: 'audio_play'
+    AUDIO_PLAY: 'audio_play',
+
+    // Restart
+    GAME_RESTART: 'game_restart'
 };

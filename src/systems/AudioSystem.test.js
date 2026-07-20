@@ -21,6 +21,7 @@ describe('AudioSystem', () => {
     it('should initialize sounds dictionary', () => {
         expect(AudioSystem.sounds['step']).toBeDefined();
         expect(AudioSystem.sounds['beep']).toBeDefined();
+        expect(AudioSystem.sounds['success']).toBeDefined();
     });
 
     it('should play sound on audio_play event', () => {
