@@ -76,7 +76,7 @@ describe('InteractionSystem', () => {
         
         InteractionSystem.update();
         expect(EventBus.emit).toHaveBeenCalledWith('player_near_npc', { npcId: 'npc1' });
-        expect(EventBus.emit).toHaveBeenCalledWith('ui_show_dialogue', 'NPC: Hej!');
+        expect(EventBus.emit).toHaveBeenCalledWith('ui_show_dialogue', 'NPC: Hey!');
     });
 
     it('should emit player_near_car when close to car', () => {
@@ -86,7 +86,7 @@ describe('InteractionSystem', () => {
         
         InteractionSystem.update();
         expect(EventBus.emit).toHaveBeenCalledWith('player_near_car', { carId: 'car1' });
-        expect(EventBus.emit).toHaveBeenCalledWith('ui_show_action_hint', 'Naciśnij F aby wsiąść');
+        expect(EventBus.emit).toHaveBeenCalledWith('ui_show_action_hint', 'Press F to enter');
     });
 
     it('should emit enter_vehicle when action is pressed near car', () => {

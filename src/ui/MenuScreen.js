@@ -68,6 +68,9 @@ export const MenuScreen = {
                 <div style="margin-top: 40px; font-size: 14px; color: #bdc3c7;">
                     ${I18n.t('menu.controls')}
                 </div>
+                <div style="margin-top: 12px; font-size: 13px; color: #95a5a6;">
+                    ${I18n.t('menu.hints')}
+                </div>
             `;
         } else if (state === GAME_STATES.WASTED) {
             this.layer.style.backgroundColor = 'rgba(139, 0, 0, 0.5)';

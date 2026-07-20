@@ -57,6 +57,7 @@ export const catalogs = {
 
         'menu.pressStart': 'NACIŚNIJ ENTER ABY ZACZĄĆ',
         'menu.controls': 'WASD — ruch | F — wsiądź/wysiądź | Spacja — strzał',
+        'menu.hints': '? — pomoc  ·  O — opcje',
         'menu.wasted': 'WASTED',
         'menu.pressRestart': 'NACIŚNIJ ENTER ABY RESTARTOWAĆ',
         'menu.missionPassed': 'MISJA UKOŃCZONA!',
@@ -122,6 +123,7 @@ export const catalogs = {
 
         'menu.pressStart': 'PRESS ENTER TO START',
         'menu.controls': 'WASD — Move | F — Enter/Exit Vehicle | Space — Shoot',
+        'menu.hints': '? — Help  ·  O — Options',
         'menu.wasted': 'WASTED',
         'menu.pressRestart': 'PRESS ENTER TO RESTART',
         'menu.missionPassed': 'MISSION PASSED!',
@@ -187,6 +189,7 @@ export const catalogs = {
 
         'menu.pressStart': 'ENTER ZUM STARTEN',
         'menu.controls': 'WASD — Bewegen | F — Ein-/Aussteigen | Leertaste — Schießen',
+        'menu.hints': '? — Hilfe  ·  O — Optionen',
         'menu.wasted': 'WASTED',
         'menu.pressRestart': 'ENTER ZUM NEUSTART',
         'menu.missionPassed': 'MISSION BESTANDEN!',
@@ -252,6 +255,7 @@ export const catalogs = {
 
         'menu.pressStart': 'PULSA ENTER PARA EMPEZAR',
         'menu.controls': 'WASD — Mover | F — Subir/Bajar | Espacio — Disparar',
+        'menu.hints': '? — Ayuda  ·  O — Opciones',
         'menu.wasted': 'WASTED',
         'menu.pressRestart': 'PULSA ENTER PARA REINICIAR',
         'menu.missionPassed': '¡MISIÓN SUPERADA!',
@@ -317,6 +321,7 @@ export const catalogs = {
 
         'menu.pressStart': 'APPUYEZ SUR ENTRÉE POUR COMMENCER',
         'menu.controls': 'WASD — Bouger | F — Monter/Descendre | Espace — Tirer',
+        'menu.hints': '? — Aide  ·  O — Options',
         'menu.wasted': 'WASTED',
         'menu.pressRestart': 'APPUYEZ SUR ENTRÉE POUR RECOMMENCER',
         'menu.missionPassed': 'MISSION RÉUSSIE !',
