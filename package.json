@@ -1,5 +1,5 @@
 {
-  "name": "game-engine",
+  "name": "lowge",
   "version": "1.0.0",
   "description": "ECS-lite based game engine",
   "type": "module",

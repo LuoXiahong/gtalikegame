@@ -1,4 +1,4 @@
-# Lightweight Open World Game Engine 🚗💥
+# lowge - Lightweight Open World Game Engine 🚗💥
 
 [![GitHub Pages Deployment](https://github.com/LuoXiahong/lowge/actions/workflows/deploy.yml/badge.svg)](https://github.com/LuoXiahong/lowge/actions/workflows/deploy.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Play_Now!-brightgreen?style=flat-square&logo=gamepad)](https://luoxiahong.github.io/lowge/)
