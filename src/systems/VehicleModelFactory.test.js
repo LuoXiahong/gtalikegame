@@ -35,6 +35,11 @@ describe('VehicleModelFactory', () => {
             if (child.isMesh) meshCount++;
         });
         expect(meshCount).toBeGreaterThan(8);
+
+        const shadow = model.children.find(c => c.name === 'contactShadow');
+        expect(shadow).toBeDefined();
+        expect(shadow.material.transparent).toBe(true);
+        expect(shadow.rotation.x).toBeCloseTo(-Math.PI / 2);
     });
 
     it('falls back to sedan_30s for unknown archetype key', () => {

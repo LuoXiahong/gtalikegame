@@ -48,9 +48,11 @@ export const RoadBuilder3D = {
 
         const geom = new THREE.PlaneGeometry(width, length);
         const texture = RoadTextureGenerator.getTexture('straight');
+        const roughnessMap = RoadTextureGenerator.getRoughnessTexture('straight');
         const mat = new THREE.MeshStandardMaterial({
             map: texture,
-            roughness: 0.9,
+            roughnessMap,
+            roughness: 1.0,
             metalness: 0.0
         });
 
@@ -85,9 +87,11 @@ export const RoadBuilder3D = {
         const width = WorldGrid.STREET_WIDTH * SF;
         const geom = new THREE.PlaneGeometry(width, width);
         const texture = RoadTextureGenerator.getTexture('intersection');
+        const roughnessMap = RoadTextureGenerator.getRoughnessTexture('intersection');
         const mat = new THREE.MeshStandardMaterial({
             map: texture,
-            roughness: 0.9,
+            roughnessMap,
+            roughness: 1.0,
             metalness: 0.0
         });
 
@@ -113,9 +117,11 @@ export const RoadBuilder3D = {
         // Width across the roadway, depth along the approach (rotate for E/W)
         const geom = new THREE.PlaneGeometry(roadW, depth);
         const texture = RoadTextureGenerator.getTexture('crosswalk');
+        const roughnessMap = RoadTextureGenerator.getRoughnessTexture('crosswalk');
         const mat = new THREE.MeshStandardMaterial({
             map: texture,
-            roughness: 0.9,
+            roughnessMap,
+            roughness: 1.0,
             metalness: 0.0
         });
 

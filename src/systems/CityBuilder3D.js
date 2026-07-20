@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { WorldGrid } from '../world/WorldGrid.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { FacadeGenerator } from './FacadeGenerator.js';
+import { createPropAt, PROP_TYPES } from './PropFactory.js';
 
 export const CityBuilder3D = {
     buildCity(renderSystem) {
@@ -108,11 +109,74 @@ export const CityBuilder3D = {
             this.createTree(renderSystem, sizeType, pos.x, pos.z);
         }
 
+        this.placeSidewalkProps(renderSystem);
+
         renderSystem.billboards = [];
         if (shops.length >= 2) {
             shops.sort(() => Math.random() - 0.5);
             this.addBillboard(renderSystem, shops[0].group, shops[0].w, shops[0].d, shops[0].h);
             this.addBillboard(renderSystem, shops[1].group, shops[1].w, shops[1].d, shops[1].h);
+        }
+    },
+
+    /**
+     * Scatter hydrants / benches / kiosks / lamp posts along sidewalk ring.
+     */
+    placeSidewalkProps(renderSystem) {
+        const SF = WorldMetrics.SCALE_FACTOR;
+        renderSystem.props = [];
+        renderSystem.streetLights = [];
+
+        const propOffsets = [
+            { x: -220, z: -180 }, { x: 220, z: -180 },
+            { x: -220, z: 180 }, { x: 220, z: 180 },
+            { x: -180, z: -220 }, { x: 180, z: -220 },
+            { x: -180, z: 220 }, { x: 180, z: 220 },
+            { x: -230, z: 0 }, { x: 230, z: 0 },
+            { x: 0, z: -230 }, { x: 0, z: 230 }
+        ];
+
+        const candidates = [];
+        for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
+            for (let c = 0; c < WorldGrid.GRID_COLS; c++) {
+                const b = WorldGrid.getBlockBounds(r, c);
+                const posX = (b.x + b.w / 2) * SF;
+                const posZ = (b.y + b.h / 2) * SF;
+                propOffsets.forEach(offset => {
+                    candidates.push({
+                        x: posX + offset.x * SF,
+                        z: posZ + offset.z * SF
+                    });
+                });
+            }
+        }
+
+        candidates.sort(() => Math.random() - 0.5);
+        const totalProps = Math.floor(Math.random() * 6) + 14; // 14–19
+        let lampCount = 0;
+        const maxLamps = 16;
+
+        for (let i = 0; i < Math.min(totalProps, candidates.length); i++) {
+            const pos = candidates[i];
+            let type;
+            if (lampCount < maxLamps && Math.random() < 0.4) {
+                type = 'lampPost';
+                lampCount++;
+            } else {
+                const others = PROP_TYPES.filter(t => t !== 'lampPost');
+                type = others[Math.floor(Math.random() * others.length)];
+            }
+
+            const rot = (Math.floor(Math.random() * 4) * Math.PI) / 2;
+            const prop = createPropAt(type, pos.x, pos.z, rot);
+            renderSystem.scene.add(prop);
+            renderSystem.props.push(prop);
+
+            prop.traverse(obj => {
+                if (obj.isLight && obj.userData.isStreetLight) {
+                    renderSystem.streetLights.push(obj);
+                }
+            });
         }
     },
 
@@ -252,7 +316,10 @@ export const CityBuilder3D = {
             map: texture,
             color: color,
             roughness: 0.8,
-            metalness: textureType === 'skyscraper' ? 0.08 : 0.05
+            metalness: textureType === 'skyscraper' ? 0.08 : 0.05,
+            emissive: 0xffffff,
+            emissiveMap: texture,
+            emissiveIntensity: 0.55
         });
     },
 

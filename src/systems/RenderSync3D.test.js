@@ -92,15 +92,18 @@ describe('RenderSync3D', () => {
         expect(carMesh.position.z).toBeCloseTo(600 * SF);
         expect(carMesh.rotation.y).toBe(0.5);
 
-        // Shadows + MeshStandardMaterial
+        // Shadows + MeshStandardMaterial (skip flat contact-shadow blobs)
         [playerMesh, npcMesh, carMesh].forEach(meshGroup => {
             meshGroup.traverse(child => {
-                if (child.isMesh) {
+                if (child.isMesh && child.name !== 'contactShadow') {
                     expect(child.material instanceof THREE.MeshStandardMaterial).toBe(true);
                     expect(child.castShadow).toBe(true);
                     expect(child.receiveShadow).toBe(true);
                 }
             });
+            const shadow = meshGroup.children.find(c => c.name === 'contactShadow');
+            expect(shadow).toBeDefined();
+            expect(shadow.material).toBeInstanceOf(THREE.MeshBasicMaterial);
         });
     });
 

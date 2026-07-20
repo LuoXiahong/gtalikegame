@@ -5,7 +5,7 @@ import { WorldMetrics } from '../world/WorldMetrics.js';
 import { RetroFilmSettings } from './RetroFilmSettings.js';
 import { EventBus } from '../core/EventBus.js';
 
-// JSDOM has no WebGL — mock Three.js WebGLRenderer
+// JSDOM has no WebGL — mock Three.js WebGLRenderer + PMREM
 vi.mock('three', async () => {
     const original = await vi.importActual('three');
     return {
@@ -23,6 +23,13 @@ vi.mock('three', async () => {
                 this.toneMapping = 0;
                 this.info = { autoReset: true };
             }
+        },
+        PMREMGenerator: class {
+            constructor() {}
+            fromScene() {
+                return { texture: new original.Texture() };
+            }
+            dispose() {}
         }
     };
 });
@@ -84,6 +91,27 @@ vi.mock('three/addons/postprocessing/OutputPass.js', () => {
     };
 });
 
+vi.mock('three/addons/postprocessing/UnrealBloomPass.js', () => {
+    return {
+        UnrealBloomPass: class {
+            constructor(resolution, strength, radius, threshold) {
+                this.resolution = resolution;
+                this.strength = strength;
+                this.radius = radius;
+                this.threshold = threshold;
+            }
+        }
+    };
+});
+
+vi.mock('three/addons/environments/RoomEnvironment.js', () => {
+    return {
+        RoomEnvironment: class {
+            constructor() {}
+        }
+    };
+});
+
 vi.mock('../world/World.js', () => ({
     World: {
         getEntitiesByType: vi.fn().mockReturnValue([])
@@ -128,11 +156,14 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.scene).toBeDefined();
         expect(RenderSystem3D.camera).toBeDefined();
 
-        // Fog + post-processing (T-704)
+        // Fog + post-processing + IBL environment
         expect(RenderSystem3D.scene.fog).toBeDefined();
-        expect(RenderSystem3D.scene.fog.near).toBe(200);
-        expect(RenderSystem3D.scene.fog.far).toBe(350);
+        expect(RenderSystem3D.scene.fog.near).toBe(60);
+        expect(RenderSystem3D.scene.fog.far).toBe(220);
+        expect(RenderSystem3D.scene.environment).toBeDefined();
         expect(RenderSystem3D.composer).toBeDefined();
+        expect(RenderSystem3D.bloomPass).toBeDefined();
+        expect(RenderSystem3D.bloomPass.threshold).toBeCloseTo(0.85);
         expect(RenderSystem3D.tiltShiftPass).toBeDefined();
         expect(RenderSystem3D.retroFilmPass).toBeDefined();
         expect(RenderSystem3D.retroFilmPass.uniforms.intensity).toBeDefined();
@@ -150,6 +181,28 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.trees.length).toBeGreaterThanOrEqual(18);
         expect(RenderSystem3D.trees.length).toBeLessThanOrEqual(25);
         expect(RenderSystem3D.billboards.length).toBe(2);
+        expect(RenderSystem3D.props.length).toBeGreaterThanOrEqual(14);
+        expect(RenderSystem3D.props.length).toBeLessThanOrEqual(19);
+        expect(RenderSystem3D.streetLights.length).toBeGreaterThan(0);
+        expect(RenderSystem3D.streetLights.length).toBeLessThanOrEqual(16);
+    });
+
+    it('should assign emissive maps to facade materials', () => {
+        RenderSystem3D.init();
+
+        const resBuilding = RenderSystem3D.createBuilding({
+            type: 'residential', x: 300, z: 300, height: 20, width: 10, depth: 10
+        });
+        const mesh = resBuilding.children.find(c => c.isMesh && c.geometry.type === 'BoxGeometry');
+        expect(mesh.material[0].emissiveMap).toBeDefined();
+        expect(mesh.material[0].emissiveIntensity).toBeCloseTo(0.55);
+    });
+
+    it('should use roughnessMap on road lane meshes', () => {
+        RenderSystem3D.init();
+        const lane = RenderSystem3D.laneMarkings[0];
+        expect(lane.material.roughnessMap).toBeDefined();
+        expect(lane.material.roughness).toBe(1);
     });
 
     it('should handle update cycles and sync camera', () => {

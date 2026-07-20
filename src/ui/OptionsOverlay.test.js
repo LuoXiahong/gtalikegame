@@ -90,6 +90,11 @@ describe('OptionsOverlay', () => {
     });
 
     it('should change language, persist and emit locale_change', () => {
+        // OptionsOverlay.init() syncs I18n to UISettings (default en) — start from pl
+        UISettings.setLocale('pl');
+        I18n.setLocale('pl');
+        document.getElementById('opt_locale').value = 'pl';
+
         const spy = vi.fn();
         EventBus.on('locale_change', spy);
 

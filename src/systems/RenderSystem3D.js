@@ -11,7 +11,9 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { World } from '../world/World.js';
 import { WorldGrid } from '../world/WorldGrid.js';
 import { RenderSync3D } from './RenderSync3D.js';
@@ -20,6 +22,7 @@ import { RoadTextureGenerator } from './RoadTextureGenerator.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { InputSystem } from '../input/InputManager.js';
 import { VehicleSystem } from './VehicleSystem.js';
+import { getContactShadowTexture } from './ContactShadow.js';
 
 import { TiltShiftShader } from './TiltShiftShader.js';
 import { RetroFilmShader } from './RetroFilmShader.js';
@@ -34,6 +37,7 @@ export const RenderSystem3D = {
     camera: null,
     composer: null,
     tiltShiftPass: null,
+    bloomPass: null,
     retroFilmPass: null,
     isZoomedIn: false,
 
@@ -45,6 +49,8 @@ export const RenderSystem3D = {
     buildings: [],
     trees: [],
     billboards: [],
+    props: [],
+    streetLights: [],
     laneMarkings: [],
     zebras: [],
 
@@ -58,25 +64,8 @@ export const RenderSystem3D = {
     originX: 1100,
     originZ: 1100,
 
-    /**
-     * Circular soft contact-shadow texture (Canvas).
-     */
     createContactShadowTexture() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 64;
-        canvas.height = 64;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-            return new THREE.Texture();
-        }
-        const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-        grad.addColorStop(0, 'rgba(0, 0, 0, 1.0)');
-        grad.addColorStop(0.3, 'rgba(0, 0, 0, 0.85)');
-        grad.addColorStop(0.8, 'rgba(0, 0, 0, 0.25)');
-        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, 64, 64);
-        return new THREE.CanvasTexture(canvas);
+        return getContactShadowTexture();
     },
 
     init() {
@@ -106,7 +95,7 @@ export const RenderSystem3D = {
         this.renderer.info.autoReset = false;
 
         this.scene = new THREE.Scene();
-        this.scene.fog = new THREE.Fog(clearColor, 200, 350);
+        this.scene.fog = new THREE.Fog(clearColor, 60, 220);
 
         // Orthographic isometric camera
         const aspect = width / height;
@@ -128,6 +117,9 @@ export const RenderSystem3D = {
         const renderPass = new RenderPass(this.scene, this.camera);
         this.composer.addPass(renderPass);
 
+        this.bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 0.4, 0.2, 0.85);
+        this.composer.addPass(this.bloomPass);
+
         this.tiltShiftPass = new ShaderPass(TiltShiftShader);
         this.composer.addPass(this.tiltShiftPass);
 
@@ -141,6 +133,7 @@ export const RenderSystem3D = {
         this.composer.addPass(outputPass);
 
         this.setupLighting();
+        this.setupEnvironment();
 
         window.addEventListener('resize', () => {
             const w = parent.clientWidth || 800;
@@ -249,6 +242,17 @@ export const RenderSystem3D = {
 
         this.scene.add(sun);
         this.sunLight = sun;
+    },
+
+    /**
+     * One-shot IBL for MeshStandardMaterial metalness reflections.
+     */
+    setupEnvironment() {
+        if (!this.renderer || !this.scene) return;
+        const pmrem = new THREE.PMREMGenerator(this.renderer);
+        const envRT = pmrem.fromScene(new RoomEnvironment());
+        this.scene.environment = envRT.texture;
+        pmrem.dispose();
     },
 
     update() {

@@ -2,6 +2,7 @@
  * NPCModelFactory — boxy 3D NPC silhouettes (muted period clothing + fedora).
  */
 import * as THREE from 'three';
+import { addContactShadow } from './ContactShadow.js';
 
 // Muted 1930s–40s clothing: greys, browns, navy (no neon/bright primaries)
 export const NPC_COLOR_PALETTE = [
@@ -72,6 +73,8 @@ export function createNPCModel(color) {
     );
     crown.position.y = 1.92;
     group.add(crown);
+
+    addContactShadow(group, { width: 0.7, depth: 0.7, y: 0.01, opacity: 0.35 });
 
     return group;
 }

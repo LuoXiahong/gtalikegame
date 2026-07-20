@@ -3,11 +3,11 @@ import * as THREE from 'three';
 import { createNPCModel, NPC_COLOR_PALETTE } from './NPCModelFactory.js';
 
 describe('NPCModelFactory', () => {
-    it('should create a THREE.Group with torso, head, and fedora', () => {
+    it('should create a THREE.Group with torso, head, fedora, and contact shadow', () => {
         const model = createNPCModel(0x3d3d3d);
 
         expect(model).toBeInstanceOf(THREE.Group);
-        expect(model.children.length).toBe(4);
+        expect(model.children.length).toBe(5);
 
         const bodyMesh = model.children[0];
         expect(bodyMesh).toBeInstanceOf(THREE.Mesh);
@@ -28,6 +28,11 @@ describe('NPCModelFactory', () => {
         expect(crown.geometry).toBeInstanceOf(THREE.CylinderGeometry);
         expect(brim.position.y).toBeGreaterThan(headMesh.position.y);
         expect(crown.position.y).toBeGreaterThan(brim.position.y);
+
+        const shadow = model.children.find(c => c.name === 'contactShadow');
+        expect(shadow).toBeDefined();
+        expect(shadow.material.transparent).toBe(true);
+        expect(shadow.rotation.x).toBeCloseTo(-Math.PI / 2);
     });
 
     it('should select a random color from the muted palette if no color is provided', () => {

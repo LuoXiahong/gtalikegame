@@ -134,7 +134,7 @@ export const RenderSync3D = {
         }
 
         group.traverse(child => {
-            if (child.isMesh) {
+            if (child.isMesh && child.name !== 'contactShadow') {
                 child.castShadow = true;
                 child.receiveShadow = true;
             }

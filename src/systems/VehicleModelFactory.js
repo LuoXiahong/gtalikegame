@@ -5,6 +5,7 @@
  */
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { addContactShadow } from './ContactShadow.js';
 
 /**
  * Soft box with clamped corner radius (2 segments keep cost low).
@@ -242,6 +243,8 @@ export function createVehicleModel(color, archetypeKey) {
     [[axleX, -wheelZ], [axleX, wheelZ], [-axleX, -wheelZ], [-axleX, wheelZ]].forEach(([x, z]) => {
         addWheel(group, x, arch.wheelRadius, z, arch.whitewallTires);
     });
+
+    addContactShadow(group, { width: L * 1.05, depth: W * 1.1, y: 0.01, opacity: 0.4 });
 
     return group;
 }

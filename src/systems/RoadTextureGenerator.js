@@ -5,12 +5,16 @@ import * as THREE from 'three';
 
 export const RoadTextureGenerator = {
     textures: new Map(),
+    roughnessTextures: new Map(),
 
     init() {
         if (this.textures.size > 0) return;
         this.textures.set('straight', this.createCanvasTexture('straight'));
         this.textures.set('intersection', this.createCanvasTexture('intersection'));
         this.textures.set('crosswalk', this.createCanvasTexture('crosswalk'));
+        this.roughnessTextures.set('straight', this.createRoughnessTexture('straight'));
+        this.roughnessTextures.set('intersection', this.createRoughnessTexture('intersection'));
+        this.roughnessTextures.set('crosswalk', this.createRoughnessTexture('crosswalk'));
     },
 
     getTexture(type) {
@@ -20,11 +24,35 @@ export const RoadTextureGenerator = {
         return this.textures.get(type);
     },
 
+    getRoughnessTexture(type) {
+        if (!this.roughnessTextures.has(type)) {
+            this.roughnessTextures.set(type, this.createRoughnessTexture(type));
+        }
+        return this.roughnessTextures.get(type);
+    },
+
+    /** Deterministic-ish wet patch list for albedo + roughness alignment. */
+    generateWetPatches(count = 7) {
+        const patches = [];
+        for (let i = 0; i < count; i++) {
+            patches.push({
+                x: 40 + Math.random() * 432,
+                y: 40 + Math.random() * 432,
+                rx: 18 + Math.random() * 42,
+                ry: 10 + Math.random() * 28,
+                rot: Math.random() * Math.PI,
+                dark: Math.random() < 0.55
+            });
+        }
+        return patches;
+    },
+
     createCanvasTexture(type) {
         const canvas = document.createElement('canvas');
         canvas.width = 512;
         canvas.height = 512;
         const ctx = canvas.getContext ? canvas.getContext('2d') : null;
+        const patches = this.generateWetPatches(type === 'crosswalk' ? 4 : 8);
 
         if (ctx) {
             ctx.fillStyle = '#222428';
@@ -41,6 +69,8 @@ export const RoadTextureGenerator = {
             } else if (type === 'crosswalk') {
                 this.drawCrosswalk(ctx);
             }
+
+            this.addWetPatchesAlbedo(ctx, patches);
         }
 
         const texture = new THREE.CanvasTexture(canvas);
@@ -49,7 +79,90 @@ export const RoadTextureGenerator = {
         // NearestFilter: crisp retro pixel look on mag
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.LinearMipmapLinearFilter;
+        texture.userData = texture.userData || {};
+        texture.userData.wetPatches = patches;
         return texture;
+    },
+
+    createRoughnessTexture(type) {
+        const albedo = this.getTexture(type);
+        const patches = (albedo.userData && albedo.userData.wetPatches) || this.generateWetPatches(6);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext ? canvas.getContext('2d') : null;
+
+        if (ctx) {
+            // High roughness base (light gray → rough asphalt)
+            ctx.fillStyle = '#e6e6e6';
+            ctx.fillRect(0, 0, 512, 512);
+
+            // Subtle noise
+            for (let i = 0; i < 200; i++) {
+                const rx = Math.random() * 512;
+                const ry = Math.random() * 512;
+                const v = 200 + Math.floor(Math.random() * 40);
+                ctx.fillStyle = `rgb(${v},${v},${v})`;
+                ctx.beginPath();
+                ctx.arc(rx, ry, 8 + Math.random() * 20, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            this.addWetPatchesRoughness(ctx, patches);
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
+        return texture;
+    },
+
+    addWetPatchesAlbedo(ctx, patches) {
+        ctx.save();
+        for (const p of patches) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(p.rx, p.ry));
+            if (p.dark) {
+                grad.addColorStop(0, 'rgba(8, 10, 14, 0.22)');
+                grad.addColorStop(0.55, 'rgba(12, 14, 18, 0.1)');
+                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            } else {
+                grad.addColorStop(0, 'rgba(90, 100, 110, 0.14)');
+                grad.addColorStop(0.55, 'rgba(70, 80, 90, 0.06)');
+                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            }
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, p.rx, p.ry, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+        ctx.restore();
+    },
+
+    addWetPatchesRoughness(ctx, patches) {
+        ctx.save();
+        for (const p of patches) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            // Dark = low roughness (wet / reflective)
+            const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(p.rx, p.ry));
+            grad.addColorStop(0, 'rgb(18, 18, 18)');
+            grad.addColorStop(0.45, 'rgb(55, 55, 55)');
+            grad.addColorStop(1, 'rgba(230, 230, 230, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, p.rx, p.ry, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+        ctx.restore();
     },
 
     addAsphaltNoise(ctx, width, height) {

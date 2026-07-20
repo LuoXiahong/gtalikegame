@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CityBuilder3D } from './CityBuilder3D.js';
+import { FacadeGenerator } from './FacadeGenerator.js';
 
 describe('CityBuilder3D', () => {
     it('should build city elements and populate collections', () => {
@@ -10,6 +11,8 @@ describe('CityBuilder3D', () => {
             buildings: [],
             trees: [],
             billboards: [],
+            props: [],
+            streetLights: [],
             contactShadowTexture: {}
         };
 
@@ -17,5 +20,15 @@ describe('CityBuilder3D', () => {
         expect(mockRenderSystem.sidewalks.length).toBeGreaterThan(0);
         expect(mockRenderSystem.buildings.length).toBeGreaterThan(0);
         expect(mockRenderSystem.trees.length).toBeGreaterThan(0);
+        expect(mockRenderSystem.props.length).toBeGreaterThanOrEqual(14);
+        expect(mockRenderSystem.streetLights.length).toBeGreaterThan(0);
+    });
+
+    it('should create face materials with emissive maps', () => {
+        FacadeGenerator.init();
+        const mat = CityBuilder3D.createFaceMaterial('residential', 10, 20, 0x9c4a3a);
+        expect(mat.map).toBeDefined();
+        expect(mat.emissiveMap).toBeDefined();
+        expect(mat.emissiveIntensity).toBeCloseTo(0.55);
     });
 });
