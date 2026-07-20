@@ -9,9 +9,10 @@ describe('RoadTextureGenerator', () => {
 
     it('should initialize and populate textures', () => {
         RoadTextureGenerator.init();
-        expect(RoadTextureGenerator.textures.size).toBe(2);
+        expect(RoadTextureGenerator.textures.size).toBe(3);
         expect(RoadTextureGenerator.textures.has('straight')).toBe(true);
         expect(RoadTextureGenerator.textures.has('intersection')).toBe(true);
+        expect(RoadTextureGenerator.textures.has('crosswalk')).toBe(true);
     });
 
     it('should create valid THREE.CanvasTexture objects via getTexture', () => {

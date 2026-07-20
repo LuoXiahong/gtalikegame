@@ -12,7 +12,10 @@ export const RoadBuilder3D = {
         const SF = WorldMetrics.SCALE_FACTOR;
         renderSystem.laneMarkings = [];
         const roads = WorldGrid.getStreetCenters();
+        const half = WorldGrid.STREET_WIDTH / 2;
 
+        // Straight corridors stop at block faces (flush with intersection squares).
+        // Lane dashes are inset in the straight texture so they sit on exit roads only.
         roads.forEach(rx => {
             this.createDashedLine(renderSystem, rx * SF, 500 * SF, rx * SF, 1000 * SF, true);
             this.createDashedLine(renderSystem, rx * SF, 1200 * SF, rx * SF, 1700 * SF, true);
@@ -29,6 +32,12 @@ export const RoadBuilder3D = {
         roads.forEach(cx => {
             roads.forEach(cz => {
                 this.createZebra(renderSystem, cx * SF, cz * SF);
+                // Crosswalks on exit approaches (same idea as 2D Decals offset)
+                const approach = half + 50;
+                this.createCrosswalk(renderSystem, cx * SF, (cz - approach) * SF, true);
+                this.createCrosswalk(renderSystem, cx * SF, (cz + approach) * SF, true);
+                this.createCrosswalk(renderSystem, (cx - approach) * SF, cz * SF, false);
+                this.createCrosswalk(renderSystem, (cx + approach) * SF, cz * SF, false);
             });
         });
     },
@@ -85,7 +94,38 @@ export const RoadBuilder3D = {
 
         const mesh = new THREE.Mesh(geom, mat);
         mesh.rotation.x = -Math.PI / 2;
-        mesh.position.set(targetX, 0.002, targetZ);
+        // Slightly above straight overlays to avoid edge z-fight; asphalt matches
+        mesh.position.set(targetX, 0.003, targetZ);
+        mesh.receiveShadow = true;
+
+        renderSystem.scene.add(mesh);
+        renderSystem.zebras.push(mesh);
+    },
+
+    /**
+     * Crosswalk on an exit road just outside the intersection square.
+     * @param {boolean} northSouth - true = bars across E-W travel (on N/S approaches)
+     */
+    createCrosswalk(renderSystem, x, z, northSouth) {
+        const SF = WorldMetrics.SCALE_FACTOR;
+        const roadW = WorldGrid.STREET_WIDTH * SF * 0.9;
+        const depth = 80 * SF;
+
+        // Width across the roadway, depth along the approach (rotate for E/W)
+        const geom = new THREE.PlaneGeometry(roadW, depth);
+        const texture = RoadTextureGenerator.getTexture('crosswalk');
+        const mat = new THREE.MeshStandardMaterial({
+            map: texture,
+            roughness: 0.9,
+            metalness: 0.0
+        });
+
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.rotation.x = -Math.PI / 2;
+        if (!northSouth) {
+            mesh.rotation.z = Math.PI / 2;
+        }
+        mesh.position.set(x, 0.004, z);
         mesh.receiveShadow = true;
 
         renderSystem.scene.add(mesh);

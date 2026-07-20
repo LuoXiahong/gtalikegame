@@ -11,11 +11,12 @@ export const RoadTextureGenerator = {
         if (this.textures.size > 0) return;
         this.textures.set('straight', this.createCanvasTexture('straight'));
         this.textures.set('intersection', this.createCanvasTexture('intersection'));
+        this.textures.set('crosswalk', this.createCanvasTexture('crosswalk'));
     },
 
     getTexture(type) {
-        if (this.textures.size === 0) {
-            this.init();
+        if (!this.textures.has(type)) {
+            this.textures.set(type, this.createCanvasTexture(type));
         }
         return this.textures.get(type);
     },
@@ -36,10 +37,12 @@ export const RoadTextureGenerator = {
 
             if (type === 'straight') {
                 this.drawStraightRoad(ctx, true);
-                this.applyAsphaltDirt(ctx, false); // dirt on left/right edges
+                this.applyAsphaltDirt(ctx, false); // curb dirt on left/right only
             } else if (type === 'intersection') {
+                // No edge dirt: all 4 sides connect to roads — keep asphalt uniform
                 this.drawIntersection(ctx);
-                this.applyAsphaltDirt(ctx, true); // dirt on all 4 edges
+            } else if (type === 'crosswalk') {
+                this.drawCrosswalk(ctx);
             }
         }
 
@@ -97,45 +100,51 @@ export const RoadTextureGenerator = {
     },
 
     drawStraightRoad(ctx, isVertical = true) {
+        // Leave clear asphalt near both ends so dashes stop short of intersections
+        // (mirrors 2D Decals clearance). ~18% of a 50 m segment ≈ 9 m gap.
+        const margin = 92;
+        const dashStart = margin;
+        const dashEnd = 512 - margin;
+
         ctx.save();
 
-        // 1. Draw subtle dark outline backing for painted line to pop (contrast drop-shadow)
+        // 1. Dark outline backing for painted line
         ctx.strokeStyle = 'rgba(10, 10, 12, 0.4)';
         ctx.lineWidth = 8;
         ctx.setLineDash([40, 40]);
         ctx.lineDashOffset = 20;
         ctx.beginPath();
         if (isVertical) {
-            ctx.moveTo(257, 0);
-            ctx.lineTo(257, 512);
+            ctx.moveTo(257, dashStart);
+            ctx.lineTo(257, dashEnd);
         } else {
-            ctx.moveTo(0, 257);
-            ctx.lineTo(512, 257);
+            ctx.moveTo(dashStart, 257);
+            ctx.lineTo(dashEnd, 257);
         }
         ctx.stroke();
 
-        // 2. Draw actual off-white dashed line with painted texture feeling
-        ctx.strokeStyle = 'rgba(240, 242, 245, 0.9)'; // Slightly transparent, realistic paint
+        // 2. Off-white dashed centerline
+        ctx.strokeStyle = 'rgba(240, 242, 245, 0.9)';
         ctx.lineWidth = 6;
         ctx.setLineDash([40, 40]);
         ctx.lineDashOffset = 20;
         ctx.beginPath();
         if (isVertical) {
-            ctx.moveTo(256, 0);
-            ctx.lineTo(256, 512);
+            ctx.moveTo(256, dashStart);
+            ctx.lineTo(256, dashEnd);
         } else {
-            ctx.moveTo(0, 256);
-            ctx.lineTo(512, 256);
+            ctx.moveTo(dashStart, 256);
+            ctx.lineTo(dashEnd, 256);
         }
         ctx.stroke();
 
-        // 3. Apply subtle scratches/wear directly on the paint
+        // 3. Paint wear / chipping (only along the dashed span)
         ctx.restore();
         ctx.save();
-        ctx.fillStyle = '#222428'; // Overwrite with asphalt color to simulate paint chipping
+        ctx.fillStyle = '#222428';
         const paintCenter = 256;
         for (let i = 0; i < 40; i++) {
-            const ry = Math.random() * 512;
+            const ry = dashStart + Math.random() * (dashEnd - dashStart);
             const rx = paintCenter + (Math.random() - 0.5) * 8;
             ctx.fillRect(rx, ry, Math.random() < 0.5 ? 2 : 1, Math.random() < 0.5 ? 2 : 1);
         }
@@ -170,54 +179,37 @@ export const RoadTextureGenerator = {
         ctx.stroke();
         ctx.restore();
 
-        // 2. Draw zebras with realistic paint thickness & drop-shadow backing
-        ctx.save();
-        
-        const offsets = [-153.6, -76.8, 0, 76.8, 153.6];
-        const center = 256;
+        // Zebras live on exit-road approaches (RoadBuilder3D), not inside the junction.
+    },
 
-        const drawZebraStripe = (x, y, w, h) => {
-            // Dark backing
+    drawCrosswalk(ctx) {
+        // Transparent-ish asphalt base matching road color, then zebra bars across width
+        ctx.fillStyle = '#222428';
+        ctx.fillRect(0, 0, 512, 512);
+        this.addAsphaltNoise(ctx, 512, 512);
+
+        const stripeCount = 5;
+        const stripeW = 48;
+        const gap = (512 - stripeCount * stripeW) / (stripeCount + 1);
+        const stripeH = 280;
+        const y = (512 - stripeH) / 2;
+
+        for (let i = 0; i < stripeCount; i++) {
+            const x = gap + i * (stripeW + gap);
             ctx.fillStyle = 'rgba(10, 10, 12, 0.4)';
-            ctx.fillRect(x + 1, y + 1, w, h);
-            // Main paint
+            ctx.fillRect(x + 1, y + 1, stripeW, stripeH);
             ctx.fillStyle = 'rgba(240, 242, 245, 0.9)';
-            ctx.fillRect(x, y, w, h);
-            // Paint wear chipping
+            ctx.fillRect(x, y, stripeW, stripeH);
             ctx.fillStyle = '#222428';
-            const chips = Math.floor(2 + Math.random() * 3);
-            for (let c = 0; c < chips; c++) {
-                const cx = x + Math.random() * (w - 2);
-                const cy = y + Math.random() * (h - 2);
-                ctx.fillRect(cx, cy, 1 + Math.random() * 2, 1 + Math.random() * 2);
+            for (let c = 0; c < 4; c++) {
+                ctx.fillRect(
+                    x + Math.random() * (stripeW - 2),
+                    y + Math.random() * (stripeH - 2),
+                    1 + Math.random() * 2,
+                    1 + Math.random() * 2
+                );
             }
-        };
-
-        // North crossing (top)
-        offsets.forEach(dx => {
-            const x = Math.round(center + dx - 5);
-            drawZebraStripe(x, 10, 10, 50);
-        });
-
-        // South crossing (bottom)
-        offsets.forEach(dx => {
-            const x = Math.round(center + dx - 5);
-            drawZebraStripe(x, 512 - 60, 10, 50);
-        });
-
-        // West crossing (left)
-        offsets.forEach(dy => {
-            const y = Math.round(center + dy - 5);
-            drawZebraStripe(10, y, 50, 10);
-        });
-
-        // East crossing (right)
-        offsets.forEach(dy => {
-            const y = Math.round(center + dy - 5);
-            drawZebraStripe(512 - 60, y, 50, 10);
-        });
-
-        ctx.restore();
+        }
     },
 
     applyAsphaltDirt(ctx, allEdges = false) {
