@@ -4,6 +4,7 @@
 import { EventBus } from '../core/EventBus.js';
 import { GameState, GAME_STATES } from '../core/GameState.js';
 import { I18n } from '../i18n/I18n.js';
+import logoSrc from '../assets/logo.png';
 
 export const MenuScreen = {
     layer: null,
@@ -63,7 +64,7 @@ export const MenuScreen = {
 
         if (state === GAME_STATES.MENU) {
             html = `
-                <h1 style="font-size: 48px; margin-bottom: 20px; color: #f1c40f; text-shadow: 2px 2px #000;">NOIR CITY</h1>
+                <img src="${logoSrc}" alt="Noir City" style="max-width: 80%; max-height: 40vh; margin-bottom: 20px; filter: drop-shadow(2px 2px 0px #000);" />
                 <p style="font-size: 24px; animation: blink 1s infinite;">${I18n.t('menu.pressStart')}</p>
                 <div style="margin-top: 40px; font-size: 14px; color: #bdc3c7;">
                     ${I18n.t('menu.controls')}

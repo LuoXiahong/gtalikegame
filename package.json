@@ -8,14 +8,20 @@
     "build": "vite build src",
     "preview": "vite preview src",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "screenshots": "node scripts/take-screenshots.mjs",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "husky": "^9.1.7",
     "jsdom": "^29.1.1",
+    "playwright": "^1.61.1",
     "vite": "^8.0.11",
     "vitest": "^4.1.5"
   },
   "dependencies": {
+    "pngjs": "^7.0.0",
     "three": "^0.184.0"
   }
 }

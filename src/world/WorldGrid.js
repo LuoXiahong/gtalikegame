@@ -9,6 +9,8 @@ export const WorldGrid = {
     GRID_COLS: 3,         // 3x3 layout
     GRID_ROWS: 3,
     PADDING: 500,         // Outer grass padding boundary (500px = 5 tiles)
+    TOTAL_WIDTH: 3000,
+    TOTAL_HEIGHT: 3000,
 
     /**
      * Returns bounds for the city block at the specified [row, col] indices

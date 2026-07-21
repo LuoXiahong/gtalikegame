@@ -129,7 +129,7 @@ export const RenderSync3D = {
 
         } else if (ent.type === 'car') {
             const color = ent.visual?.color ? parseInt(ent.visual.color.replace('#', '0x')) : 0x1a1a1a;
-            const archetypeKey = pickArchetypeKey(ent.id);
+            const archetypeKey = ent.archetype || pickArchetypeKey(ent.id);
             group = createVehicleModel(color, archetypeKey);
         }
 

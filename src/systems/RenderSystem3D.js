@@ -158,8 +158,31 @@ export const RenderSystem3D = {
             this.camera.updateProjectionMatrix();
         });
 
+        const screenshotMode = new URLSearchParams(window.location.search).get('screenshot');
+        this.screenshotMode = screenshotMode;
+
         CityBuilder3D.buildCity(this);
         RoadBuilder3D.buildRoads(this);
+
+        if (screenshotMode) {
+            if (screenshotMode === 'street-intersection') {
+                this.screenshotScenario = { camera: { targetX: 1100, targetZ: 1100, zoom: 1.2 } };
+                RetroFilmSettings.applyPreset('classic');
+                TimeOfDaySettings.applyPreset('dusk');
+            } else if (screenshotMode === 'city-overview') {
+                this.screenshotScenario = { camera: { targetX: 1100, targetZ: 1100, zoom: 0.6 } };
+                RetroFilmSettings.applyPreset('noir');
+                TimeOfDaySettings.applyPreset('night');
+            } else if (screenshotMode === 'traffic-block') {
+                this.screenshotScenario = { camera: { targetX: 1150, targetZ: 1150, zoom: 1.5 } };
+                RetroFilmSettings.applyPreset('classic');
+                TimeOfDaySettings.applyPreset('day');
+            }
+            if (this.screenshotScenario) {
+                this.camera.zoom = this.screenshotScenario.camera.zoom;
+                this.camera.updateProjectionMatrix();
+            }
+        }
 
         // Apply saved/default TOD after lights + street lamps exist
         this.applyTimeOfDayImmediate(TimeOfDaySettings.get());
@@ -173,6 +196,8 @@ export const RenderSystem3D = {
         this.box5u.visible = false; // debug scale cube — keep out of play view
         this.scene.add(this.box5u);
     },
+
+    // Custom diorama builder removed, using real city instead
 
     createDashedLine(xStart, zStart, xEnd, zEnd, isVertical) {
         RoadBuilder3D.createDashedLine(this, xStart, zStart, xEnd, zEnd, isVertical);
@@ -386,12 +411,13 @@ export const RenderSystem3D = {
             speed = Math.abs(controlled.physics.speed || 0);
         }
         const speedRatio = Math.min(speed / 300, 1.0);
-        const targetZoom = baseZoom * (1.0 - 0.2 * speedRatio);
-
-        if (this.currentZoom === undefined) this.currentZoom = baseZoom;
-        this.currentZoom += (targetZoom - this.currentZoom) * 0.05;
-        this.camera.zoom = this.currentZoom;
-        this.camera.updateProjectionMatrix();
+        if (!this.screenshotMode) {
+            const targetZoom = baseZoom * (1.0 - 0.2 * speedRatio);
+            if (this.currentZoom === undefined) this.currentZoom = baseZoom;
+            this.currentZoom += (targetZoom - this.currentZoom) * 0.05;
+            this.camera.zoom = this.currentZoom;
+            this.camera.updateProjectionMatrix();
+        }
 
         const time = Date.now() * 0.001;
         this.box5u.position.x = (1500 + Math.sin(time) * 1000) * SF;
@@ -405,8 +431,13 @@ export const RenderSystem3D = {
             focusZ = controlled.transform.y;
         }
 
-        const sFocusX = focusX * SF;
-        const sFocusZ = focusZ * SF;
+        let sFocusX = focusX * SF;
+        let sFocusZ = focusZ * SF;
+
+        if (this.screenshotMode && this.screenshotScenario?.camera) {
+            sFocusX = this.screenshotScenario.camera.targetX * SF;
+            sFocusZ = this.screenshotScenario.camera.targetZ * SF;
+        }
 
         const tiltAngle = 35.264 * Math.PI / 180;
         const yawAngle = 45 * Math.PI / 180;
@@ -415,7 +446,6 @@ export const RenderSystem3D = {
         this.camera.position.x = sFocusX + Math.cos(yawAngle) * Math.cos(tiltAngle) * distance;
         this.camera.position.y = Math.sin(tiltAngle) * distance;
         this.camera.position.z = sFocusZ + Math.sin(yawAngle) * Math.cos(tiltAngle) * distance;
-
         this.camera.lookAt(sFocusX, 0, sFocusZ);
 
         RenderSync3D.update(this.scene);
@@ -423,7 +453,11 @@ export const RenderSystem3D = {
         this.updateTimeOfDay(Time.delta || 0.016);
 
         if (this.retroFilmPass && this.retroFilmPass.enabled && this.retroFilmPass.uniforms?.time) {
-            this.retroFilmPass.uniforms.time.value = performance.now() * 0.001;
+            if (this.screenshotMode) {
+                this.retroFilmPass.uniforms.time.value = 42.0; // static time for determinism
+            } else {
+                this.retroFilmPass.uniforms.time.value = performance.now() * 0.001;
+            }
         }
 
         if (this.composer) {

@@ -10,34 +10,7 @@ import { createPropAt, PROP_TYPES } from './PropFactory.js';
 export const CityBuilder3D = {
     buildCity(renderSystem) {
         const SF = WorldMetrics.SCALE_FACTOR;
-        const width = WorldGrid.TOTAL_WIDTH * SF;
-        const height = WorldGrid.TOTAL_HEIGHT * SF;
-
-        const groundGeom = new THREE.PlaneGeometry(width, height);
-        const groundMat = new THREE.MeshStandardMaterial({
-            color: 0x4a5a3a,
-            roughness: 0.95,
-            metalness: 0.0,
-            envMapIntensity: 0
-        });
-        renderSystem.groundPlane = new THREE.Mesh(groundGeom, groundMat);
-        renderSystem.groundPlane.rotation.x = -Math.PI / 2;
-        renderSystem.groundPlane.position.set(width / 2, 0, height / 2);
-        renderSystem.groundPlane.receiveShadow = true;
-        renderSystem.scene.add(renderSystem.groundPlane);
-
-        const asphaltGeom = new THREE.PlaneGeometry(width, height);
-        const asphaltMat = new THREE.MeshStandardMaterial({
-            color: 0x1e272e,
-            roughness: 0.95,
-            metalness: 0.0,
-            envMapIntensity: 0
-        });
-        renderSystem.asphaltPlane = new THREE.Mesh(asphaltGeom, asphaltMat);
-        renderSystem.asphaltPlane.rotation.x = -Math.PI / 2;
-        renderSystem.asphaltPlane.position.set(width / 2, 0.001, height / 2);
-        renderSystem.asphaltPlane.receiveShadow = true;
-        renderSystem.scene.add(renderSystem.asphaltPlane);
+        // Removed groundPlane and asphaltPlane to allow 2D tilemap to show through
 
         renderSystem.sidewalks = [];
         renderSystem.buildingZones = [];

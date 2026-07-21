@@ -75,13 +75,29 @@ export const Game = {
         OptionsOverlay.init();
         FilmGateOverlay.init();
 
-        this.spawnEntities();
+        this.screenshotMode = new URLSearchParams(window.location.search).get('screenshot');
+
+        if (!this.screenshotMode) {
+            this.spawnEntities();
+        } else {
+            // Still spawn entities for screenshots so cars/NPCs appear in the world
+            this.spawnEntities();
+            const uiElements = ['menuLayer', 'mobileHUD'];
+            uiElements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+        }
 
         if (this._onRestart) EventBus.off('game_restart', this._onRestart);
         this._onRestart = () => this.restart();
         EventBus.on('game_restart', this._onRestart);
 
-        GameState.setState(GAME_STATES.MENU);
+        if (this.screenshotMode) {
+            GameState.setState(GAME_STATES.PLAY);
+        } else {
+            GameState.setState(GAME_STATES.MENU);
+        }
 
         requestAnimationFrame((ts) => this.loop(ts));
     },
