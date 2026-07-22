@@ -33,6 +33,11 @@ const TIME_PRESET_IDS = [
     { id: 'night', labelKey: 'options.time.night' },
 ];
 
+const WEATHER_PRESET_IDS = [
+    { id: 'clear', labelKey: 'options.weather.clear' },
+    { id: 'rain', labelKey: 'options.weather.rain' },
+];
+
 const CSS = `
 #optionsBackdrop {
     position: fixed;
@@ -318,6 +323,26 @@ export const OptionsOverlay = {
             this._timePresetBtns.push(btn);
         });
 
+        const weatherSection = document.createElement('div');
+        weatherSection.className = 'options-section';
+        this._sectionEls.weather = weatherSection;
+
+        const weatherPresets = document.createElement('div');
+        weatherPresets.className = 'options-presets';
+        this._weatherPresetBtns = [];
+        WEATHER_PRESET_IDS.forEach(({ id, labelKey }) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.dataset.weather = id;
+            btn.dataset.labelKey = labelKey;
+            btn.addEventListener('click', () => {
+                TimeOfDaySettings.applyWeather(id);
+                this._syncWeatherPresetButtons();
+            });
+            weatherPresets.appendChild(btn);
+            this._weatherPresetBtns.push(btn);
+        });
+
         // --- Retro ---
         const filmSection = document.createElement('div');
         filmSection.className = 'options-section';
@@ -346,6 +371,8 @@ export const OptionsOverlay = {
         panel.appendChild(debugToggle);
         panel.appendChild(timeSection);
         panel.appendChild(timePresets);
+        panel.appendChild(weatherSection);
+        panel.appendChild(weatherPresets);
         panel.appendChild(filmSection);
         panel.appendChild(toggleRow);
 
@@ -435,6 +462,7 @@ export const OptionsOverlay = {
         if (this._sectionEls.controls) this._sectionEls.controls.textContent = I18n.t('options.section.controls');
         if (this._sectionEls.dev) this._sectionEls.dev.textContent = I18n.t('options.section.dev');
         if (this._sectionEls.time) this._sectionEls.time.textContent = I18n.t('options.time.title');
+        if (this._sectionEls.weather) this._sectionEls.weather.textContent = I18n.t('options.weather.title');
         if (this._sectionEls.film) this._sectionEls.film.textContent = I18n.t('options.section.film');
 
         if (this._labelEls.onscreen) this._labelEls.onscreen.textContent = I18n.t('options.onscreen');
@@ -452,7 +480,11 @@ export const OptionsOverlay = {
         (this._timePresetBtns || []).forEach((btn) => {
             btn.textContent = I18n.t(btn.dataset.labelKey);
         });
+        (this._weatherPresetBtns || []).forEach((btn) => {
+            btn.textContent = I18n.t(btn.dataset.labelKey);
+        });
         this._syncTimePresetButtons();
+        this._syncWeatherPresetButtons();
         if (this._localeEl) {
             this._localeEl.value = I18n.getLocale();
         }
@@ -461,6 +493,12 @@ export const OptionsOverlay = {
     _syncTimePresetButtons() {
         (this._timePresetBtns || []).forEach((btn) => {
             btn.classList.toggle('active', btn.dataset.preset === TimeOfDaySettings.current);
+        });
+    },
+
+    _syncWeatherPresetButtons() {
+        (this._weatherPresetBtns || []).forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.weather === TimeOfDaySettings.weather);
         });
     },
 

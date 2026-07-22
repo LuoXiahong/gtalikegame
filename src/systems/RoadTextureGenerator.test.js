@@ -6,6 +6,7 @@ describe('RoadTextureGenerator', () => {
     beforeEach(() => {
         RoadTextureGenerator.textures.clear();
         RoadTextureGenerator.roughnessTextures.clear();
+        RoadTextureGenerator._wetness = 'clear';
     });
 
     it('should initialize and populate textures', () => {
@@ -32,5 +33,14 @@ describe('RoadTextureGenerator', () => {
         expect(roughness).toBeInstanceOf(THREE.CanvasTexture);
         expect(albedo.userData.wetPatches).toBeDefined();
         expect(albedo.userData.wetPatches.length).toBeGreaterThan(0);
+    });
+
+    it('setWetness increases wet patch count for rain', () => {
+        RoadTextureGenerator.init();
+        const clearCount = RoadTextureGenerator.getTexture('straight').userData.wetPatches.length;
+        RoadTextureGenerator.setWetness('rain');
+        const rainCount = RoadTextureGenerator.getTexture('straight').userData.wetPatches.length;
+        expect(rainCount).toBeGreaterThan(clearCount);
+        expect(RoadTextureGenerator._wetness).toBe('rain');
     });
 });

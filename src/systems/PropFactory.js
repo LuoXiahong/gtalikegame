@@ -3,6 +3,7 @@
  */
 import * as THREE from 'three';
 import { WorldMetrics } from '../world/WorldMetrics.js';
+import { STREET_LIGHT_BASE } from './RenderSystem3D.js';
 
 export const PROP_TYPES = ['lampPost', 'hydrant', 'bench', 'kiosk'];
 
@@ -77,11 +78,11 @@ function addLampPost(group) {
     group.add(globe);
 
     // Subtle warm pool on the sidewalk
-    const light = new THREE.PointLight(0xffb84d, 0.7, 10, 2);
+    const light = new THREE.PointLight(0xffb84d, STREET_LIGHT_BASE, 18, 2);
     light.position.copy(globe.position);
     light.castShadow = false;
     light.userData.isStreetLight = true;
-    light.userData.baseIntensity = 0.7;
+    light.userData.baseIntensity = STREET_LIGHT_BASE;
     group.add(light);
 }
 

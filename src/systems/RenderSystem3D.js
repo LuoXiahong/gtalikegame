@@ -8,32 +8,32 @@
  * world3D.y represents vertical height.
  */
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { World } from '../world/World.js';
-import { WorldGrid } from '../world/WorldGrid.js';
-import { RenderSync3D } from './RenderSync3D.js';
-import { FacadeGenerator } from './FacadeGenerator.js';
-import { RoadTextureGenerator } from './RoadTextureGenerator.js';
-import { WorldMetrics } from '../world/WorldMetrics.js';
 import { InputSystem } from '../input/InputManager.js';
-import { VehicleSystem } from './VehicleSystem.js';
+import { World } from '../world/World.js';
+import { WorldMetrics } from '../world/WorldMetrics.js';
 import { getContactShadowTexture } from './ContactShadow.js';
+import { FacadeGenerator } from './FacadeGenerator.js';
+import { RenderSync3D } from './RenderSync3D.js';
+import { RoadTextureGenerator } from './RoadTextureGenerator.js';
+import { VehicleSystem } from './VehicleSystem.js';
 
-import { TiltShiftShader } from './TiltShiftShader.js';
-import { RetroFilmShader } from './RetroFilmShader.js';
-import { RetroFilmSettings } from './RetroFilmSettings.js';
-import { TimeOfDaySettings } from './TimeOfDaySettings.js';
 import { EventBus } from '../core/EventBus.js';
 import { Time } from '../core/Time.js';
 import { CityBuilder3D } from './CityBuilder3D.js';
+import { RetroFilmSettings } from './RetroFilmSettings.js';
+import { RetroFilmShader } from './RetroFilmShader.js';
 import { RoadBuilder3D } from './RoadBuilder3D.js';
+import { RainSystem } from './RainSystem.js';
+import { TiltShiftShader } from './TiltShiftShader.js';
+import { TimeOfDaySettings } from './TimeOfDaySettings.js';
 
 /** Base PointLight intensity from PropFactory lamp posts. */
-const STREET_LIGHT_BASE = 0.7;
+export const STREET_LIGHT_BASE = 1000;
 const TOD_TRANSITION_SEC = 1.5;
 
 export const RenderSystem3D = {
@@ -44,10 +44,15 @@ export const RenderSystem3D = {
     tiltShiftPass: null,
     retroFilmPass: null,
     isZoomedIn: false,
+    currentZoom: 1,
     _todFrom: null,
     _todTo: null,
     _todT: 1,
     _streetLightMult: 0,
+    _gradingDesat: 0,
+    _gradingTint: null,
+    _baseFogNear: 60,
+    _baseFogFar: 220,
 
     // Environment meshes
     groundPlane: null,
@@ -95,6 +100,7 @@ export const RenderSystem3D = {
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 0.72;   // darkens overall before light tweaks
         this.renderer.setSize(width, height, false);
         const clearColor = 0x000000;
         this.renderer.setClearColor(clearColor, 1.0);
@@ -134,6 +140,7 @@ export const RenderSystem3D = {
 
         EventBus.on('retro_settings_change', () => this.applyRetroSettings());
         EventBus.on('time_of_day_change', () => this.startTimeOfDayTransition());
+        EventBus.on('weather_change', (weather) => this._onWeatherChange(weather));
 
         const outputPass = new OutputPass();
         this.composer.addPass(outputPass);
@@ -173,6 +180,7 @@ export const RenderSystem3D = {
                 this.screenshotScenario = { camera: { targetX: 1100, targetZ: 1100, zoom: 0.6 } };
                 RetroFilmSettings.applyPreset('noir');
                 TimeOfDaySettings.applyPreset('night');
+                TimeOfDaySettings.applyWeather('rain');
             } else if (screenshotMode === 'traffic-block') {
                 this.screenshotScenario = { camera: { targetX: 1150, targetZ: 1150, zoom: 1.5 } };
                 RetroFilmSettings.applyPreset('classic');
@@ -186,6 +194,9 @@ export const RenderSystem3D = {
 
         // Apply saved/default TOD after lights + street lamps exist
         this.applyTimeOfDayImmediate(TimeOfDaySettings.get());
+        RainSystem.init(this.scene);
+        RainSystem.setActive(TimeOfDaySettings.isRaining());
+        RoadTextureGenerator.setWetness(TimeOfDaySettings.weather);
 
         // Scale/movement validation cube
         const SF = WorldMetrics.SCALE_FACTOR;
@@ -237,7 +248,43 @@ export const RenderSystem3D = {
     applyRetroSettings() {
         if (!this.retroFilmPass) return;
         RetroFilmSettings.applyToUniforms(this.retroFilmPass.uniforms);
-        this.retroFilmPass.enabled = RetroFilmSettings.isActive();
+        // Keep pass enabled so time-of-day grading runs even when film intensity is 0.
+        this.retroFilmPass.enabled = true;
+        this._applyGradingUniforms();
+    },
+
+    _applyGradingUniforms() {
+        if (!this.retroFilmPass?.uniforms) return;
+        const u = this.retroFilmPass.uniforms;
+        if (u.todDesaturation) {
+            u.todDesaturation.value = this._gradingDesat ?? 0;
+        }
+        if (u.todTint && this._gradingTint) {
+            const v = u.todTint.value;
+            if (v && typeof v.set === 'function') {
+                v.set(this._gradingTint.r, this._gradingTint.g, this._gradingTint.b);
+            } else if (Array.isArray(v)) {
+                v[0] = this._gradingTint.r;
+                v[1] = this._gradingTint.g;
+                v[2] = this._gradingTint.b;
+            }
+        }
+    },
+
+    _applyGradingFromPreset(preset) {
+        if (!preset?.grading) return;
+        this._gradingDesat = preset.grading.desaturation;
+        if (!this._gradingTint) {
+            this._gradingTint = new THREE.Color(preset.grading.tint);
+        } else {
+            this._gradingTint.setHex(preset.grading.tint);
+        }
+        this._applyGradingUniforms();
+    },
+
+    _onWeatherChange(weather) {
+        RainSystem.setActive(weather === 'rain');
+        RoadTextureGenerator.setWetness(weather);
     },
 
     startTimeOfDayTransition() {
@@ -263,10 +310,16 @@ export const RenderSystem3D = {
         this.sunLight.color.setHex(preset.sun.color);
         this.sunLight.intensity = preset.sun.intensity;
 
+        if (this.rimLight && preset.rim) {
+            this.rimLight.color.setHex(preset.rim.color);
+            this.rimLight.intensity = preset.rim.intensity;
+        }
+
         if (this.scene.fog) {
             this.scene.fog.color.setHex(preset.fog.color);
-            this.scene.fog.near = preset.fog.near;
-            this.scene.fog.far = preset.fog.far;
+            this._baseFogNear = preset.fog.near;
+            this._baseFogFar = preset.fog.far;
+            this._applyFogForCurrentZoom();
         }
         if (this.renderer) {
             this.renderer.setClearColor(preset.fog.color, 1.0);
@@ -274,8 +327,24 @@ export const RenderSystem3D = {
 
         this._streetLightMult = preset.streetLightMultiplier;
         this._applyStreetLightMultiplier(this._streetLightMult);
+        this._applyGradingFromPreset(preset);
         this._todTo = null;
         this._todT = 1;
+    },
+
+    /**
+     * Apply base fog distances scaled by the live camera zoom.
+     * Zoom already lerps each frame, so fog follows smoothly.
+     */
+    _applyFogForCurrentZoom() {
+        if (!this.scene?.fog) return;
+        const zoom = this.camera?.zoom ?? this.currentZoom ?? 1;
+        const scaled = TimeOfDaySettings.fogAtZoom(
+            { color: 0, near: this._baseFogNear, far: this._baseFogFar },
+            zoom,
+        );
+        this.scene.fog.near = scaled.near;
+        this.scene.fog.far = scaled.far;
     },
 
     _captureLightingSnapshot() {
@@ -295,10 +364,18 @@ export const RenderSystem3D = {
             },
             fog: {
                 color: this.scene.fog.color.clone(),
-                near: this.scene.fog.near,
-                far: this.scene.fog.far,
+                near: this._baseFogNear,
+                far: this._baseFogFar,
             },
             streetMult: this._streetLightMult,
+            grading: {
+                desaturation: this._gradingDesat ?? 0,
+                tint: (this._gradingTint ?? new THREE.Color(0xffffff)).clone(),
+            },
+            rim: {
+                color: this.rimLight?.color.clone() ?? new THREE.Color(0xa8b8d8),
+                intensity: this.rimLight?.intensity ?? 0,
+            },
         };
     },
 
@@ -327,9 +404,15 @@ export const RenderSystem3D = {
         this.sunLight.color.copy(from.sun.color).lerp(new THREE.Color(to.sun.color), t);
         this.sunLight.intensity = THREE.MathUtils.lerp(from.sun.intensity, to.sun.intensity, t);
 
+        if (this.rimLight && to.rim) {
+            this.rimLight.color.copy(from.rim.color).lerp(new THREE.Color(to.rim.color), t);
+            this.rimLight.intensity = THREE.MathUtils.lerp(from.rim.intensity, to.rim.intensity, t);
+        }
+
         this.scene.fog.color.copy(from.fog.color).lerp(new THREE.Color(to.fog.color), t);
-        this.scene.fog.near = THREE.MathUtils.lerp(from.fog.near, to.fog.near, t);
-        this.scene.fog.far = THREE.MathUtils.lerp(from.fog.far, to.fog.far, t);
+        this._baseFogNear = THREE.MathUtils.lerp(from.fog.near, to.fog.near, t);
+        this._baseFogFar = THREE.MathUtils.lerp(from.fog.far, to.fog.far, t);
+        this._applyFogForCurrentZoom();
         if (this.renderer) {
             this.renderer.setClearColor(this.scene.fog.color, 1.0);
         }
@@ -337,6 +420,15 @@ export const RenderSystem3D = {
         const mult = THREE.MathUtils.lerp(from.streetMult ?? 0, to.streetLightMultiplier, t);
         this._streetLightMult = mult;
         this._applyStreetLightMultiplier(mult);
+
+        if (to.grading) {
+            const fromDesat = from.grading?.desaturation ?? 0;
+            const fromTint = from.grading?.tint ?? new THREE.Color(0xffffff);
+            this._gradingDesat = THREE.MathUtils.lerp(fromDesat, to.grading.desaturation, t);
+            if (!this._gradingTint) this._gradingTint = new THREE.Color();
+            this._gradingTint.copy(fromTint).lerp(new THREE.Color(to.grading.tint), t);
+            this._applyGradingUniforms();
+        }
 
         if (this._todT >= 1) {
             this._todTo = null;
@@ -381,6 +473,14 @@ export const RenderSystem3D = {
 
         this.scene.add(sun);
         this.sunLight = sun;
+
+        const rim = new THREE.DirectionalLight(0xa8b8d8, 0);
+        rim.castShadow = false;
+        rim.position.set(0, 400 * SF, 0);
+        rim.target.position.set(1500 * SF, 0, 1500 * SF);
+        this.scene.add(rim.target);
+        this.scene.add(rim);
+        this.rimLight = rim;
     },
 
     /**
@@ -413,11 +513,11 @@ export const RenderSystem3D = {
         const speedRatio = Math.min(speed / 300, 1.0);
         if (!this.screenshotMode) {
             const targetZoom = baseZoom * (1.0 - 0.2 * speedRatio);
-            if (this.currentZoom === undefined) this.currentZoom = baseZoom;
             this.currentZoom += (targetZoom - this.currentZoom) * 0.05;
             this.camera.zoom = this.currentZoom;
             this.camera.updateProjectionMatrix();
         }
+        this._applyFogForCurrentZoom();
 
         const time = Date.now() * 0.001;
         this.box5u.position.x = (1500 + Math.sin(time) * 1000) * SF;
@@ -448,9 +548,31 @@ export const RenderSystem3D = {
         this.camera.position.z = sFocusZ + Math.sin(yawAngle) * Math.cos(tiltAngle) * distance;
         this.camera.lookAt(sFocusX, 0, sFocusZ);
 
+        if (this.rimLight) {
+            const camToFocusX = sFocusX - this.camera.position.x;
+            const camToFocusZ = sFocusZ - this.camera.position.z;
+            const len = Math.hypot(camToFocusX, camToFocusZ) || 1;
+            const backX = -camToFocusX / len;
+            const backZ = -camToFocusZ / len;
+            const rimDist = 280 * SF;
+            const rimHeight = 180 * SF;
+            this.rimLight.position.set(
+                sFocusX + backX * rimDist,
+                rimHeight,
+                sFocusZ + backZ * rimDist,
+            );
+            this.rimLight.target.position.set(sFocusX, 40 * SF, sFocusZ);
+            this.rimLight.target.updateMatrixWorld();
+        }
+
         RenderSync3D.update(this.scene);
 
         this.updateTimeOfDay(Time.delta || 0.016);
+
+        const rainZoom = this.camera?.zoom ?? this.currentZoom ?? 1;
+        const rainAspect = (this.camera.right - this.camera.left)
+            / Math.max(this.camera.top - this.camera.bottom, 0.001);
+        RainSystem.update(Time.delta || 0.016, sFocusX, sFocusZ, rainZoom, rainAspect);
 
         if (this.retroFilmPass && this.retroFilmPass.enabled && this.retroFilmPass.uniforms?.time) {
             if (this.screenshotMode) {

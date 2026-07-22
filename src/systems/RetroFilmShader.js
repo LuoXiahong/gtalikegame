@@ -16,6 +16,8 @@ export const RetroFilmShader = {
         sepia: { value: 0.35 },
         contrast: { value: 0.15 },
         fps: { value: 18.0 },
+        todDesaturation: { value: 0.0 },
+        todTint: { value: [1.0, 1.0, 1.0] },
     },
     vertexShader: `
         varying vec2 vUv;
@@ -37,6 +39,8 @@ export const RetroFilmShader = {
         uniform float sepia;
         uniform float contrast;
         uniform float fps;
+        uniform float todDesaturation;
+        uniform vec3 todTint;
         varying vec2 vUv;
 
         float hash(vec2 p) {
@@ -59,11 +63,9 @@ export const RetroFilmShader = {
 
         void main() {
             vec4 raw = texture2D(tDiffuse, vUv);
-            if (intensity < 0.001) {
-                gl_FragColor = raw;
-                return;
-            }
+            vec3 col = raw.rgb;
 
+            if (intensity >= 0.001) {
             float i = intensity;
             float frame = floor(time * max(fps, 1.0));
 
@@ -80,7 +82,7 @@ export const RetroFilmShader = {
             }
             uv = clamp(uv, vec2(0.001), vec2(0.999));
 
-            vec3 col = texture2D(tDiffuse, uv).rgb;
+            col = texture2D(tDiffuse, uv).rgb;
 
             // Warm tint only — keep character colors (max ~55% sepia mix)
             float sepMix = sepia * i * 0.55;
@@ -172,7 +174,16 @@ export const RetroFilmShader = {
                 col = mix(col, vec3(0.0), hole * holeX * i);
             }
 
-            gl_FragColor = vec4(mix(raw.rgb, clamp(col, 0.0, 1.0), i), raw.a);
+            col = mix(raw.rgb, clamp(col, 0.0, 1.0), i);
+            }
+
+            // Time-of-day cool grading — always applied (even when film intensity is 0)
+            float luma = dot(col, vec3(0.299, 0.587, 0.114));
+            col = mix(col, vec3(luma), todDesaturation);
+            vec3 tinted = col * todTint;
+            col = mix(col, tinted, min(1.0, todDesaturation * 0.65 + 0.12));
+
+            gl_FragColor = vec4(clamp(col, 0.0, 1.0), raw.a);
         }
     `
 };

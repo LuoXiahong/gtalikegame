@@ -152,7 +152,7 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.scene.environment).toBeDefined();
         expect(RenderSystem3D.composer).toBeDefined();
         expect(RenderSystem3D.ambientLight.intensity).toBeCloseTo(0.42);
-        expect(RenderSystem3D._streetLightMult).toBeCloseTo(0.6);
+        expect(RenderSystem3D._streetLightMult).toBeCloseTo(1.0);
         expect(RenderSystem3D.tiltShiftPass).toBeDefined();
         expect(RenderSystem3D.retroFilmPass).toBeDefined();
         expect(RenderSystem3D.retroFilmPass.uniforms.intensity).toBeDefined();
@@ -209,7 +209,7 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.renderer.render).toHaveBeenCalled();
     });
 
-    it('should sync retro film pass with settings and disable when off', () => {
+    it('should sync retro film pass with settings while keeping pass enabled for grading', () => {
         RenderSystem3D.init();
         expect(RenderSystem3D.retroFilmPass.enabled).toBe(true);
         expect(RenderSystem3D.retroFilmPass.uniforms.sepia.value).toBeCloseTo(0.35);
@@ -217,7 +217,7 @@ describe('RenderSystem3D', () => {
         RetroFilmSettings.applyPreset('off');
         EventBus.emit('retro_settings_change', RetroFilmSettings.toJSON());
 
-        expect(RenderSystem3D.retroFilmPass.enabled).toBe(false);
+        expect(RenderSystem3D.retroFilmPass.enabled).toBe(true);
         expect(RenderSystem3D.retroFilmPass.uniforms.intensity.value).toBe(0);
 
         RetroFilmSettings.applyPreset('subtle');
@@ -237,15 +237,32 @@ describe('RenderSystem3D', () => {
         // Halfway through 1.5s transition
         RenderSystem3D.updateTimeOfDay(0.75);
         expect(RenderSystem3D._todT).toBeCloseTo(0.5);
-        expect(RenderSystem3D.ambientLight.intensity).toBeGreaterThan(0.22);
+        expect(RenderSystem3D.ambientLight.intensity).toBeGreaterThan(0.10);
         expect(RenderSystem3D.ambientLight.intensity).toBeLessThan(0.42);
 
         // Finish transition
         RenderSystem3D.updateTimeOfDay(1.0);
         expect(RenderSystem3D._todTo).toBeNull();
-        expect(RenderSystem3D.ambientLight.intensity).toBeCloseTo(0.22);
-        expect(RenderSystem3D.scene.fog.near).toBe(40);
-        expect(RenderSystem3D._streetLightMult).toBeCloseTo(1.0);
+        expect(RenderSystem3D.ambientLight.intensity).toBeCloseTo(0.10);
+        expect(RenderSystem3D.scene.fog.near).toBe(30);
+        expect(RenderSystem3D._streetLightMult).toBeCloseTo(3.4);
+    });
+
+    it('should scale fog near/far with camera zoom', () => {
+        RenderSystem3D.init();
+        // dusk base: near 60, far 220 at zoom 1
+        expect(RenderSystem3D.scene.fog.near).toBe(60);
+        expect(RenderSystem3D.scene.fog.far).toBe(220);
+
+        RenderSystem3D.camera.zoom = 2;
+        RenderSystem3D._applyFogForCurrentZoom();
+        expect(RenderSystem3D.scene.fog.near).toBeCloseTo(63);
+        expect(RenderSystem3D.scene.fog.far).toBeCloseTo(231);
+
+        RenderSystem3D.camera.zoom = 0.5;
+        RenderSystem3D._applyFogForCurrentZoom();
+        expect(RenderSystem3D.scene.fog.near).toBeCloseTo(58.5);
+        expect(RenderSystem3D.scene.fog.far).toBeCloseTo(214.5);
     });
 
     it('should create custom building types via createBuilding', () => {

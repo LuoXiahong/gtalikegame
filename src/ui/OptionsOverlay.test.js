@@ -155,6 +155,20 @@ describe('OptionsOverlay', () => {
         expect(nightBtn.classList.contains('active')).toBe(true);
     });
 
+    it('should switch weather presets and mark active button', () => {
+        const spy = vi.fn();
+        EventBus.on('weather_change', spy);
+
+        const rainBtn = [...document.querySelectorAll('.options-presets button')]
+            .find((b) => b.dataset.weather === 'rain');
+        expect(rainBtn).toBeDefined();
+        rainBtn.click();
+
+        expect(TimeOfDaySettings.weather).toBe('rain');
+        expect(spy).toHaveBeenCalledWith('rain');
+        expect(rainBtn.classList.contains('active')).toBe(true);
+    });
+
     it('should apply off preset from button', () => {
         const btn = document.querySelector('[data-preset="off"]');
         expect(btn).toBeTruthy();

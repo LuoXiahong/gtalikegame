@@ -6,6 +6,7 @@ import * as THREE from 'three';
 export const RoadTextureGenerator = {
     textures: new Map(),
     roughnessTextures: new Map(),
+    _wetness: 'clear',
 
     init() {
         if (this.textures.size > 0) return;
@@ -15,6 +16,87 @@ export const RoadTextureGenerator = {
         this.roughnessTextures.set('straight', this.createRoughnessTexture('straight'));
         this.roughnessTextures.set('intersection', this.createRoughnessTexture('intersection'));
         this.roughnessTextures.set('crosswalk', this.createRoughnessTexture('crosswalk'));
+    },
+
+    setWetness(weather) {
+        const wetness = weather === 'rain' ? 'rain' : 'clear';
+        if (this._wetness === wetness && this.textures.size > 0) return;
+        this._wetness = wetness;
+        if (this.textures.size === 0) return;
+
+        for (const type of ['straight', 'intersection', 'crosswalk']) {
+            this._rebakeAlbedo(type);
+            this._rebakeRoughness(type);
+        }
+    },
+
+    _wetPatchCount(type) {
+        const base = type === 'crosswalk' ? 2 : 4;
+        return this._wetness === 'rain' ? base * 2 : base;
+    },
+
+    _rebakeAlbedo(type) {
+        const texture = this.textures.get(type);
+        if (!texture?.image) return;
+        const patches = this.generateWetPatches(this._wetPatchCount(type));
+        texture.userData = texture.userData || {};
+        texture.userData.wetPatches = patches;
+
+        const canvas = texture.image;
+        const ctx = canvas.getContext ? canvas.getContext('2d') : null;
+        if (!ctx) {
+            texture.needsUpdate = true;
+            return;
+        }
+
+        if (type === 'crosswalk') {
+            ctx.clearRect(0, 0, 512, 512);
+            this.drawCrosswalk(ctx);
+        } else {
+            ctx.fillStyle = '#222428';
+            ctx.fillRect(0, 0, 512, 512);
+            this.addAsphaltNoise(ctx, 512, 512);
+
+            if (type === 'straight') {
+                this.drawStraightRoad(ctx, true);
+                this.applyAsphaltDirt(ctx, false);
+            } else if (type === 'intersection') {
+                this.drawIntersection(ctx);
+                this.applyCornerDirt(ctx);
+            }
+
+            this.addWetPatchesAlbedo(ctx, patches);
+        }
+
+        texture.needsUpdate = true;
+    },
+
+    _rebakeRoughness(type) {
+        const albedo = this.textures.get(type);
+        const texture = this.roughnessTextures.get(type);
+        if (!texture?.image || !albedo) return;
+        const patches = (albedo.userData && albedo.userData.wetPatches)
+            || this.generateWetPatches(this._wetPatchCount(type));
+
+        const canvas = texture.image;
+        const ctx = canvas.getContext ? canvas.getContext('2d') : null;
+        if (!ctx) return;
+
+        ctx.fillStyle = '#e6e6e6';
+        ctx.fillRect(0, 0, 512, 512);
+
+        for (let i = 0; i < 200; i++) {
+            const rx = Math.random() * 512;
+            const ry = Math.random() * 512;
+            const v = 200 + Math.floor(Math.random() * 40);
+            ctx.fillStyle = `rgb(${v},${v},${v})`;
+            ctx.beginPath();
+            ctx.arc(rx, ry, 8 + Math.random() * 20, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        this.addWetPatchesRoughness(ctx, patches);
+        texture.needsUpdate = true;
     },
 
     getTexture(type) {
@@ -33,15 +115,17 @@ export const RoadTextureGenerator = {
 
     /** Sparse subtle wet stains (albedo + mild roughness only — no mirror puddles). */
     generateWetPatches(count = 3) {
+        const scale = this._wetness === 'rain' ? 1.5 : 1.0;
+        const darkBias = this._wetness === 'rain' ? 0.82 : 0.65;
         const patches = [];
         for (let i = 0; i < count; i++) {
             patches.push({
                 x: 40 + Math.random() * 432,
                 y: 40 + Math.random() * 432,
-                rx: 12 + Math.random() * 22,
-                ry: 8 + Math.random() * 16,
+                rx: (12 + Math.random() * 22) * scale,
+                ry: (8 + Math.random() * 16) * scale,
                 rot: Math.random() * Math.PI,
-                dark: Math.random() < 0.65
+                dark: Math.random() < darkBias
             });
         }
         return patches;
@@ -52,7 +136,7 @@ export const RoadTextureGenerator = {
         canvas.width = 512;
         canvas.height = 512;
         const ctx = canvas.getContext ? canvas.getContext('2d') : null;
-        const patches = this.generateWetPatches(type === 'crosswalk' ? 2 : 4);
+        const patches = this.generateWetPatches(this._wetPatchCount(type));
 
         if (ctx) {
             if (type === 'crosswalk') {

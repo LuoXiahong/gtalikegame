@@ -13,9 +13,11 @@ describe('RetroFilmShader', () => {
     });
 
     it('should include intensity early-out and shadow-lift friendly grading', () => {
-        expect(RetroFilmShader.fragmentShader).toContain('intensity < 0.001');
+        expect(RetroFilmShader.fragmentShader).toContain('intensity >= 0.001');
         expect(RetroFilmShader.fragmentShader).toContain('shadow lift');
         expect(RetroFilmShader.fragmentShader).toContain('max(0.78, flick)');
+        expect(RetroFilmShader.fragmentShader).toContain('todDesaturation');
+        expect(RetroFilmShader.fragmentShader).toContain('todTint');
         expect(RetroFilmShader.uniforms.intensity.value).toBe(1.0);
     });
 
@@ -30,6 +32,7 @@ describe('RetroFilmShader', () => {
         const keys = [
             'tDiffuse', 'time', 'intensity', 'vignette', 'flicker', 'jitter',
             'grain', 'scratches', 'dust', 'sepia', 'contrast', 'fps',
+            'todDesaturation', 'todTint',
         ];
         keys.forEach((k) => {
             expect(RetroFilmShader.uniforms[k]).toBeDefined();
