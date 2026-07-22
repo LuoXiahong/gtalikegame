@@ -167,7 +167,7 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.scene.environment).toBeDefined();
         expect(RenderSystem3D.composer).toBeDefined();
         expect(RenderSystem3D.ambientLight.intensity).toBeCloseTo(0.10);
-        expect(RenderSystem3D._streetLightMult).toBeCloseTo(3.4);
+        expect(RenderSystem3D._streetLightMult).toBeCloseTo(2.2);
         expect(RenderSystem3D.tiltShiftPass).toBeDefined();
         expect(RenderSystem3D.retroFilmPass).toBeDefined();
         expect(RenderSystem3D.retroFilmPass.uniforms.intensity).toBeDefined();
@@ -192,10 +192,10 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.trees.length).toBeGreaterThanOrEqual(18);
         expect(RenderSystem3D.trees.length).toBeLessThanOrEqual(25);
         expect(RenderSystem3D.billboards.length).toBe(2);
-        expect(RenderSystem3D.props.length).toBeGreaterThanOrEqual(18);
-        expect(RenderSystem3D.props.length).toBeLessThanOrEqual(22);
+        expect(RenderSystem3D.props.length).toBeGreaterThanOrEqual(70);
         expect(RenderSystem3D.streetLights.length).toBeGreaterThan(0);
-        expect(RenderSystem3D.streetLights.length).toBeLessThanOrEqual(16);
+        // Deterministic lamps: 9 blocks × 8 edge samples (corners + mids)
+        expect(RenderSystem3D.streetLights.length).toBe(72);
         expect(RenderSystem3D.box5u.visible).toBe(false);
     });
 

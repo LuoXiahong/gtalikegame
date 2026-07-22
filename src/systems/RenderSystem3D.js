@@ -34,7 +34,7 @@ import { TiltShiftShader } from './TiltShiftShader.js';
 import { TimeOfDaySettings } from './TimeOfDaySettings.js';
 
 /** Base PointLight intensity from PropFactory lamp posts. */
-export const STREET_LIGHT_BASE = 1000;
+export const STREET_LIGHT_BASE = 550;
 const TOD_TRANSITION_SEC = 1.5;
 /** Soft lamp/emissive glow — high threshold so white zebra paint does not bloom. */
 export const BLOOM_STRENGTH = 0.18;
@@ -103,14 +103,21 @@ export const RenderSystem3D = {
         const width = parent.clientWidth || 800;
         const height = parent.clientHeight || 600;
 
-        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        const screenshotMode = new URLSearchParams(window.location.search).get('screenshot');
+        this.screenshotMode = screenshotMode;
+        this.renderer = new THREE.WebGLRenderer({
+            canvas,
+            antialias: true,
+            powerPreference: 'high-performance',
+        });
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, screenshotMode ? 1 : 1.5));
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 0.72;   // darkens overall before light tweaks
         this.renderer.setSize(width, height, false);
         const clearColor = 0x000000;
         this.renderer.setClearColor(clearColor, 1.0);
-        this.renderer.shadowMap.enabled = true;
+        // Shadows are expensive; skip in screenshot captures
+        this.renderer.shadowMap.enabled = !screenshotMode;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.info.autoReset = false;
 
@@ -182,27 +189,18 @@ export const RenderSystem3D = {
             this.camera.updateProjectionMatrix();
         });
 
-        const screenshotMode = new URLSearchParams(window.location.search).get('screenshot');
-        this.screenshotMode = screenshotMode;
-
         CityBuilder3D.buildCity(this);
         RoadBuilder3D.buildRoads(this);
 
-        if (screenshotMode) {
-            if (screenshotMode === 'street-intersection') {
+        if (this.screenshotMode) {
+            // Screenshots are night + rain + noir only (see screenshotScenarios.js)
+            RetroFilmSettings.applyPreset('noir');
+            TimeOfDaySettings.applyPreset('night');
+            TimeOfDaySettings.applyWeather('rain');
+            if (this.screenshotMode === 'street-intersection') {
                 this.screenshotScenario = { camera: { targetX: 1100, targetZ: 1100, zoom: 1.2 } };
-                RetroFilmSettings.applyPreset('noir');
-                TimeOfDaySettings.applyPreset('night');
-                TimeOfDaySettings.applyWeather('rain');
-            } else if (screenshotMode === 'city-overview') {
+            } else if (this.screenshotMode === 'city-overview') {
                 this.screenshotScenario = { camera: { targetX: 1100, targetZ: 1100, zoom: 0.6 } };
-                RetroFilmSettings.applyPreset('noir');
-                TimeOfDaySettings.applyPreset('night');
-                TimeOfDaySettings.applyWeather('rain');
-            } else if (screenshotMode === 'traffic-block') {
-                this.screenshotScenario = { camera: { targetX: 1150, targetZ: 1150, zoom: 1.5 } };
-                RetroFilmSettings.applyPreset('classic');
-                TimeOfDaySettings.applyPreset('day');
             }
             if (this.screenshotScenario) {
                 this.camera.zoom = this.screenshotScenario.camera.zoom;
@@ -216,6 +214,15 @@ export const RenderSystem3D = {
         RainSystem.setActive(TimeOfDaySettings.isRaining());
         const roadMeshes = [...(this.laneMarkings || []), ...(this.zebras || [])];
         RoadTextureGenerator.setWetness(TimeOfDaySettings.weather, roadMeshes);
+
+        if (this.screenshotMode) {
+            // Signal capture script as soon as the scene exists (2 frames for composer settle)
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    window.__SCREENSHOT_READY__ = true;
+                });
+            });
+        }
 
         // Scale/movement validation cube
         const SF = WorldMetrics.SCALE_FACTOR;

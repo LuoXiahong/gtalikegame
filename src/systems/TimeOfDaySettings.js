@@ -37,7 +37,7 @@ export const TIME_PRESETS = {
         hemi: { sky: 0x2a2e42, ground: 0x141210, intensity: 0.12 },
         sun: { color: 0x6a7ba8, intensity: 0.06 },
         fog: { color: 0x0e0e12, near: 30, far: 160 },
-        streetLightMultiplier: 3.4,
+        streetLightMultiplier: 2.2,
         // Strong mono push for ref parity (was 0.42 — still left brick/teal readable)
         grading: { desaturation: 0.74, tint: 0x9aa4b4 },
         rim: { color: 0xb0c4e0, intensity: 0.45 },

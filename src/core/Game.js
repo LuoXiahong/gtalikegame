@@ -84,6 +84,10 @@ export const Game = {
         } else {
             // Still spawn entities for screenshots so cars/NPCs appear in the world
             this.spawnEntities();
+            window.__SCREENSHOT_READY__ = false;
+            this._screenshotFrames = 0;
+            // Failsafe if rAF is starved (software GL / GPU stalls)
+            setTimeout(() => { window.__SCREENSHOT_READY__ = true; }, 2500);
             const uiElements = ['menuLayer', 'mobileHUD'];
             uiElements.forEach(id => {
                 const el = document.getElementById(id);
@@ -210,6 +214,14 @@ export const Game = {
         UISystem.update();
         FilmGateOverlay.update(timestamp);
         FpsOverlay.update(dt);
+
+        if (this.screenshotMode && !window.__SCREENSHOT_READY__) {
+            this._screenshotFrames = (this._screenshotFrames || 0) + 1;
+            // 2 painted frames is enough — long waits starve under software GL
+            if (this._screenshotFrames >= 2) {
+                window.__SCREENSHOT_READY__ = true;
+            }
+        }
 
         requestAnimationFrame((ts) => this.loop(ts));
     }

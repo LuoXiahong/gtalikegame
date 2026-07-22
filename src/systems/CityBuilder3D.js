@@ -7,6 +7,13 @@ import { WorldMetrics } from '../world/WorldMetrics.js';
 import { FacadeGenerator } from './FacadeGenerator.js';
 import { createPropAt, PROP_TYPES } from './PropFactory.js';
 
+/** Inset from block outer edge onto sidewalk (2D px). */
+export const LAMP_EDGE_INSET = 30;
+/** Target spacing along a block edge (2D px) — corners + even steps. */
+export const LAMP_EDGE_SPACING = 220;
+/** Min 3D distance between a random prop and a lamp. */
+const PROP_LAMP_CLEARANCE = 2.5;
+
 export const CityBuilder3D = {
     buildCity(renderSystem) {
         const SF = WorldMetrics.SCALE_FACTOR;
@@ -113,12 +120,18 @@ export const CityBuilder3D = {
     },
 
     /**
-     * Scatter hydrants / benches / kiosks / lamp posts along sidewalk ring.
+     * Lamps: deterministic corners + even spacing along every block edge.
+     * Other props: random on leftover sidewalk slots (clear of lamps).
      */
     placeSidewalkProps(renderSystem) {
         const SF = WorldMetrics.SCALE_FACTOR;
         renderSystem.props = [];
         renderSystem.streetLights = [];
+
+        const lampSpots = this.collectLampSpots(SF);
+        for (const spot of lampSpots) {
+            this._placeProp(renderSystem, 'lampPost', spot.x, spot.z, spot.rot);
+        }
 
         const propOffsets = [
             { x: -220, z: -180 }, { x: 220, z: -180 },
@@ -144,27 +157,73 @@ export const CityBuilder3D = {
             }
         }
 
-        candidates.sort(() => Math.random() - 0.5);
-        const totalProps = Math.floor(Math.random() * 5) + 18; // 18–22
-        let lampCount = 0;
-        const maxLamps = 16;
+        const free = candidates.filter(pos =>
+            lampSpots.every(lamp => Math.hypot(pos.x - lamp.x, pos.z - lamp.z) >= PROP_LAMP_CLEARANCE)
+        );
+        free.sort(() => Math.random() - 0.5);
 
-        for (let i = 0; i < Math.min(totalProps, candidates.length); i++) {
-            const pos = candidates[i];
-            let type;
-            if (lampCount < maxLamps && Math.random() < 0.55) {
-                type = 'lampPost';
-                lampCount++;
-            } else {
-                const others = PROP_TYPES.filter(t => t !== 'lampPost');
-                type = others[Math.floor(Math.random() * others.length)];
-            }
-
+        const others = PROP_TYPES.filter(t => t !== 'lampPost');
+        const totalOthers = Math.floor(Math.random() * 5) + 10; // 10–14
+        for (let i = 0; i < Math.min(totalOthers, free.length); i++) {
+            const pos = free[i];
+            const type = others[Math.floor(Math.random() * others.length)];
             const rot = (Math.floor(Math.random() * 4) * Math.PI) / 2;
-            const prop = createPropAt(type, pos.x, pos.z, rot);
-            renderSystem.scene.add(prop);
-            renderSystem.props.push(prop);
+            this._placeProp(renderSystem, type, pos.x, pos.z, rot);
+        }
+    },
 
+    /**
+     * Deterministic lamp world positions (3D xz) for every block edge.
+     * @param {number} SF
+     * @returns {{ x: number, z: number, rot: number }[]}
+     */
+    collectLampSpots(SF) {
+        const spots = [];
+        const seen = new Set();
+
+        const add = (wx, wz, rot) => {
+            const k = `${Math.round(wx)},${Math.round(wz)}`;
+            if (seen.has(k)) return;
+            seen.add(k);
+            spots.push({ x: wx * SF, z: wz * SF, rot });
+        };
+
+        /** Place endpoints + even interior steps along an edge (2D px). */
+        const placeEdge = (x0, z0, x1, z1, rot) => {
+            const dx = x1 - x0;
+            const dz = z1 - z0;
+            const len = Math.hypot(dx, dz);
+            const steps = Math.max(1, Math.round(len / LAMP_EDGE_SPACING));
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                add(x0 + dx * t, z0 + dz * t, rot);
+            }
+        };
+
+        for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
+            for (let c = 0; c < WorldGrid.GRID_COLS; c++) {
+                const b = WorldGrid.getBlockBounds(r, c);
+                const x0 = b.x + LAMP_EDGE_INSET;
+                const x1 = b.x + b.w - LAMP_EDGE_INSET;
+                const z0 = b.y + LAMP_EDGE_INSET;
+                const z1 = b.y + b.h - LAMP_EDGE_INSET;
+
+                // Arm local +X → rotate so globe faces outward toward the street
+                placeEdge(x0, z0, x1, z0, Math.PI / 2);   // north → -Z
+                placeEdge(x0, z1, x1, z1, -Math.PI / 2);  // south → +Z
+                placeEdge(x0, z0, x0, z1, Math.PI);       // west  → -X
+                placeEdge(x1, z0, x1, z1, 0);             // east  → +X
+            }
+        }
+
+        return spots;
+    },
+
+    _placeProp(renderSystem, type, x, z, rot) {
+        const prop = createPropAt(type, x, z, rot);
+        renderSystem.scene.add(prop);
+        renderSystem.props.push(prop);
+        if (type === 'lampPost') {
             prop.traverse(obj => {
                 if (obj.isLight && obj.userData.isStreetLight) {
                     renderSystem.streetLights.push(obj);

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { PNG } from 'pngjs';
-const data = fs.readFileSync('docs/screenshots/traffic-block.png');
+const data = fs.readFileSync('docs/screenshots/street-intersection.png');
 const png = PNG.sync.read(data);
 let grassCount = 0;
 for (let i = 0; i < png.data.length; i += 4) {

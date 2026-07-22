@@ -7,6 +7,10 @@ import { STREET_LIGHT_BASE } from './RenderSystem3D.js';
 
 export const PROP_TYPES = ['lampPost', 'hydrant', 'bench', 'kiosk'];
 
+/** PointLight reach — local curb pool via lighting, not a fake disc overlay. */
+export const STREET_LIGHT_DISTANCE = 20;
+export const STREET_LIGHT_DECAY = 2;
+
 /**
  * @param {'lampPost'|'hydrant'|'bench'|'kiosk'} type
  * @returns {THREE.Group}
@@ -37,12 +41,9 @@ export function createProp(type) {
 }
 
 function addLampPost(group) {
-    const poleMat = new THREE.MeshStandardMaterial({
-        color: 0xb0b0b8,
-        roughness: 0.28,
-        metalness: 0.85,
-        envMapIntensity: 1.2
-    });
+    // Unlit matte paint — Standard/Lambert still pick a white streak from the
+    // PointLight on this same post (thin cylinder → specular alias flicker).
+    const poleMat = new THREE.MeshBasicMaterial({ color: 0x3a3a42 });
     // Base plinth so the pole reads grounded from the isometric view
     const base = new THREE.Mesh(
         new THREE.CylinderGeometry(0.22, 0.28, 0.35, 8),
@@ -52,11 +53,12 @@ function addLampPost(group) {
     group.add(base);
 
     const pole = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.09, 0.13, 5.2, 8),
+        new THREE.CylinderGeometry(0.11, 0.14, 5.2, 8),
         poleMat
     );
     pole.position.y = 2.6;
     pole.castShadow = true;
+    pole.userData.isLampPole = true;
     group.add(pole);
 
     const arm = new THREE.Mesh(
@@ -68,17 +70,22 @@ function addLampPost(group) {
 
     const globeMat = new THREE.MeshStandardMaterial({
         color: 0xffe6a0,
-        roughness: 0.4,
+        roughness: 0.55,
         metalness: 0.05,
-        emissive: 0xffcc66,
-        emissiveIntensity: 0.7
+        emissive: 0xffaa44,
+        emissiveIntensity: 0.35
     });
     const globe = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 10), globeMat);
     globe.position.set(0.75, 4.9, 0);
     group.add(globe);
 
-    // Subtle warm pool on the sidewalk
-    const light = new THREE.PointLight(0xffb84d, STREET_LIGHT_BASE, 18, 2);
+    // Local curb light — keep below bloom blow-out; wet asphalt carries the pool
+    const light = new THREE.PointLight(
+        0xffb84d,
+        STREET_LIGHT_BASE,
+        STREET_LIGHT_DISTANCE,
+        STREET_LIGHT_DECAY
+    );
     light.position.copy(globe.position);
     light.castShadow = false;
     light.userData.isStreetLight = true;
