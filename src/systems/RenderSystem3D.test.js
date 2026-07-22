@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
-import { RenderSystem3D } from './RenderSystem3D.js';
+import { RenderSystem3D, BLOOM_STRENGTH, BLOOM_RADIUS, BLOOM_THRESHOLD } from './RenderSystem3D.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { RetroFilmSettings } from './RetroFilmSettings.js';
 import { TimeOfDaySettings } from './TimeOfDaySettings.js';
@@ -92,6 +92,21 @@ vi.mock('three/addons/postprocessing/OutputPass.js', () => {
     };
 });
 
+vi.mock('three/addons/postprocessing/UnrealBloomPass.js', () => {
+    return {
+        UnrealBloomPass: class {
+            constructor(resolution, strength, radius, threshold) {
+                this.resolution = resolution;
+                this.strength = strength;
+                this.radius = radius;
+                this.threshold = threshold;
+                this.enabled = true;
+                this.setSize = vi.fn();
+            }
+        }
+    };
+});
+
 vi.mock('three/addons/environments/RoomEnvironment.js', () => {
     return {
         RoomEnvironment: class {
@@ -157,6 +172,13 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.retroFilmPass).toBeDefined();
         expect(RenderSystem3D.retroFilmPass.uniforms.intensity).toBeDefined();
         expect(RenderSystem3D.retroFilmPass.enabled).toBe(true);
+        expect(RenderSystem3D.bloomPass).toBeDefined();
+        expect(RenderSystem3D.bloomPass.strength).toBeCloseTo(BLOOM_STRENGTH);
+        expect(RenderSystem3D.bloomPass.radius).toBeCloseTo(BLOOM_RADIUS);
+        expect(RenderSystem3D.bloomPass.threshold).toBeCloseTo(BLOOM_THRESHOLD);
+        expect(RenderSystem3D.bloomPass.enabled).toBe(true);
+        // Pipeline: Render → Bloom → TiltShift → RetroFilm → Output
+        expect(RenderSystem3D.composer.passes.length).toBeGreaterThanOrEqual(5);
 
         expect(RenderSystem3D.groundPlane).toBeDefined();
         expect(RenderSystem3D.asphaltPlane).toBeDefined();
@@ -213,6 +235,19 @@ describe('RenderSystem3D', () => {
         TimeOfDaySettings.applyWeather('rain');
         expect(lane.material.envMapIntensity).toBeCloseTo(0.35);
         expect(lane.material.metalness).toBeCloseTo(0.08);
+    });
+
+    it('should keep bloom pass before film grading with soft lamp glow settings', () => {
+        RenderSystem3D.init();
+        const passes = RenderSystem3D.composer.passes;
+        const bloomIdx = passes.indexOf(RenderSystem3D.bloomPass);
+        const tiltIdx = passes.indexOf(RenderSystem3D.tiltShiftPass);
+        const filmIdx = passes.indexOf(RenderSystem3D.retroFilmPass);
+        expect(bloomIdx).toBeGreaterThan(0);
+        expect(bloomIdx).toBeLessThan(tiltIdx);
+        expect(tiltIdx).toBeLessThan(filmIdx);
+        expect(RenderSystem3D.bloomPass.strength).toBeLessThan(0.25);
+        expect(RenderSystem3D.bloomPass.threshold).toBeGreaterThan(0.88);
     });
 
     it('should handle update cycles and sync camera', () => {

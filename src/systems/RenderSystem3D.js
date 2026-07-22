@@ -13,6 +13,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { InputSystem } from '../input/InputManager.js';
 import { World } from '../world/World.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
@@ -35,12 +36,17 @@ import { TimeOfDaySettings } from './TimeOfDaySettings.js';
 /** Base PointLight intensity from PropFactory lamp posts. */
 export const STREET_LIGHT_BASE = 1000;
 const TOD_TRANSITION_SEC = 1.5;
+/** Soft lamp/emissive glow — high threshold so white zebra paint does not bloom. */
+export const BLOOM_STRENGTH = 0.18;
+export const BLOOM_RADIUS = 0.38;
+export const BLOOM_THRESHOLD = 0.92;
 
 export const RenderSystem3D = {
     renderer: null,
     scene: null,
     camera: null,
     composer: null,
+    bloomPass: null,
     tiltShiftPass: null,
     retroFilmPass: null,
     isZoomedIn: false,
@@ -131,6 +137,14 @@ export const RenderSystem3D = {
         const renderPass = new RenderPass(this.scene, this.camera);
         this.composer.addPass(renderPass);
 
+        this.bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(width, height),
+            BLOOM_STRENGTH,
+            BLOOM_RADIUS,
+            BLOOM_THRESHOLD,
+        );
+        this.composer.addPass(this.bloomPass);
+
         this.tiltShiftPass = new ShaderPass(TiltShiftShader);
         this.composer.addPass(this.tiltShiftPass);
 
@@ -155,6 +169,9 @@ export const RenderSystem3D = {
             this.renderer.setSize(w, h, false);
             if (this.composer) {
                 this.composer.setSize(w, h);
+            }
+            if (this.bloomPass) {
+                this.bloomPass.setSize(w, h);
             }
 
             const newAspect = w / h;
