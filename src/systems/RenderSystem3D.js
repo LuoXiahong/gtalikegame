@@ -197,7 +197,8 @@ export const RenderSystem3D = {
         this.applyTimeOfDayImmediate(TimeOfDaySettings.get());
         RainSystem.init(this.scene);
         RainSystem.setActive(TimeOfDaySettings.isRaining());
-        RoadTextureGenerator.setWetness(TimeOfDaySettings.weather);
+        const roadMeshes = [...(this.laneMarkings || []), ...(this.zebras || [])];
+        RoadTextureGenerator.setWetness(TimeOfDaySettings.weather, roadMeshes);
 
         // Scale/movement validation cube
         const SF = WorldMetrics.SCALE_FACTOR;
@@ -285,7 +286,8 @@ export const RenderSystem3D = {
 
     _onWeatherChange(weather) {
         RainSystem.setActive(weather === 'rain');
-        RoadTextureGenerator.setWetness(weather);
+        const roadMeshes = [...(this.laneMarkings || []), ...(this.zebras || [])];
+        RoadTextureGenerator.setWetness(weather, roadMeshes);
     },
 
     startTimeOfDayTransition() {

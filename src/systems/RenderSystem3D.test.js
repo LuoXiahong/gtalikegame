@@ -194,8 +194,25 @@ describe('RenderSystem3D', () => {
         RenderSystem3D.init();
         const lane = RenderSystem3D.laneMarkings[0];
         expect(lane.material.roughnessMap).toBeDefined();
+        // Default weather is rain → soft wet gloss (not glitter)
+        expect(lane.material.roughness).toBeCloseTo(0.62);
+        expect(lane.material.metalness).toBeCloseTo(0.08);
+        expect(lane.material.envMapIntensity).toBeCloseTo(0.35);
+    });
+
+    it('should dry road materials when weather switches to clear', () => {
+        RenderSystem3D.init();
+        const lane = RenderSystem3D.laneMarkings[0];
+        expect(lane.material.envMapIntensity).toBeCloseTo(0.35);
+
+        TimeOfDaySettings.applyWeather('clear');
         expect(lane.material.roughness).toBe(1);
+        expect(lane.material.metalness).toBe(0);
         expect(lane.material.envMapIntensity).toBe(0);
+
+        TimeOfDaySettings.applyWeather('rain');
+        expect(lane.material.envMapIntensity).toBeCloseTo(0.35);
+        expect(lane.material.metalness).toBeCloseTo(0.08);
     });
 
     it('should handle update cycles and sync camera', () => {

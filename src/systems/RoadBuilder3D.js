@@ -49,12 +49,13 @@ export const RoadBuilder3D = {
         const geom = new THREE.PlaneGeometry(width, length);
         const texture = RoadTextureGenerator.getTexture('straight');
         const roughnessMap = RoadTextureGenerator.getRoughnessTexture('straight');
+        const wet = RoadTextureGenerator.getSurfaceMaterialProps();
         const mat = new THREE.MeshStandardMaterial({
             map: texture,
             roughnessMap,
-            roughness: 1.0,
-            metalness: 0.0,
-            envMapIntensity: 0
+            roughness: wet.roughness,
+            metalness: wet.metalness,
+            envMapIntensity: wet.envMapIntensity,
         });
 
         const mesh = new THREE.Mesh(geom, mat);
@@ -89,12 +90,13 @@ export const RoadBuilder3D = {
         const geom = new THREE.PlaneGeometry(width, width);
         const texture = RoadTextureGenerator.getTexture('intersection');
         const roughnessMap = RoadTextureGenerator.getRoughnessTexture('intersection');
+        const wet = RoadTextureGenerator.getSurfaceMaterialProps();
         const mat = new THREE.MeshStandardMaterial({
             map: texture,
             roughnessMap,
-            roughness: 1.0,
-            metalness: 0.0,
-            envMapIntensity: 0
+            roughness: wet.roughness,
+            metalness: wet.metalness,
+            envMapIntensity: wet.envMapIntensity,
         });
 
         const mesh = new THREE.Mesh(geom, mat);
