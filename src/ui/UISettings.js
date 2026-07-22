@@ -32,6 +32,8 @@ export const UISettings = {
     _locale: DEFAULT_LOCALE,
     /** @type {boolean} */
     _debugAI: false,
+    /** @type {boolean} */
+    _showFps: false,
 
     init() {
         try {
@@ -45,6 +47,9 @@ export const UISettings = {
             if (loc) this._locale = loc;
             if (typeof data.debugAI === 'boolean') {
                 this._debugAI = data.debugAI;
+            }
+            if (typeof data.showFps === 'boolean') {
+                this._showFps = data.showFps;
             }
         } catch {
             this._onScreenControlsOverride = null;
@@ -106,12 +111,22 @@ export const UISettings = {
         this._persist();
     },
 
+    getShowFps() {
+        return this._showFps;
+    },
+
+    setShowFps(enabled) {
+        this._showFps = Boolean(enabled);
+        this._persist();
+    },
+
     _persist() {
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify({
                 onScreenControls: this._onScreenControlsOverride,
                 locale: this._locale,
                 debugAI: this._debugAI,
+                showFps: this._showFps,
             }));
         } catch {
             /* private mode / quota — ignore */
@@ -123,6 +138,7 @@ export const UISettings = {
         this._onScreenControlsOverride = null;
         this._locale = DEFAULT_LOCALE;
         this._debugAI = false;
+        this._showFps = false;
         try {
             localStorage.removeItem(STORAGE_KEY);
         } catch {

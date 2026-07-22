@@ -9,15 +9,15 @@ describe('RetroFilmSettings', () => {
         RetroFilmSettings.reset();
     });
 
-    it('should start with classic preset (readable colors, lifted shadows)', () => {
+    it('should start with noir preset (cool mono, no warm sepia)', () => {
         expect(RetroFilmSettings.enabled).toBe(true);
-        expect(RetroFilmSettings.intensity).toBe(RETRO_PRESETS.classic.intensity);
-        expect(RetroFilmSettings.sepia).toBe(35);
-        expect(RetroFilmSettings.jitter).toBe(8);
+        expect(RetroFilmSettings.intensity).toBe(RETRO_PRESETS.noir.intensity);
+        expect(RetroFilmSettings.sepia).toBe(0);
+        expect(RetroFilmSettings.jitter).toBe(RETRO_PRESETS.noir.jitter);
         expect(RetroFilmSettings.dust).toBe(0);
-        expect(RetroFilmSettings.scratches).toBe(40);
-        expect(RetroFilmSettings.contrast).toBe(15);
-        expect(RetroFilmSettings.vignette).toBe(40);
+        expect(RetroFilmSettings.scratches).toBe(RETRO_PRESETS.noir.scratches);
+        expect(RetroFilmSettings.contrast).toBe(RETRO_PRESETS.noir.contrast);
+        expect(RetroFilmSettings.vignette).toBe(RETRO_PRESETS.noir.vignette);
     });
 
     it('isActive should be false when disabled or intensity is 0', () => {
@@ -59,6 +59,16 @@ describe('RetroFilmSettings', () => {
         expect(RetroFilmSettings.applyPreset('nope')).toBe(false);
     });
 
+    it('should apply noir preset without warm sepia', () => {
+        expect(RETRO_PRESETS.noir).toBeDefined();
+        expect(RetroFilmSettings.applyPreset('noir')).toBe(true);
+        expect(RetroFilmSettings.enabled).toBe(true);
+        expect(RetroFilmSettings.sepia).toBe(0);
+        expect(RetroFilmSettings.contrast).toBe(RETRO_PRESETS.noir.contrast);
+        expect(RetroFilmSettings.intensity).toBe(RETRO_PRESETS.noir.intensity);
+        expect(RetroFilmSettings.isActive()).toBe(true);
+    });
+
     it('applyToUniforms should map 0-100 to 0-1 including jitter', () => {
         const uniforms = {};
         ['intensity', 'vignette', 'flicker', 'jitter', 'grain', 'scratches', 'dust', 'sepia', 'contrast', 'fps']
@@ -84,15 +94,15 @@ describe('RetroFilmSettings', () => {
         const json = RetroFilmSettings.toJSON();
         expect(json).toEqual({
             enabled: true,
-            intensity: 85,
-            vignette: 40,
-            flicker: 25,
-            jitter: 8,
-            grain: 35,
-            scratches: 40,
+            intensity: RETRO_PRESETS.noir.intensity,
+            vignette: RETRO_PRESETS.noir.vignette,
+            flicker: RETRO_PRESETS.noir.flicker,
+            jitter: RETRO_PRESETS.noir.jitter,
+            grain: RETRO_PRESETS.noir.grain,
+            scratches: RETRO_PRESETS.noir.scratches,
             dust: 0,
-            sepia: 35,
-            contrast: 15,
+            sepia: 0,
+            contrast: RETRO_PRESETS.noir.contrast,
         });
     });
 
@@ -104,7 +114,7 @@ describe('RetroFilmSettings', () => {
         expect(stored.enabled).toBe(false);
 
         RetroFilmSettings.reset();
-        expect(RetroFilmSettings.grain).toBe(35);
+        expect(RetroFilmSettings.grain).toBe(RETRO_PRESETS.noir.grain);
         expect(localStorage.getItem('gtalike_retro_settings')).toBeNull();
 
         localStorage.setItem('gtalike_retro_settings', JSON.stringify({

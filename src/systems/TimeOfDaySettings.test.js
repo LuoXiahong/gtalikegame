@@ -14,13 +14,14 @@ describe('TimeOfDaySettings', () => {
         }
     });
 
-    it('defaults to dusk preset', () => {
-        expect(TimeOfDaySettings.current).toBe('dusk');
-        expect(TimeOfDaySettings.weather).toBe('clear');
-        expect(TimeOfDaySettings.get()).toBe(TIME_PRESETS.dusk);
-        expect(TimeOfDaySettings.get().streetLightMultiplier).toBe(1.0);
-        expect(TimeOfDaySettings.get().grading.desaturation).toBeCloseTo(0.18);
-        expect(TimeOfDaySettings.get().rim.intensity).toBeCloseTo(0.22);
+    it('defaults to night + rain', () => {
+        expect(TimeOfDaySettings.current).toBe('night');
+        expect(TimeOfDaySettings.weather).toBe('rain');
+        expect(TimeOfDaySettings.get()).toBe(TIME_PRESETS.night);
+        expect(TimeOfDaySettings.get().streetLightMultiplier).toBe(3.4);
+        expect(TimeOfDaySettings.get().grading.desaturation).toBeCloseTo(0.74);
+        expect(TimeOfDaySettings.get().rim.intensity).toBeCloseTo(0.45);
+        expect(TimeOfDaySettings.isRaining()).toBe(true);
     });
 
     it('applyPreset changes current and emits time_of_day_change', () => {

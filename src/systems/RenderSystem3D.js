@@ -174,8 +174,9 @@ export const RenderSystem3D = {
         if (screenshotMode) {
             if (screenshotMode === 'street-intersection') {
                 this.screenshotScenario = { camera: { targetX: 1100, targetZ: 1100, zoom: 1.2 } };
-                RetroFilmSettings.applyPreset('classic');
-                TimeOfDaySettings.applyPreset('dusk');
+                RetroFilmSettings.applyPreset('noir');
+                TimeOfDaySettings.applyPreset('night');
+                TimeOfDaySettings.applyWeather('rain');
             } else if (screenshotMode === 'city-overview') {
                 this.screenshotScenario = { camera: { targetX: 1100, targetZ: 1100, zoom: 0.6 } };
                 RetroFilmSettings.applyPreset('noir');

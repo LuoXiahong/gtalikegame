@@ -25,6 +25,7 @@ describe('RetroFilmShader', () => {
         expect(RetroFilmShader.fragmentShader).toContain('Warm tint');
         expect(RetroFilmShader.fragmentShader).toContain('sprocket');
         expect(RetroFilmShader.fragmentShader).toContain('overlayChannel');
+        expect(RetroFilmShader.fragmentShader).toContain('lumaTod');
         expect(RetroFilmShader.fragmentShader).not.toContain('blob');
     });
 

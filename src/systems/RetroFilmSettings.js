@@ -40,6 +40,19 @@ export const RETRO_PRESETS = {
         sepia: 35,
         contrast: 15,
     },
+    /** Cool mono film look — no warm sepia (used by night/rain ref parity). */
+    noir: {
+        enabled: true,
+        intensity: 90,
+        vignette: 48,
+        flicker: 16,
+        jitter: 5,
+        grain: 42,
+        scratches: 22,
+        dust: 0,
+        sepia: 0,
+        contrast: 28,
+    },
     ruined: {
         enabled: true,
         intensity: 95,
@@ -54,7 +67,7 @@ export const RETRO_PRESETS = {
     },
 };
 
-const DEFAULTS = { ...RETRO_PRESETS.classic };
+const DEFAULTS = { ...RETRO_PRESETS.noir };
 const STORAGE_KEY = 'gtalike_retro_settings';
 
 export const RETRO_PARAM_KEYS = [

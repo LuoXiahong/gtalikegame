@@ -76,4 +76,18 @@ describe('UISettings', () => {
         UISettings.init();
         expect(UISettings.getDebugAI()).toBe(true);
     });
+
+    it('persists and reloads showFps (default off)', async () => {
+        expect(UISettings.getShowFps()).toBe(false);
+        UISettings.setShowFps(true);
+        expect(JSON.parse(localStorage.getItem('gtalike_ui_settings')).showFps).toBe(true);
+
+        vi.resetModules();
+        ({ UISettings } = await import('./UISettings.js'));
+        UISettings.init();
+        expect(UISettings.getShowFps()).toBe(true);
+
+        UISettings.setShowFps(false);
+        expect(UISettings.getShowFps()).toBe(false);
+    });
 });

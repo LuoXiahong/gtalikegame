@@ -33,6 +33,7 @@ import { MenuScreen } from '../ui/MenuScreen.js';
 import { KeyboardHelpOverlay } from '../ui/KeyboardHelpOverlay.js';
 import { OptionsOverlay } from '../ui/OptionsOverlay.js';
 import { FilmGateOverlay } from '../ui/FilmGateOverlay.js';
+import { FpsOverlay } from '../ui/FpsOverlay.js';
 import { UISettings } from '../ui/UISettings.js';
 import { I18n } from '../i18n/I18n.js';
 import { RetroFilmSettings } from '../systems/RetroFilmSettings.js';
@@ -74,6 +75,7 @@ export const Game = {
         KeyboardHelpOverlay.init();
         OptionsOverlay.init();
         FilmGateOverlay.init();
+        FpsOverlay.init();
 
         this.screenshotMode = new URLSearchParams(window.location.search).get('screenshot');
 
@@ -207,6 +209,7 @@ export const Game = {
 
         UISystem.update();
         FilmGateOverlay.update(timestamp);
+        FpsOverlay.update(dt);
 
         requestAnimationFrame((ts) => this.loop(ts));
     }

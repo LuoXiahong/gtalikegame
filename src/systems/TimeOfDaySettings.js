@@ -6,8 +6,8 @@ import { EventBus } from '../core/EventBus.js';
 
 const STORAGE_KEY = 'lowge_time_of_day';
 const WEATHER_STORAGE_KEY = 'lowge_weather';
-const DEFAULT_PRESET = 'dusk';
-const DEFAULT_WEATHER = 'clear';
+const DEFAULT_PRESET = 'night';
+const DEFAULT_WEATHER = 'rain';
 
 export const WEATHER_MODES = ['clear', 'rain'];
 /** How strongly camera zoom nudges fog distances (1 = full zoom scale). */
@@ -38,7 +38,8 @@ export const TIME_PRESETS = {
         sun: { color: 0x6a7ba8, intensity: 0.06 },
         fog: { color: 0x0e0e12, near: 30, far: 160 },
         streetLightMultiplier: 3.4,
-        grading: { desaturation: 0.42, tint: 0x8ea0c8 },
+        // Strong mono push for ref parity (was 0.42 — still left brick/teal readable)
+        grading: { desaturation: 0.74, tint: 0x9aa4b4 },
         rim: { color: 0xb0c4e0, intensity: 0.45 },
     },
 };

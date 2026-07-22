@@ -25,6 +25,7 @@ const PRESET_IDS = [
     { id: 'off', labelKey: 'options.preset.off' },
     { id: 'subtle', labelKey: 'options.preset.subtle' },
     { id: 'classic', labelKey: 'options.preset.classic' },
+    { id: 'noir', labelKey: 'options.preset.noir' },
     { id: 'ruined', labelKey: 'options.preset.ruined' },
 ];
 
@@ -320,6 +321,7 @@ export const OptionsOverlay = {
     _enabledEl: null,
     _onScreenControlsEl: null,
     _debugAIEl: null,
+    _showFpsEl: null,
     _localeEl: null,
     _titleEl: null,
     _hintEl: null,
@@ -453,12 +455,33 @@ export const OptionsOverlay = {
             });
         });
 
+        const fpsToggle = document.createElement('div');
+        fpsToggle.className = 'options-toggle-row';
+        fpsToggle.innerHTML = `
+            <label for="opt_show_fps">
+                <span data-i18n-label="showFps"></span>
+                <span class="options-toggle-hint" data-i18n-hint="showFps"></span>
+            </label>
+            <input type="checkbox" id="opt_show_fps" />
+        `;
+        this._showFpsEl = fpsToggle.querySelector('#opt_show_fps');
+        this._labelEls.showFps = fpsToggle.querySelector('[data-i18n-label="showFps"]');
+        this._labelEls.showFpsHint = fpsToggle.querySelector('[data-i18n-hint="showFps"]');
+        this._showFpsEl.checked = UISettings.getShowFps();
+        this._showFpsEl.addEventListener('change', () => {
+            UISettings.setShowFps(this._showFpsEl.checked);
+            EventBus.emit('ui_settings_change', {
+                showFps: UISettings.getShowFps(),
+            });
+        });
+
         generalPane.appendChild(langSection);
         generalPane.appendChild(localeSelect);
         generalPane.appendChild(controlsSection);
         generalPane.appendChild(controlsToggle);
         generalPane.appendChild(devSection);
         generalPane.appendChild(debugToggle);
+        generalPane.appendChild(fpsToggle);
 
         // --- Tab: World ---
         const worldPane = document.createElement('div');
@@ -654,6 +677,8 @@ export const OptionsOverlay = {
         if (this._labelEls.onscreenHint) this._labelEls.onscreenHint.textContent = I18n.t('options.onscreen.hint');
         if (this._labelEls.debugAI) this._labelEls.debugAI.textContent = I18n.t('options.debugAI');
         if (this._labelEls.debugAIHint) this._labelEls.debugAIHint.textContent = I18n.t('options.debugAI.hint');
+        if (this._labelEls.showFps) this._labelEls.showFps.textContent = I18n.t('options.showFps');
+        if (this._labelEls.showFpsHint) this._labelEls.showFpsHint.textContent = I18n.t('options.showFps.hint');
         if (this._labelEls.filmEnable) this._labelEls.filmEnable.textContent = I18n.t('options.film.enable');
 
         Object.values(this._sliderLabelEls || {}).forEach(({ el, labelKey }) => {
@@ -693,6 +718,9 @@ export const OptionsOverlay = {
         }
         if (this._debugAIEl) {
             this._debugAIEl.checked = Boolean(RenderSystem.debugAI);
+        }
+        if (this._showFpsEl) {
+            this._showFpsEl.checked = UISettings.getShowFps();
         }
         if (this._localeEl) {
             this._localeEl.value = I18n.getLocale();

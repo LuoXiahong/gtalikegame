@@ -45,19 +45,22 @@ export const SCENARIOS = {
       { type: 'building', archetype: 'skyscraper', x: 30, z: -30, w: 14, d: 14, h: 35 },
     ],
     camera: { x: 0, y: 22, z: 14, targetX: 0, targetZ: 0, zoom: 1.2 },
-    retroPreset: 'classic',
-    timeOfDay: 'dusk',
+    retroPreset: 'noir',
+    timeOfDay: 'night',
+    weather: 'rain',
   },
   'city-overview': {
     entities: [],
     camera: { x: 0, y: 35, z: 25, targetX: 0, targetZ: 0, zoom: 0.8 },
     retroPreset: 'noir',
     timeOfDay: 'night',
+    weather: 'rain',
   },
   'traffic-block': {
     entities: [],
     camera: { targetX: 1150, targetZ: 1150, zoom: 1.5 },
     retroPreset: 'classic',
     timeOfDay: 'day',
+    weather: 'clear',
   }
 };

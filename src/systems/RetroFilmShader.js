@@ -177,11 +177,13 @@ export const RetroFilmShader = {
             col = mix(raw.rgb, clamp(col, 0.0, 1.0), i);
             }
 
-            // Time-of-day cool grading — always applied (even when film intensity is 0)
-            float luma = dot(col, vec3(0.299, 0.587, 0.114));
-            col = mix(col, vec3(luma), todDesaturation);
+            // Time-of-day cool grading — always applied (even when film intensity is 0).
+            // High todDesaturation (night/noir) drives near-mono; tint stays cool gray-blue.
+            float lumaTod = dot(col, vec3(0.299, 0.587, 0.114));
+            col = mix(col, vec3(lumaTod), clamp(todDesaturation, 0.0, 1.0));
             vec3 tinted = col * todTint;
-            col = mix(col, tinted, min(1.0, todDesaturation * 0.65 + 0.12));
+            float tintAmt = mix(0.10, 0.55, clamp(todDesaturation, 0.0, 1.0));
+            col = mix(col, tinted, tintAmt);
 
             gl_FragColor = vec4(clamp(col, 0.0, 1.0), raw.a);
         }

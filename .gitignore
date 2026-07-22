@@ -10,3 +10,16 @@ build/
 meta/
 .agents/
 src/dist/
+.cursor/
+.claude/
+.gemini/
+.groq/
+.openai/
+.anthropic/
+.google/
+.microsoft/
+.amazon/
+.azure/
+.oracle/
+.ibm/
+.baidu/
