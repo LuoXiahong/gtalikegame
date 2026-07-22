@@ -146,11 +146,11 @@ export const UISystem = {
 
         if (this.missionText) {
             const safeMission = escapeHTML(this.missionText);
-            html += `<div id="missionProgress" style="position:absolute; top:${MISSION_TOP_PX}px; left:20px; max-width:140px; font-size:13px; font-weight:bold; color:white; font-family: system-ui, -apple-system, sans-serif; letter-spacing:0.3px; line-height:1.35; ${shadowStyle}">${safeMission}</div>`;
+            html += `<div id="missionProgress" style="position:absolute; top:${MISSION_TOP_PX}px; left:20px; max-width:140px; font-size:13px; font-weight:bold; color:white; font-family: 'Yomogi', cursive; letter-spacing:0.3px; line-height:1.35; ${shadowStyle}">${safeMission}</div>`;
         }
         if (this.currentDialogue) {
             const safeDialogue = escapeHTML(this.currentDialogue);
-            html += `<div style="position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); font-size:15px; font-weight:500; color:white; font-family: system-ui, -apple-system, sans-serif; ${glassStyle} padding:12px 20px; border-radius:8px; max-width: 80%; text-align: center;">${safeDialogue}</div>`;
+            html += `<div style="position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); font-size:15px; font-weight:500; color:white; font-family: 'Yomogi', cursive; ${glassStyle} padding:12px 20px; border-radius:8px; max-width: 80%; text-align: center;">${safeDialogue}</div>`;
         }
         if (this.actionHint) {
             const safeHint = escapeHTML(this.actionHint);
@@ -158,7 +158,7 @@ export const UISystem = {
             const hintPos = onScreenPad
                 ? 'bottom:auto; top:70px; right:25px;'
                 : 'bottom:25px; right:25px;';
-            html += `<div style="position:absolute; ${hintPos} font-size:13px; font-weight:bold; color:white; font-family: system-ui, -apple-system, sans-serif; ${glassStyle} padding:6px 12px; border-radius:6px; letter-spacing:0.5px;">${safeHint}</div>`;
+            html += `<div style="position:absolute; ${hintPos} font-size:13px; font-weight:bold; color:white; font-family: 'Yomogi', cursive; ${glassStyle} padding:6px 12px; border-radius:6px; letter-spacing:0.5px;">${safeHint}</div>`;
         }
         if (this.wantedStars > 0) {
             let starsHtml = '';
@@ -166,14 +166,14 @@ export const UISystem = {
                 starsHtml += i < this.wantedStars ? '★' : '☆';
             }
             const color = this.isBlinking ? '#e74c3c' : '#f1c40f';
-            html += `<div style="position:absolute; top:20px; right:25px; font-size:30px; letter-spacing:3px; color:${color}; ${shadowStyle} transition: color 0.15s;">${starsHtml}</div>`;
+            html += `<div style="position:absolute; top:20px; right:25px; font-size:30px; letter-spacing:3px; color:${color}; font-family: 'Yomogi', cursive; ${shadowStyle} transition: color 0.15s;">${starsHtml}</div>`;
         }
         if (this.showSpeed) {
             // Keep speedometer clear of the on-screen pad when that pad is visible
             const speedPos = onScreenPad
                 ? 'bottom:25px; right:25px;'
                 : 'bottom:25px; left:25px;';
-            html += `<div id="speedometer" style="position:absolute; ${speedPos} font-size:24px; font-weight:bold; color:#2ecc71; font-family: monospace; letter-spacing:1px; ${shadowStyle}">${kmh} ${kmhLabel}</div>`;
+            html += `<div id="speedometer" style="position:absolute; ${speedPos} font-size:24px; font-weight:bold; color:#2ecc71; font-family: 'Yomogi', cursive; letter-spacing:1px; ${shadowStyle}">${kmh} ${kmhLabel}</div>`;
         }
         this.layer.innerHTML = html;
     },

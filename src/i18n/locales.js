@@ -15,6 +15,9 @@ export const LOCALE_NATIVE_NAMES = {
 export const catalogs = {
     pl: {
         'options.title': 'Opcje',
+        'options.tab.general': 'Gra',
+        'options.tab.world': 'Świat',
+        'options.tab.film': 'Film',
         'options.section.language': 'Język',
         'options.section.controls': 'Sterowanie',
         'options.section.dev': 'Developer',
@@ -88,6 +91,9 @@ export const catalogs = {
 
     en: {
         'options.title': 'Options',
+        'options.tab.general': 'Game',
+        'options.tab.world': 'World',
+        'options.tab.film': 'Film',
         'options.section.language': 'Language',
         'options.section.controls': 'Controls',
         'options.section.dev': 'Developer',
@@ -161,6 +167,9 @@ export const catalogs = {
 
     de: {
         'options.title': 'Optionen',
+        'options.tab.general': 'Spiel',
+        'options.tab.world': 'Welt',
+        'options.tab.film': 'Film',
         'options.section.language': 'Sprache',
         'options.section.controls': 'Steuerung',
         'options.section.dev': 'Entwickler',
@@ -234,6 +243,9 @@ export const catalogs = {
 
     es: {
         'options.title': 'Opciones',
+        'options.tab.general': 'Juego',
+        'options.tab.world': 'Mundo',
+        'options.tab.film': 'Film',
         'options.section.language': 'Idioma',
         'options.section.controls': 'Controles',
         'options.section.dev': 'Desarrollador',
@@ -307,6 +319,9 @@ export const catalogs = {
 
     fr: {
         'options.title': 'Options',
+        'options.tab.general': 'Jeu',
+        'options.tab.world': 'Monde',
+        'options.tab.film': 'Film',
         'options.section.language': 'Langue',
         'options.section.controls': 'Commandes',
         'options.section.dev': 'Développeur',

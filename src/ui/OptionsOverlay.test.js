@@ -57,9 +57,11 @@ describe('OptionsOverlay', () => {
         delete globalThis.requestAnimationFrame;
     });
 
-    it('should mount unified options: language, controls, debug, film', () => {
+    it('should mount unified options with tabs: language, controls, debug, film', () => {
         expect(document.getElementById('optionsBackdrop')).toBeTruthy();
         expect(document.getElementById('optionsPanel')).toBeTruthy();
+        expect(document.getElementById('optionsTabs')).toBeTruthy();
+        expect(document.querySelectorAll('.options-tab').length).toBe(3);
         expect(document.getElementById('opt_locale')).toBeTruthy();
         expect(document.getElementById('opt_onscreen_controls')).toBeTruthy();
         expect(document.getElementById('opt_debug_ai')).toBeTruthy();
@@ -68,6 +70,19 @@ describe('OptionsOverlay', () => {
         expect(document.getElementById('opt_sepia')).toBeTruthy();
         const locale = document.getElementById('opt_locale');
         expect([...locale.options].map((o) => o.value)).toEqual(['pl', 'en', 'de', 'es', 'fr']);
+    });
+
+    it('should switch option tabs', () => {
+        const filmTab = document.querySelector('[data-tab="film"]');
+        const worldTab = document.querySelector('[data-tab="world"]');
+        expect(filmTab).toBeTruthy();
+        filmTab.click();
+        expect(OptionsOverlay._activeTab).toBe('film');
+        expect(document.querySelector('[data-pane="film"]').classList.contains('active')).toBe(true);
+        expect(document.querySelector('[data-pane="general"]').classList.contains('active')).toBe(false);
+        worldTab.click();
+        expect(OptionsOverlay._activeTab).toBe('world');
+        expect(document.querySelector('[data-pane="world"]').classList.contains('active')).toBe(true);
     });
 
     it('should toggle on-screen controls and emit ui_settings_change', () => {

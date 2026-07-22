@@ -1,5 +1,6 @@
 /**
  * OptionsOverlay — language, controls, AI debug, time of day, retro film (open with O).
+ * Game-menu layout: wide panel + tabs (General / World / Film).
  */
 import { RetroFilmSettings, RETRO_PARAM_KEYS } from '../systems/RetroFilmSettings.js';
 import { TimeOfDaySettings } from '../systems/TimeOfDaySettings.js';
@@ -38,160 +39,282 @@ const WEATHER_PRESET_IDS = [
     { id: 'rain', labelKey: 'options.weather.rain' },
 ];
 
+const TAB_IDS = [
+    { id: 'general', labelKey: 'options.tab.general' },
+    { id: 'world', labelKey: 'options.tab.world' },
+    { id: 'film', labelKey: 'options.tab.film' },
+];
+
 const CSS = `
 #optionsBackdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(3px);
+    background: rgba(0, 0, 0, 0.72);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9100;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.22s ease;
+    transition: opacity 0.18s ease;
 }
 #optionsBackdrop.visible {
     opacity: 1;
     pointer-events: all;
 }
 #optionsPanel {
-    background: rgba(15, 17, 25, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
-    padding: 24px 28px 28px;
-    width: min(420px, 92vw);
+    background: #0c0e14;
+    border: 3px solid #c9a45c;
+    box-shadow:
+        0 0 0 2px #1a1408,
+        0 18px 0 rgba(0, 0, 0, 0.55),
+        inset 0 0 0 1px rgba(255, 220, 140, 0.12);
+    padding: 0;
+    width: min(720px, 94vw);
     max-height: 88vh;
-    overflow-y: auto;
-    transform: scale(0.92) translateY(12px);
-    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-    font-family: system-ui, -apple-system, sans-serif;
-    color: #e8eaf0;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.96) translateY(10px);
+    transition: transform 0.18s ease;
+    font-family: 'Yomogi', cursive;
+    color: #f0e6d2;
 }
 #optionsBackdrop.visible #optionsPanel {
     transform: scale(1) translateY(0);
 }
+#optionsHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px 10px;
+    background: linear-gradient(180deg, #1a1520 0%, #0c0e14 100%);
+    border-bottom: 2px solid rgba(201, 164, 92, 0.45);
+}
 #optionsTitle {
-    font-size: 15px;
+    font-size: 22px;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.45);
-    margin: 0 0 16px 0;
+    color: #f5e6c8;
+    margin: 0;
+    text-shadow: 2px 2px 0 #000;
 }
-#optionsTitle::before {
-    content: '';
-    display: inline-block;
-    width: 3px;
-    height: 14px;
-    border-radius: 2px;
-    background: linear-gradient(180deg, #e0b978, #b8925a);
-    margin-right: 8px;
-    vertical-align: middle;
+#optionsTabs {
+    display: flex;
+    gap: 6px;
+    padding: 10px 14px 0;
+    background: #080a10;
+    border-bottom: 2px solid rgba(201, 164, 92, 0.35);
 }
-.options-section {
-    font-size: 11px;
-    font-weight: 700;
+.options-tab {
+    flex: 1;
+    font-family: inherit;
+    font-size: 14px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.35);
-    margin: 18px 0 10px 0;
+    padding: 10px 8px 12px;
+    border: 2px solid rgba(201, 164, 92, 0.35);
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    background: #12151e;
+    color: rgba(240, 230, 210, 0.45);
+    cursor: pointer;
+    text-shadow: 1px 1px 0 #000;
 }
-.options-section:first-of-type {
+.options-tab:hover {
+    color: #f5e6c8;
+    border-color: rgba(201, 164, 92, 0.7);
+}
+.options-tab.active {
+    background: #0c0e14;
+    color: #f5e6c8;
+    border-color: #c9a45c;
+    box-shadow: inset 0 -2px 0 #0c0e14;
+    position: relative;
+    z-index: 1;
+    margin-bottom: -2px;
+}
+#optionsBody {
+    padding: 18px 20px 12px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+.options-pane {
+    display: none;
+}
+.options-pane.active {
+    display: block;
+}
+.options-section {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #c9a45c;
+    margin: 16px 0 10px 0;
+    text-shadow: 1px 1px 0 #000;
+}
+.options-section:first-child {
     margin-top: 0;
 }
 .options-toggle-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 16px;
     margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 2px solid rgba(255, 255, 255, 0.08);
 }
 .options-toggle-row label {
-    font-size: 14px;
-    color: rgba(255,255,255,0.85);
+    font-size: 15px;
+    color: #f0e6d2;
     line-height: 1.35;
+    cursor: pointer;
 }
 .options-toggle-hint {
     display: block;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 400;
-    color: rgba(255,255,255,0.35);
-    margin-top: 2px;
+    color: rgba(240, 230, 210, 0.4);
+    margin-top: 3px;
+    letter-spacing: 0.02em;
+}
+.options-toggle-row input[type=checkbox] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 52px;
+    height: 28px;
+    flex-shrink: 0;
+    border: 2px solid #c9a45c;
+    background: #1a1408;
+    position: relative;
+    cursor: pointer;
+    box-shadow: inset 0 2px 0 rgba(0,0,0,0.45);
+}
+.options-toggle-row input[type=checkbox]::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: #6a5a3a;
+    transition: left 0.12s ease, background 0.12s ease;
+}
+.options-toggle-row input[type=checkbox]:checked {
+    background: #3a2e14;
+}
+.options-toggle-row input[type=checkbox]:checked::after {
+    left: 26px;
+    background: #e0b978;
 }
 .options-control {
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 .options-control label {
     display: flex;
     justify-content: space-between;
-    font-size: 13px;
-    color: rgba(255,255,255,0.75);
-    margin-bottom: 4px;
+    font-size: 14px;
+    color: rgba(240, 230, 210, 0.85);
+    margin-bottom: 6px;
 }
 .options-control .val {
     color: #e0b978;
     font-variant-numeric: tabular-nums;
-    min-width: 28px;
+    min-width: 32px;
     text-align: right;
+    text-shadow: 1px 1px 0 #000;
 }
 .options-control input[type=range] {
     width: 100%;
-    accent-color: #b8925a;
+    height: 10px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: #1a1408;
+    border: 2px solid rgba(201, 164, 92, 0.55);
+    outline: none;
+}
+.options-control input[type=range]::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 22px;
+    background: #e0b978;
+    border: 2px solid #1a1408;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 #000;
+}
+.options-control input[type=range]::-moz-range-thumb {
+    width: 18px;
+    height: 22px;
+    background: #e0b978;
+    border: 2px solid #1a1408;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 #000;
 }
 .options-presets {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     gap: 8px;
-    margin-top: 16px;
+    margin-top: 4px;
 }
 .options-presets button {
-    flex: 1;
-    min-width: 90px;
-    font-size: 11px;
-    letter-spacing: 0.06em;
+    font-family: inherit;
+    font-size: 13px;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 8px 6px;
-    border-radius: 6px;
-    border: 1px solid rgba(184,146,90,0.45);
-    background: rgba(255,255,255,0.05);
-    color: #e8eaf0;
+    padding: 12px 8px;
+    border: 2px solid rgba(201, 164, 92, 0.5);
+    background: #141820;
+    color: #f0e6d2;
     cursor: pointer;
+    text-shadow: 1px 1px 0 #000;
 }
 .options-presets button:hover {
     border-color: #e0b978;
     color: #e0b978;
+    background: #1a1520;
 }
 .options-presets button.active {
-    background: rgba(232, 192, 112, 0.28);
-    border-color: rgba(232, 192, 112, 0.55);
+    background: #3a2e14;
+    border-color: #e0b978;
     color: #f5e6c8;
+    box-shadow: inset 0 0 0 1px rgba(224, 185, 120, 0.35);
 }
 #opt_locale {
     width: 100%;
-    font-size: 14px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.15);
-    background: rgba(0,0,0,0.35);
-    color: #e8eaf0;
+    font-family: inherit;
+    font-size: 15px;
+    padding: 12px 14px;
+    border: 2px solid rgba(201, 164, 92, 0.55);
+    background: #141820;
+    color: #f0e6d2;
     margin-bottom: 4px;
+    cursor: pointer;
+}
+#opt_locale:focus {
+    outline: none;
+    border-color: #e0b978;
 }
 #optionsHint {
-    margin-top: 16px;
+    margin: 0;
+    padding: 12px 18px 14px;
     text-align: center;
-    font-size: 12px;
-    color: rgba(255,255,255,0.3);
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    color: rgba(240, 230, 210, 0.35);
+    border-top: 2px solid rgba(201, 164, 92, 0.25);
+    background: #080a10;
 }
 `;
 
 export const OptionsOverlay = {
     _backdrop: null,
     _visible: false,
+    _activeTab: 'general',
     _valueEls: null,
     _rangeEls: null,
     _enabledEl: null,
@@ -202,8 +325,11 @@ export const OptionsOverlay = {
     _hintEl: null,
     _sectionEls: null,
     _labelEls: null,
+    _tabBtns: null,
+    _panes: null,
     _presetBtns: null,
     _timePresetBtns: null,
+    _weatherPresetBtns: null,
     _sliderLabelEls: null,
 
     init() {
@@ -222,14 +348,41 @@ export const OptionsOverlay = {
         const panel = document.createElement('div');
         panel.id = 'optionsPanel';
 
+        const header = document.createElement('div');
+        header.id = 'optionsHeader';
+
         const title = document.createElement('div');
         title.id = 'optionsTitle';
         this._titleEl = title;
+        header.appendChild(title);
+
+        const tabsBar = document.createElement('div');
+        tabsBar.id = 'optionsTabs';
+        this._tabBtns = [];
+        TAB_IDS.forEach(({ id, labelKey }) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'options-tab' + (id === this._activeTab ? ' active' : '');
+            btn.dataset.tab = id;
+            btn.dataset.labelKey = labelKey;
+            btn.addEventListener('click', () => this.setTab(id));
+            tabsBar.appendChild(btn);
+            this._tabBtns.push(btn);
+        });
+
+        const body = document.createElement('div');
+        body.id = 'optionsBody';
 
         this._sectionEls = {};
         this._labelEls = {};
+        this._panes = {};
 
-        // --- Language ---
+        // --- Tab: General ---
+        const generalPane = document.createElement('div');
+        generalPane.className = 'options-pane active';
+        generalPane.dataset.pane = 'general';
+        this._panes.general = generalPane;
+
         const langSection = document.createElement('div');
         langSection.className = 'options-section';
         this._sectionEls.language = langSection;
@@ -251,7 +404,6 @@ export const OptionsOverlay = {
         });
         this._localeEl = localeSelect;
 
-        // --- Controls ---
         const controlsSection = document.createElement('div');
         controlsSection.className = 'options-section';
         this._sectionEls.controls = controlsSection;
@@ -276,7 +428,6 @@ export const OptionsOverlay = {
             });
         });
 
-        // --- Dev ---
         const devSection = document.createElement('div');
         devSection.className = 'options-section';
         this._sectionEls.dev = devSection;
@@ -302,7 +453,19 @@ export const OptionsOverlay = {
             });
         });
 
-        // --- Time of day ---
+        generalPane.appendChild(langSection);
+        generalPane.appendChild(localeSelect);
+        generalPane.appendChild(controlsSection);
+        generalPane.appendChild(controlsToggle);
+        generalPane.appendChild(devSection);
+        generalPane.appendChild(debugToggle);
+
+        // --- Tab: World ---
+        const worldPane = document.createElement('div');
+        worldPane.className = 'options-pane';
+        worldPane.dataset.pane = 'world';
+        this._panes.world = worldPane;
+
         const timeSection = document.createElement('div');
         timeSection.className = 'options-section';
         this._sectionEls.time = timeSection;
@@ -343,7 +506,17 @@ export const OptionsOverlay = {
             this._weatherPresetBtns.push(btn);
         });
 
-        // --- Retro ---
+        worldPane.appendChild(timeSection);
+        worldPane.appendChild(timePresets);
+        worldPane.appendChild(weatherSection);
+        worldPane.appendChild(weatherPresets);
+
+        // --- Tab: Film ---
+        const filmPane = document.createElement('div');
+        filmPane.className = 'options-pane';
+        filmPane.dataset.pane = 'film';
+        this._panes.film = filmPane;
+
         const filmSection = document.createElement('div');
         filmSection.className = 'options-section';
         this._sectionEls.film = filmSection;
@@ -362,19 +535,8 @@ export const OptionsOverlay = {
             this._notifyRetro();
         });
 
-        panel.appendChild(title);
-        panel.appendChild(langSection);
-        panel.appendChild(localeSelect);
-        panel.appendChild(controlsSection);
-        panel.appendChild(controlsToggle);
-        panel.appendChild(devSection);
-        panel.appendChild(debugToggle);
-        panel.appendChild(timeSection);
-        panel.appendChild(timePresets);
-        panel.appendChild(weatherSection);
-        panel.appendChild(weatherPresets);
-        panel.appendChild(filmSection);
-        panel.appendChild(toggleRow);
+        filmPane.appendChild(filmSection);
+        filmPane.appendChild(toggleRow);
 
         this._valueEls = {};
         this._rangeEls = {};
@@ -405,7 +567,7 @@ export const OptionsOverlay = {
                 }
                 this._notifyRetro();
             });
-            panel.appendChild(wrap);
+            filmPane.appendChild(wrap);
         });
 
         const presets = document.createElement('div');
@@ -424,11 +586,19 @@ export const OptionsOverlay = {
             presets.appendChild(btn);
             this._presetBtns.push(btn);
         });
-        panel.appendChild(presets);
+        filmPane.appendChild(presets);
+
+        body.appendChild(generalPane);
+        body.appendChild(worldPane);
+        body.appendChild(filmPane);
 
         const hint = document.createElement('div');
         hint.id = 'optionsHint';
         this._hintEl = hint;
+
+        panel.appendChild(header);
+        panel.appendChild(tabsBar);
+        panel.appendChild(body);
         panel.appendChild(hint);
 
         backdrop.appendChild(panel);
@@ -455,6 +625,17 @@ export const OptionsOverlay = {
         this.applyLabels();
     },
 
+    setTab(tabId) {
+        if (!this._panes[tabId]) return;
+        this._activeTab = tabId;
+        Object.entries(this._panes).forEach(([id, pane]) => {
+            pane.classList.toggle('active', id === tabId);
+        });
+        (this._tabBtns || []).forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.tab === tabId);
+        });
+    },
+
     applyLabels() {
         if (this._titleEl) this._titleEl.textContent = I18n.t('options.title');
         if (this._hintEl) this._hintEl.textContent = I18n.t('options.closeHint');
@@ -464,6 +645,10 @@ export const OptionsOverlay = {
         if (this._sectionEls.time) this._sectionEls.time.textContent = I18n.t('options.time.title');
         if (this._sectionEls.weather) this._sectionEls.weather.textContent = I18n.t('options.weather.title');
         if (this._sectionEls.film) this._sectionEls.film.textContent = I18n.t('options.section.film');
+
+        (this._tabBtns || []).forEach((btn) => {
+            btn.textContent = I18n.t(btn.dataset.labelKey);
+        });
 
         if (this._labelEls.onscreen) this._labelEls.onscreen.textContent = I18n.t('options.onscreen');
         if (this._labelEls.onscreenHint) this._labelEls.onscreenHint.textContent = I18n.t('options.onscreen.hint');

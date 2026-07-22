@@ -32,7 +32,7 @@ const CSS = `
     position: absolute;
     bottom: 8px;
     left: 40px;
-    font-family: 'Jost', system-ui, sans-serif;
+    font-family: 'Yomogi', cursive;
     font-size: 10px;
     letter-spacing: 0.15em;
     color: rgba(233, 221, 194, 0.55);

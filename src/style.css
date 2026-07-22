@@ -8,7 +8,7 @@ body {
     height: 100vh;
     overflow: hidden;
     touch-action: none;
-    font-family: sans-serif;
+    font-family: 'Yomogi', cursive;
 }
 
 #gameContainer {
@@ -57,6 +57,7 @@ canvas {
     background-color: rgba(0, 0, 0, 0.55);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
+    font-family: 'Yomogi', cursive;
     font-size: 22px;
     font-weight: bold;
     display: flex;

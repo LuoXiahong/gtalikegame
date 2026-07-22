@@ -4,7 +4,8 @@
 import { EventBus } from '../core/EventBus.js';
 import { GameState, GAME_STATES } from '../core/GameState.js';
 import { I18n } from '../i18n/I18n.js';
-import logoSrc from '../assets/logo.png';
+
+const LOGO_SRC = './assets/logo.png';
 
 export const MenuScreen = {
     layer: null,
@@ -64,26 +65,26 @@ export const MenuScreen = {
 
         if (state === GAME_STATES.MENU) {
             html = `
-                <img src="${logoSrc}" alt="Noir City" style="max-width: 80%; max-height: 40vh; margin-bottom: 20px; filter: drop-shadow(2px 2px 0px #000);" />
-                <p style="font-size: 24px; animation: blink 1s infinite;">${I18n.t('menu.pressStart')}</p>
-                <div style="margin-top: 40px; font-size: 14px; color: #bdc3c7;">
+                <img src="${LOGO_SRC}" alt="Noir City" style="max-width: 80%; max-height: 40vh; margin-bottom: 20px; filter: drop-shadow(2px 2px 0px #000);" />
+                <p style="font-family: 'Yomogi', cursive; font-size: 24px; animation: blink 1s infinite;">${I18n.t('menu.pressStart')}</p>
+                <div style="font-family: 'Yomogi', cursive; margin-top: 40px; font-size: 14px; color: #bdc3c7;">
                     ${I18n.t('menu.controls')}
                 </div>
-                <div style="margin-top: 12px; font-size: 13px; color: #95a5a6;">
+                <div style="font-family: 'Yomogi', cursive; margin-top: 12px; font-size: 13px; color: #95a5a6;">
                     ${I18n.t('menu.hints')}
                 </div>
             `;
         } else if (state === GAME_STATES.WASTED) {
             this.layer.style.backgroundColor = 'rgba(139, 0, 0, 0.5)';
             html = `
-                <h1 style="font-size: 72px; color: #ff0000; text-shadow: 3px 3px #000; letter-spacing: 10px;">${I18n.t('menu.wasted')}</h1>
-                <p style="font-size: 20px; margin-top: 20px;">${I18n.t('menu.pressRestart')}</p>
+                <h1 style="font-family: 'Yomogi', cursive; font-size: 72px; color: #ff0000; text-shadow: 3px 3px #000; letter-spacing: 10px;">${I18n.t('menu.wasted')}</h1>
+                <p style="font-family: 'Yomogi', cursive; font-size: 20px; margin-top: 20px;">${I18n.t('menu.pressRestart')}</p>
             `;
         } else if (state === GAME_STATES.MISSION_PASSED) {
             html = `
-                <h1 style="font-size: 48px; color: #2ecc71; text-shadow: 2px 2px #000;">${I18n.t('menu.missionPassed')}</h1>
-                <p style="font-size: 20px; margin-top: 20px;">${I18n.t('menu.respect')}</p>
-                <p style="font-size: 16px; margin-top: 20px;">${I18n.t('menu.pressContinue')}</p>
+                <h1 style="font-family: 'Yomogi', cursive; font-size: 48px; color: #2ecc71; text-shadow: 2px 2px #000;">${I18n.t('menu.missionPassed')}</h1>
+                <p style="font-family: 'Yomogi', cursive; font-size: 20px; margin-top: 20px;">${I18n.t('menu.respect')}</p>
+                <p style="font-family: 'Yomogi', cursive; font-size: 16px; margin-top: 20px;">${I18n.t('menu.pressContinue')}</p>
             `;
         }
 

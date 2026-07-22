@@ -48,7 +48,7 @@ const CSS = `
     max-width: 520px;
     transform: scale(0.92) translateY(12px);
     transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family: 'Yomogi', cursive;
     color: #e8eaf0;
 }
 #keyboardHelpBackdrop.visible #keyboardHelpPanel {
@@ -100,7 +100,7 @@ const CSS = `
     border-radius: 5px;
     padding: 2px 8px;
     font-size: 12px;
-    font-family: monospace;
+    font-family: 'Yomogi', cursive;
     font-weight: 600;
     color: #c8d0e8;
     white-space: nowrap;
