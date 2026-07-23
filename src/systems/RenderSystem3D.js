@@ -32,6 +32,7 @@ import { RoadBuilder3D } from './RoadBuilder3D.js';
 import { RainSystem } from './RainSystem.js';
 import { TiltShiftShader } from './TiltShiftShader.js';
 import { TimeOfDaySettings } from './TimeOfDaySettings.js';
+import { ScreenshotCapture } from './ScreenshotCapture.js';
 
 /** Base PointLight intensity from PropFactory lamp posts. */
 export const STREET_LIGHT_BASE = 550;
@@ -613,6 +614,10 @@ export const RenderSystem3D = {
             this.composer.render();
         } else {
             this.renderer.render(this.scene, this.camera);
+        }
+
+        if (ScreenshotCapture.isPending()) {
+            ScreenshotCapture.flushFromCanvas(this.renderer?.domElement, 'lowge');
         }
     }
 };

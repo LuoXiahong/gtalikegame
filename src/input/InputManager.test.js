@@ -41,4 +41,14 @@ describe('InputSystem', () => {
         expect(consumed).toBe(true);
         expect(InputSystem.zoomToggleJustPressed).toBe(false);
     });
+
+    it('should trigger screenshotJustPressed on F9 keydown', () => {
+        InputSystem.setKey('F9', true);
+        expect(InputSystem.keys.screenshot).toBe(true);
+        expect(InputSystem.screenshotJustPressed).toBe(true);
+
+        const consumed = InputSystem.consumeScreenshot();
+        expect(consumed).toBe(true);
+        expect(InputSystem.screenshotJustPressed).toBe(false);
+    });
 });

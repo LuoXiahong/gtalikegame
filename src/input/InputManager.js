@@ -2,7 +2,7 @@
  * Keyboard and on-screen HUD input.
  */
 export const InputSystem = {
-    keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false, debugAI: false, viewToggle: false, zoomToggle: false, help: false },
+    keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false, debugAI: false, viewToggle: false, zoomToggle: false, help: false, screenshot: false },
     actionJustPressed: false,
     shootJustPressed: false,
     explodeJustPressed: false,
@@ -10,6 +10,7 @@ export const InputSystem = {
     viewToggleJustPressed: false,
     zoomToggleJustPressed: false,
     helpJustPressed: false,
+    screenshotJustPressed: false,
 
     init() {
         window.addEventListener("keydown", (e) => {
@@ -53,6 +54,10 @@ export const InputSystem = {
         if (code === "KeyZ") {
             if (state && !this.keys.zoomToggle) this.zoomToggleJustPressed = true;
             this.keys.zoomToggle = state;
+        }
+        if (code === "F9") {
+            if (state && !this.keys.screenshot) this.screenshotJustPressed = true;
+            this.keys.screenshot = state;
         }
         // Slash (/) and Shift+/ (?) — help; do not stopPropagation (overlay handles it)
         if (code === "Slash") {
@@ -103,6 +108,12 @@ export const InputSystem = {
         return pressed;
     },
 
+    consumeScreenshot() {
+        const pressed = this.screenshotJustPressed;
+        this.screenshotJustPressed = false;
+        return pressed;
+    },
+
     resetAll() {
         for (const key in this.keys) {
             this.keys[key] = false;
@@ -114,6 +125,7 @@ export const InputSystem = {
         this.viewToggleJustPressed = false;
         this.zoomToggleJustPressed = false;
         this.helpJustPressed = false;
+        this.screenshotJustPressed = false;
     },
 
     bindHUD(elementId, keyName) {

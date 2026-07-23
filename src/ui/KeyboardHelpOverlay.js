@@ -14,6 +14,7 @@ const KEYBINDING_DEFS = [
     { key: 'E', descKey: 'help.key.explode' },
     { key: 'V', descKey: 'help.key.view' },
     { key: 'Z', descKey: 'help.key.zoom' },
+    { key: 'F9', descKey: 'help.key.screenshot' },
     { key: '` (backtick)', descKey: 'help.key.debugAI' },
     { key: 'O', descKey: 'help.key.options' },
     { key: '? / /', descKey: 'help.key.help' },

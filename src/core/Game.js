@@ -38,6 +38,7 @@ import { UISettings } from '../ui/UISettings.js';
 import { I18n } from '../i18n/I18n.js';
 import { RetroFilmSettings } from '../systems/RetroFilmSettings.js';
 import { TimeOfDaySettings } from '../systems/TimeOfDaySettings.js';
+import { ScreenshotCapture } from '../systems/ScreenshotCapture.js';
 
 export const Game = {
     is3D: true,
@@ -203,6 +204,10 @@ export const Game = {
                 if (canvas2D) canvas2D.style.display = 'block';
                 if (canvas3D) canvas3D.style.display = 'none';
             }
+        }
+
+        if (InputSystem.consumeScreenshot()) {
+            ScreenshotCapture.request();
         }
 
         if (this.is3D) {

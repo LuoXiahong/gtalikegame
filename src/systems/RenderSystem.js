@@ -7,6 +7,7 @@ import { Camera } from '../world/Camera.js';
 import { VehicleSystem } from './VehicleSystem.js';
 import { MissionSystem } from './MissionSystem.js';
 import { TILE_COLORS } from '../world/Tilemap.js';
+import { ScreenshotCapture } from './ScreenshotCapture.js';
 
 export const RenderSystem = {
     ctx: null,
@@ -353,5 +354,9 @@ export const RenderSystem = {
         this.drawDebugAI();
 
         this.ctx.restore();
+
+        if (ScreenshotCapture.isPending()) {
+            ScreenshotCapture.flushFromCanvas(this.canvas, 'lowge');
+        }
     }
 };
