@@ -39,13 +39,24 @@ export const RoadTextureGenerator = {
         return type === 'straight' ? 1 : 0;
     },
 
-    /** Material knobs — wet look from soft sheet + lamp specular, not glittery grain. */
+    /** How many water puddles to stamp (rain only). Wear patches are separate. */
+    _puddleCount(type) {
+        if (this._wetness !== 'rain') return 0;
+        if (type === 'straight') return 3;
+        if (type === 'intersection') return 2;
+        return 0;
+    },
+
+    /**
+     * Material knobs — road stays mostly matte; puddle gloss comes from roughnessMap
+     * (dark = shiny). Mild envMap so puddles can catch lamp/env highlights.
+     */
     getSurfaceMaterialProps() {
         if (this._wetness === 'rain') {
             return {
-                roughness: 0.62,
-                metalness: 0.08,
-                envMapIntensity: 0.35,
+                roughness: 0.92,
+                metalness: 0.04,
+                envMapIntensity: 0.55,
             };
         }
         return {
@@ -76,8 +87,10 @@ export const RoadTextureGenerator = {
         const texture = this.textures.get(type);
         if (!texture?.image) return;
         const patches = this.generateWetPatches(this._wetPatchCount(type), type);
+        const puddles = this.generatePuddles(this._puddleCount(type), type);
         texture.userData = texture.userData || {};
         texture.userData.wetPatches = patches;
+        texture.userData.puddles = puddles;
 
         const canvas = texture.image;
         const ctx = canvas.getContext ? canvas.getContext('2d') : null;
@@ -90,8 +103,7 @@ export const RoadTextureGenerator = {
             ctx.clearRect(0, 0, 512, 512);
             this.drawCrosswalk(ctx);
         } else {
-            // Slightly darker base when raining = wet sheet (ref-like), not stamp spam
-            ctx.fillStyle = this._wetness === 'rain' ? '#1a1c22' : '#222428';
+            ctx.fillStyle = '#222428';
             ctx.fillRect(0, 0, 512, 512);
             this.addAsphaltNoise(ctx, 512, 512);
 
@@ -104,6 +116,7 @@ export const RoadTextureGenerator = {
             }
 
             this.addWetPatchesAlbedo(ctx, patches);
+            this.addPuddlesAlbedo(ctx, puddles);
         }
 
         texture.needsUpdate = true;
@@ -115,6 +128,8 @@ export const RoadTextureGenerator = {
         if (!texture?.image || !albedo) return;
         const patches = (albedo.userData && albedo.userData.wetPatches)
             || this.generateWetPatches(this._wetPatchCount(type), type);
+        const puddles = (albedo.userData && albedo.userData.puddles)
+            || this.generatePuddles(this._puddleCount(type), type);
 
         const canvas = texture.image;
         const ctx = canvas.getContext ? canvas.getContext('2d') : null;
@@ -122,6 +137,9 @@ export const RoadTextureGenerator = {
 
         this._fillRoughnessBase(ctx);
         this.addWetPatchesRoughness(ctx, patches);
+        this.addPuddlesRoughness(ctx, puddles);
+        // Lane paint last → stays matte even if a puddle overlaps the dash corridor
+        this.addLanePaintRoughness(ctx, type);
         texture.needsUpdate = true;
     },
 
@@ -140,7 +158,8 @@ export const RoadTextureGenerator = {
     },
 
     /**
-     * Sparse road wear: potholes + wheel ruts (koleiny). Spaced so they don't merge.
+     * Sparse road wear: potholes + wheel ruts (koleiny) — NOT water puddles.
+     * Water uses generatePuddles(). Spaced so wear marks don't merge.
      * @param {number} [_count] ignored — layout is type-driven
      * @param {string} [type]
      */
@@ -277,12 +296,92 @@ export const RoadTextureGenerator = {
         return patches;
     },
 
+    /**
+     * Irregular water puddles (rain only). Separate from wear (pothole/rut).
+     * Large, mostly round bodies with small lobe bumps for edge irregularity.
+     * @param {number} count
+     * @param {string} [type]
+     */
+    generatePuddles(count = 0, type = 'straight') {
+        const puddles = [];
+        if (this._wetness !== 'rain' || count <= 0 || type === 'crosswalk') {
+            return puddles;
+        }
+
+        /** @type {{ x: number, y: number, r: number }[]} */
+        const placed = [];
+
+        const farEnough = (x, y, radius) => {
+            for (const p of placed) {
+                const dx = p.x - x;
+                const dy = p.y - y;
+                const min = p.r + radius + 28;
+                if (dx * dx + dy * dy < min * min) return false;
+            }
+            return true;
+        };
+
+        const makePuddle = (x, y) => {
+            // Large + nearly circular; small offset lobes = soft outline wobble
+            const r = 32 + Math.random() * 36;
+            const lobes = [
+                {
+                    ox: 0,
+                    oy: 0,
+                    rx: r,
+                    ry: r * (0.88 + Math.random() * 0.12),
+                    rot: Math.random() * Math.PI,
+                },
+                {
+                    ox: (Math.random() - 0.5) * r * 0.22,
+                    oy: (Math.random() - 0.5) * r * 0.22,
+                    rx: r * (0.78 + Math.random() * 0.12),
+                    ry: r * (0.76 + Math.random() * 0.12),
+                    rot: Math.random() * Math.PI,
+                },
+                {
+                    ox: (Math.random() - 0.5) * r * 0.38,
+                    oy: (Math.random() - 0.5) * r * 0.38,
+                    rx: r * (0.38 + Math.random() * 0.18),
+                    ry: r * (0.36 + Math.random() * 0.18),
+                    rot: Math.random() * Math.PI,
+                },
+            ];
+            return {
+                kind: 'puddle',
+                x,
+                y,
+                rot: Math.random() * Math.PI,
+                intensity: 0.8 + Math.random() * 0.2,
+                lobes,
+            };
+        };
+
+        const target = Math.max(0, count);
+        for (let i = 0; i < target; i++) {
+            for (let attempt = 0; attempt < 22; attempt++) {
+                const x = 80 + Math.random() * 350;
+                const y = 80 + Math.random() * 350;
+                // Keep puddle centers clear of the dashed paint strip
+                if (type === 'straight' && Math.abs(x - 256) < 40) continue;
+                const puddle = makePuddle(x, y);
+                const span = Math.max(puddle.lobes[0].rx, puddle.lobes[0].ry) + 10;
+                if (!farEnough(x, y, span)) continue;
+                placed.push({ x, y, r: span });
+                puddles.push(puddle);
+                break;
+            }
+        }
+        return puddles;
+    },
+
     createCanvasTexture(type) {
         const canvas = document.createElement('canvas');
         canvas.width = 512;
         canvas.height = 512;
         const ctx = canvas.getContext ? canvas.getContext('2d') : null;
         const patches = this.generateWetPatches(this._wetPatchCount(type), type);
+        const puddles = this.generatePuddles(this._puddleCount(type), type);
 
         if (ctx) {
             if (type === 'crosswalk') {
@@ -290,7 +389,7 @@ export const RoadTextureGenerator = {
                 ctx.clearRect(0, 0, 512, 512);
                 this.drawCrosswalk(ctx);
             } else {
-                ctx.fillStyle = this._wetness === 'rain' ? '#1a1c22' : '#222428';
+                ctx.fillStyle = '#222428';
                 ctx.fillRect(0, 0, 512, 512);
 
                 this.addAsphaltNoise(ctx, 512, 512);
@@ -305,6 +404,7 @@ export const RoadTextureGenerator = {
                 }
 
                 this.addWetPatchesAlbedo(ctx, patches);
+                this.addPuddlesAlbedo(ctx, puddles);
             }
         }
 
@@ -316,12 +416,15 @@ export const RoadTextureGenerator = {
         texture.minFilter = THREE.LinearMipmapLinearFilter;
         texture.userData = texture.userData || {};
         texture.userData.wetPatches = patches;
+        texture.userData.puddles = puddles;
         return texture;
     },
 
     createRoughnessTexture(type) {
         const albedo = this.getTexture(type);
         const patches = (albedo.userData && albedo.userData.wetPatches) || this.generateWetPatches(6, type);
+        const puddles = (albedo.userData && albedo.userData.puddles)
+            || this.generatePuddles(this._puddleCount(type), type);
 
         const canvas = document.createElement('canvas');
         canvas.width = 512;
@@ -331,6 +434,8 @@ export const RoadTextureGenerator = {
         if (ctx) {
             this._fillRoughnessBase(ctx);
             this.addWetPatchesRoughness(ctx, patches);
+            this.addPuddlesRoughness(ctx, puddles);
+            this.addLanePaintRoughness(ctx, type);
         }
 
         const texture = new THREE.CanvasTexture(canvas);
@@ -341,18 +446,16 @@ export const RoadTextureGenerator = {
         return texture;
     },
 
-    /** Shared roughness fill — rain uses quieter noise so envMap doesn't glitter. */
+    /** Shared roughness fill — matte asphalt; puddles paint glossy cores separately. */
     _fillRoughnessBase(ctx) {
-        ctx.fillStyle = this._wetness === 'rain' ? '#b0b0b0' : '#e6e6e6';
+        ctx.fillStyle = '#e6e6e6';
         ctx.fillRect(0, 0, 512, 512);
 
-        const noiseCount = this._wetness === 'rain' ? 40 : 200;
+        const noiseCount = 180;
         for (let i = 0; i < noiseCount; i++) {
             const rx = Math.random() * 512;
             const ry = Math.random() * 512;
-            const v = this._wetness === 'rain'
-                ? (160 + Math.floor(Math.random() * 30))
-                : (200 + Math.floor(Math.random() * 40));
+            const v = 200 + Math.floor(Math.random() * 40);
             ctx.fillStyle = `rgb(${v},${v},${v})`;
             ctx.beginPath();
             ctx.arc(rx, ry, 8 + Math.random() * 20, 0, Math.PI * 2);
@@ -361,13 +464,12 @@ export const RoadTextureGenerator = {
     },
 
     addWetPatchesAlbedo(ctx, patches) {
-        const rain = this._wetness === 'rain';
         ctx.save();
         for (const p of patches) {
             ctx.save();
             ctx.translate(p.x, p.y);
             ctx.rotate(p.rot || 0);
-            const a = (p.intensity ?? 1) * (rain ? 1 : 0.6);
+            const a = (p.intensity ?? 1) * 0.75;
 
             for (const lobe of (p.lobes || [])) {
                 ctx.save();
@@ -402,8 +504,41 @@ export const RoadTextureGenerator = {
         ctx.restore();
     },
 
+    /** Dark reflective water body — albedo only; gloss is in roughness map. */
+    addPuddlesAlbedo(ctx, puddles) {
+        if (!puddles?.length) return;
+        ctx.save();
+        for (const p of puddles) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot || 0);
+            const a = p.intensity ?? 1;
+
+            for (const lobe of (p.lobes || [])) {
+                ctx.save();
+                ctx.translate(lobe.ox, lobe.oy);
+                ctx.rotate(lobe.rot || 0);
+                const r = Math.max(lobe.rx, lobe.ry);
+                const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+                // Cool dark water + faint rim catch-light
+                grad.addColorStop(0, `rgba(12, 16, 24, ${0.72 * a})`);
+                grad.addColorStop(0.45, `rgba(22, 28, 38, ${0.48 * a})`);
+                grad.addColorStop(0.78, `rgba(48, 56, 68, ${0.18 * a})`);
+                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, lobe.rx, lobe.ry, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            ctx.restore();
+        }
+        ctx.restore();
+    },
+
     addWetPatchesRoughness(ctx, patches) {
-        const rain = this._wetness === 'rain';
+        // Wear stays relatively matte — only puddles get mirror-like roughness.
         ctx.save();
         for (const p of patches) {
             ctx.save();
@@ -415,18 +550,9 @@ export const RoadTextureGenerator = {
                 ctx.rotate(lobe.rot || 0);
                 const r = Math.max(lobe.rx, lobe.ry);
                 const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
-                if (rain) {
-                    // Water collects in holes/ruts → glossier cores
-                    const core = p.kind === 'pothole' ? 24 : 40;
-                    grad.addColorStop(0, `rgb(${core}, ${core}, ${core})`);
-                    grad.addColorStop(0.5, 'rgb(100, 100, 100)');
-                    grad.addColorStop(0.85, 'rgb(170, 170, 170)');
-                    grad.addColorStop(1, 'rgba(230, 230, 230, 0)');
-                } else {
-                    grad.addColorStop(0, 'rgb(150, 150, 150)');
-                    grad.addColorStop(0.55, 'rgb(195, 195, 195)');
-                    grad.addColorStop(1, 'rgba(230, 230, 230, 0)');
-                }
+                grad.addColorStop(0, 'rgb(150, 150, 150)');
+                grad.addColorStop(0.55, 'rgb(195, 195, 195)');
+                grad.addColorStop(1, 'rgba(230, 230, 230, 0)');
                 ctx.fillStyle = grad;
                 ctx.beginPath();
                 ctx.ellipse(0, 0, lobe.rx, lobe.ry, 0, 0, Math.PI * 2);
@@ -438,19 +564,69 @@ export const RoadTextureGenerator = {
         ctx.restore();
     },
 
+    /**
+     * Near-black roughness inside puddle lobes → shiny water; asphalt stays matte.
+     * (Three.js multiplies roughnessMap × material.roughness.)
+     */
+    addPuddlesRoughness(ctx, puddles) {
+        if (!puddles?.length) return;
+        ctx.save();
+        for (const p of puddles) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot || 0);
+            for (const lobe of (p.lobes || [])) {
+                ctx.save();
+                ctx.translate(lobe.ox, lobe.oy);
+                ctx.rotate(lobe.rot || 0);
+                const r = Math.max(lobe.rx, lobe.ry);
+                const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+                grad.addColorStop(0, 'rgb(8, 8, 8)');
+                grad.addColorStop(0.45, 'rgb(28, 28, 28)');
+                grad.addColorStop(0.8, 'rgb(110, 110, 110)');
+                grad.addColorStop(1, 'rgba(230, 230, 230, 0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, lobe.rx, lobe.ry, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+            ctx.restore();
+        }
+        ctx.restore();
+    },
+
+    /**
+     * Force lane dashes (and zebra paint) to stay matte — paint must not specular-glint.
+     * Drawn after puddles so overlapping water doesn't make the stripe shiny.
+     */
+    addLanePaintRoughness(ctx, type) {
+        if (type === 'straight') {
+            // Matches drawStraightRoad dash corridor (~x=256, width ~8 + soft pad)
+            const margin = 92;
+            const x0 = 246;
+            const w = 20;
+            ctx.fillStyle = '#f2f2f2';
+            ctx.fillRect(x0, margin, w, 512 - margin * 2);
+            return;
+        }
+        if (type === 'crosswalk') {
+            // Entire overlay is paint — fully matte
+            ctx.fillStyle = '#f2f2f2';
+            ctx.fillRect(0, 0, 512, 512);
+        }
+    },
+
     addAsphaltNoise(ctx, width, height) {
-        const rain = this._wetness === 'rain';
-        // Large aging blotches — quieter when wet (ref: smooth sheet, not speckles)
-        const blotchCount = rain ? 12 : 30;
+        // Keep aggregate visible in rain — wet look is puddles, not smoothed dirt removal
+        const blotchCount = 28;
         for (let i = 0; i < blotchCount; i++) {
             const rx = Math.random() * width;
             const ry = Math.random() * height;
             const rSize = 40 + Math.random() * 60;
             const isLight = Math.random() < 0.5;
             const grad = ctx.createRadialGradient(rx, ry, 0, rx, ry, rSize);
-            const lightA = rain ? 0.012 : 0.025;
-            const darkA = rain ? 0.03 : 0.04;
-            grad.addColorStop(0, isLight ? `rgba(255, 255, 255, ${lightA})` : `rgba(10, 10, 15, ${darkA})`);
+            grad.addColorStop(0, isLight ? 'rgba(255, 255, 255, 0.022)' : 'rgba(10, 10, 15, 0.038)');
             grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = grad;
             ctx.beginPath();
@@ -458,31 +634,29 @@ export const RoadTextureGenerator = {
             ctx.fill();
         }
 
-        // Medium aggregate — much fewer / darker when raining (white grit + env = glitter)
-        const stoneCount = rain ? 180 : 800;
+        const stoneCount = 700;
         for (let i = 0; i < stoneCount; i++) {
             const rx = Math.random() * width;
             const ry = Math.random() * height;
             const rSize = 1.0 + Math.random() * 2.0;
-            const isLight = Math.random() < (rain ? 0.2 : 0.45);
+            const isLight = Math.random() < 0.4;
             ctx.fillStyle = isLight
-                ? `rgba(230, 230, 235, ${rain ? 0.04 : 0.12})`
-                : `rgba(5, 5, 10, ${rain ? 0.12 : 0.15})`;
+                ? 'rgba(230, 230, 235, 0.1)'
+                : 'rgba(5, 5, 10, 0.14)';
             ctx.beginPath();
             ctx.arc(rx, ry, rSize, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // High-frequency sand grain
-        const pixelFrac = rain ? 0.02 : 0.08;
+        const pixelFrac = 0.07;
         const pixelCount = Math.round(width * height * pixelFrac);
-        ctx.fillStyle = `rgba(255, 255, 255, ${rain ? 0.015 : 0.04})`;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
         for (let i = 0; i < pixelCount; i++) {
             const rx = Math.random() * width;
             const ry = Math.random() * height;
             ctx.fillRect(rx, ry, 1, 1);
         }
-        ctx.fillStyle = `rgba(0, 0, 0, ${rain ? 0.08 : 0.10})`;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
         for (let i = 0; i < pixelCount; i++) {
             const rx = Math.random() * width;
             const ry = Math.random() * height;

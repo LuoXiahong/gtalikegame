@@ -69,19 +69,19 @@ function addLampPost(group) {
     group.add(arm);
 
     const globeMat = new THREE.MeshStandardMaterial({
-        color: 0xffe6a0,
+        color: 0xe4e8f0,
         roughness: 0.55,
         metalness: 0.05,
-        emissive: 0xffaa44,
+        emissive: 0xc8d0e0,
         emissiveIntensity: 0.35
     });
     const globe = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 10), globeMat);
     globe.position.set(0.75, 4.9, 0);
     group.add(globe);
 
-    // Local curb light — keep below bloom blow-out; wet asphalt carries the pool
+    // Local curb light — cool mercury/silver pools (noir); wet asphalt carries the pool
     const light = new THREE.PointLight(
-        0xffb84d,
+        0xd0dae8,
         STREET_LIGHT_BASE,
         STREET_LIGHT_DISTANCE,
         STREET_LIGHT_DECAY

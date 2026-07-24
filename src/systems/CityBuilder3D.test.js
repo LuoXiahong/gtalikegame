@@ -78,4 +78,17 @@ describe('CityBuilder3D', () => {
         expect(lampsA.length).toBe(a.streetLights.length);
         expect(lampFingerprint(a)).toBe(lampFingerprint(b));
     });
+
+    it('keeps trees clear of lamp posts', () => {
+        const mock = mockRenderSystem();
+        CityBuilder3D.buildCity(mock);
+        const SF = WorldMetrics.SCALE_FACTOR;
+        const lampSpots = CityBuilder3D.collectLampSpots(SF);
+        const minDist = Math.min(
+            ...mock.trees.map(tree =>
+                Math.min(...lampSpots.map(l => Math.hypot(tree.position.x - l.x, tree.position.z - l.z)))
+            )
+        );
+        expect(minDist).toBeGreaterThanOrEqual(2.5);
+    });
 });

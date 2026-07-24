@@ -33,9 +33,10 @@ describe('RoadTextureGenerator', () => {
         expect(roughness).toBeInstanceOf(THREE.CanvasTexture);
         expect(albedo.userData.wetPatches).toBeDefined();
         expect(albedo.userData.wetPatches.length).toBeGreaterThan(0);
+        expect(albedo.userData.puddles).toEqual([]);
     });
 
-    it('getSurfaceMaterialProps uses soft rain gloss (not glitter)', () => {
+    it('getSurfaceMaterialProps keeps rain road mostly matte (puddle gloss via map)', () => {
         RoadTextureGenerator._wetness = 'clear';
         expect(RoadTextureGenerator.getSurfaceMaterialProps()).toEqual({
             roughness: 1.0,
@@ -44,9 +45,9 @@ describe('RoadTextureGenerator', () => {
         });
         RoadTextureGenerator._wetness = 'rain';
         expect(RoadTextureGenerator.getSurfaceMaterialProps()).toEqual({
-            roughness: 0.62,
-            metalness: 0.08,
-            envMapIntensity: 0.35,
+            roughness: 0.92,
+            metalness: 0.04,
+            envMapIntensity: 0.55,
         });
     });
 
@@ -71,9 +72,9 @@ describe('RoadTextureGenerator', () => {
         };
         RoadTextureGenerator._wetness = 'rain';
         RoadTextureGenerator.applyWetnessToMeshes([opaque, glass]);
-        expect(opaque.material.roughness).toBeCloseTo(0.62);
-        expect(opaque.material.metalness).toBeCloseTo(0.08);
-        expect(opaque.material.envMapIntensity).toBeCloseTo(0.35);
+        expect(opaque.material.roughness).toBeCloseTo(0.92);
+        expect(opaque.material.metalness).toBeCloseTo(0.04);
+        expect(opaque.material.envMapIntensity).toBeCloseTo(0.55);
         expect(opaque.material.needsUpdate).toBe(true);
         expect(glass.material.roughness).toBe(0.85);
         expect(glass.material.envMapIntensity).toBe(0);
@@ -101,13 +102,36 @@ describe('RoadTextureGenerator', () => {
         }
     });
 
-    it('crosswalk has no wear patches; intersection stays sparse', () => {
+    it('setWetness generates separate puddles with dual lobes (not wear kinds)', () => {
+        RoadTextureGenerator.init();
+        RoadTextureGenerator.setWetness('rain');
+        const straight = RoadTextureGenerator.getTexture('straight');
+        const puddles = straight.userData.puddles;
+        expect(puddles.length).toBeGreaterThanOrEqual(1);
+        expect(puddles.length).toBeLessThanOrEqual(3);
+        expect(puddles.every((p) => p.kind === 'puddle')).toBe(true);
+        for (const p of puddles) {
+            expect(p.lobes?.length).toBeGreaterThanOrEqual(2);
+            // Large, mostly round main body
+            expect(p.lobes[0].rx).toBeGreaterThanOrEqual(32);
+            expect(p.lobes[0].ry / p.lobes[0].rx).toBeGreaterThan(0.85);
+        }
+        // Clear has no puddles
+        RoadTextureGenerator.setWetness('clear');
+        expect(RoadTextureGenerator.getTexture('straight').userData.puddles).toEqual([]);
+    });
+
+    it('crosswalk has no wear/puddles; intersection stays sparse', () => {
         RoadTextureGenerator.init();
         RoadTextureGenerator.setWetness('rain');
         expect(RoadTextureGenerator.getTexture('crosswalk').userData.wetPatches).toEqual([]);
+        expect(RoadTextureGenerator.getTexture('crosswalk').userData.puddles).toEqual([]);
         const ix = RoadTextureGenerator.getTexture('intersection').userData.wetPatches;
         expect(ix.length).toBeLessThanOrEqual(2);
         expect(ix.every((p) => p.kind === 'pothole' || p.kind === 'rut')).toBe(true);
+        const ixPuddles = RoadTextureGenerator.getTexture('intersection').userData.puddles;
+        expect(ixPuddles.length).toBeGreaterThan(0);
+        expect(ixPuddles.every((p) => p.kind === 'puddle')).toBe(true);
     });
 
     it('setWetness toggles clear ↔ rain and refreshes patch layout + materials', () => {
@@ -124,7 +148,7 @@ describe('RoadTextureGenerator', () => {
 
         RoadTextureGenerator.setWetness('rain', [mesh]);
         const rainPatches = [...RoadTextureGenerator.getTexture('straight').userData.wetPatches];
-        expect(mesh.material.envMapIntensity).toBeCloseTo(0.35);
+        expect(mesh.material.envMapIntensity).toBeCloseTo(0.55);
 
         RoadTextureGenerator.setWetness('clear', [mesh]);
         expect(RoadTextureGenerator._wetness).toBe('clear');
@@ -137,7 +161,8 @@ describe('RoadTextureGenerator', () => {
         expect(again.length).toBeGreaterThan(0);
         // Rebake replaces patch list (new random layout)
         expect(again).not.toBe(rainPatches);
-        expect(mesh.material.envMapIntensity).toBeCloseTo(0.35);
+        expect(mesh.material.envMapIntensity).toBeCloseTo(0.55);
+        expect(RoadTextureGenerator.getTexture('straight').userData.puddles.length).toBeGreaterThan(0);
     });
 
     it('_wetPatchCount stays low for rain (no stamp spam)', () => {
@@ -147,5 +172,14 @@ describe('RoadTextureGenerator', () => {
         expect(RoadTextureGenerator._wetPatchCount('crosswalk')).toBeLessThanOrEqual(1);
         RoadTextureGenerator._wetness = 'clear';
         expect(RoadTextureGenerator._wetPatchCount('straight')).toBeLessThanOrEqual(1);
+    });
+
+    it('_puddleCount is rain-only and zero on crosswalk', () => {
+        RoadTextureGenerator._wetness = 'clear';
+        expect(RoadTextureGenerator._puddleCount('straight')).toBe(0);
+        RoadTextureGenerator._wetness = 'rain';
+        expect(RoadTextureGenerator._puddleCount('straight')).toBe(3);
+        expect(RoadTextureGenerator._puddleCount('intersection')).toBe(2);
+        expect(RoadTextureGenerator._puddleCount('crosswalk')).toBe(0);
     });
 });

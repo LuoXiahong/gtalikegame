@@ -111,9 +111,12 @@ export const RetroFilmShader = {
             col *= flick;
 
             if (grain > 0.001) {
-                float n = hash(floor(uv * vec2(320.0, 240.0) + frame * 13.0));
-                float v = 0.5 + (n * 2.0 - 1.0) * (100.0 / 255.0) * grain;
-                float gAlpha = (0.12 + grain * 0.22) * i;
+                // Dual-scale grain: coarse stock + fine silver halide density
+                float nCoarse = hash(floor(uv * vec2(480.0, 360.0) + frame * 13.0));
+                float nFine = hash(floor(uv * vec2(960.0, 720.0) + frame * 7.3));
+                float n = mix(nCoarse, nFine, 0.55);
+                float v = 0.5 + (n * 2.0 - 1.0) * (118.0 / 255.0) * grain;
+                float gAlpha = (0.16 + grain * 0.34) * i;
                 col = mix(col, overlay(col, vec3(clamp(v, 0.0, 1.0))), gAlpha);
             }
 
@@ -133,8 +136,11 @@ export const RetroFilmShader = {
 
                         float xLine = sx + sin(uv.y * 14.0 + sx * 30.0) * wobble;
                         float line = smoothstep(w * 1.8, 0.0, abs(uv.x - xLine));
+                        // Cool scratch when sepia is off (noir); warm only with sepia presets
+                        vec3 warmScratch = vec3(0.78, 0.74, 0.66);
+                        vec3 coolScratch = vec3(0.72, 0.76, 0.84);
                         vec3 scratchCol = hash(vec2(nf, 1.4)) < 0.7
-                            ? vec3(0.78, 0.74, 0.66)
+                            ? mix(coolScratch, warmScratch, sepia)
                             : vec3(0.08, 0.07, 0.06);
                         col = mix(col, scratchCol, line * alpha);
                     }
@@ -178,11 +184,11 @@ export const RetroFilmShader = {
             }
 
             // Time-of-day cool grading — always applied (even when film intensity is 0).
-            // High todDesaturation (night/noir) drives near-mono; tint stays cool gray-blue.
+            // High todDesaturation (night/noir) drives near-mono; tint stays cool silver-blue.
             float lumaTod = dot(col, vec3(0.299, 0.587, 0.114));
             col = mix(col, vec3(lumaTod), clamp(todDesaturation, 0.0, 1.0));
             vec3 tinted = col * todTint;
-            float tintAmt = mix(0.10, 0.55, clamp(todDesaturation, 0.0, 1.0));
+            float tintAmt = mix(0.12, 0.72, clamp(todDesaturation, 0.0, 1.0));
             col = mix(col, tinted, tintAmt);
 
             gl_FragColor = vec4(clamp(col, 0.0, 1.0), raw.a);

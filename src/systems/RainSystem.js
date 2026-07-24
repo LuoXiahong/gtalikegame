@@ -1,17 +1,26 @@
 /**
- * Lightweight rain via THREE.Points — cinematic streaks, no physics.
- * Particles live in world-space offsets (no parent scale) so density stays even.
+ * Cinematic rain streaks via InstancedMesh (elongated quads).
+ * THREE.Points cannot deliver streaks — PointsMaterial always draws square sprites,
+ * crushing the drop texture into ~N×N px dots. Each instance is a thin plane
+ * aligned to fall + wind, facing the isometric camera.
  */
 import * as THREE from 'three';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 
 /** Must match RenderSystem3D orthographic viewSize. */
 const VIEW_SIZE = 60;
-/** Must match RenderSystem3D isometric yaw (45°). */
+/** Must match RenderSystem3D isometric yaw (45°) and tilt (~35.264°). */
 const CAMERA_YAW = Math.PI / 4;
-const PARTICLE_COUNT = 2000;
-const FALL_SPEED = 100;
-const WIND_DRIFT = 12;
+const CAMERA_TILT = 35.264 * Math.PI / 180;
+const PARTICLE_COUNT = 700;
+const FALL_SPEED = 400;
+const WIND_DRIFT = 15;
+/**
+ * World-unit streak size. Ortho frustum height ≈ VIEW_SIZE/zoom (~60),
+ * so length 3.2 ≈ 5% of view (~38px @720p); width 0.35 stays a readable stroke.
+ */
+const STREAK_WIDTH = 0.05;
+const STREAK_LENGTH = 3.2;
 
 function createDropTexture() {
     const canvas = document.createElement('canvas');
@@ -21,11 +30,11 @@ function createDropTexture() {
     if (ctx) {
         const grad = ctx.createLinearGradient(4, 0, 4, 48);
         grad.addColorStop(0, 'rgba(200, 210, 225, 0)');
-        grad.addColorStop(0.3, 'rgba(215, 225, 240, 0.55)');
-        grad.addColorStop(0.65, 'rgba(190, 202, 220, 0.35)');
+        grad.addColorStop(0.25, 'rgba(230, 238, 250, 0.85)');
+        grad.addColorStop(0.55, 'rgba(200, 214, 235, 0.45)');
         grad.addColorStop(1, 'rgba(165, 178, 195, 0)');
         ctx.fillStyle = grad;
-        ctx.fillRect(3, 0, 2, 48);
+        ctx.fillRect(2, 0, 4, 48);
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.needsUpdate = true;
@@ -59,21 +68,66 @@ function wrapCoord(v, half) {
     return v;
 }
 
+/** Direction from focus toward the isometric camera (matches RenderSystem3D). */
+const _camDir = new THREE.Vector3(
+    Math.cos(CAMERA_YAW) * Math.cos(CAMERA_TILT),
+    Math.sin(CAMERA_TILT),
+    Math.sin(CAMERA_YAW) * Math.cos(CAMERA_TILT),
+).normalize();
+
+const _fall = new THREE.Vector3();
+const _xAxis = new THREE.Vector3();
+const _yAxis = new THREE.Vector3();
+const _zAxis = new THREE.Vector3();
+const _scale = new THREE.Vector3(1, 1, 1);
+const _mat = new THREE.Matrix4();
+
+function writeInstanceMatrix(mesh, index, x, y, z, windX, fallY, lengthScale) {
+    // Local Y = fall direction; local Z faces camera so the quad is not edge-on.
+    _fall.set(windX, -fallY, 0);
+    if (_fall.lengthSq() < 1e-8) _fall.set(0, -1, 0);
+    else _fall.normalize();
+
+    _yAxis.copy(_fall);
+    _xAxis.crossVectors(_yAxis, _camDir);
+    if (_xAxis.lengthSq() < 1e-8) {
+        _xAxis.set(1, 0, 0);
+    } else {
+        _xAxis.normalize();
+    }
+    _zAxis.crossVectors(_xAxis, _yAxis).normalize();
+
+    _scale.set(1, lengthScale, 1);
+    _mat.makeBasis(_xAxis, _yAxis, _zAxis);
+    _mat.scale(_scale);
+    _mat.setPosition(x, y, z);
+    mesh.setMatrixAt(index, _mat);
+}
+
 export const RainSystem = {
-    points: null,
+    /** @type {THREE.InstancedMesh|null} */
+    mesh: null,
+    /** @deprecated alias of mesh — kept for older call sites/tests during transition */
+    get points() {
+        return this.mesh;
+    },
+    set points(value) {
+        this.mesh = value;
+    },
     _positions: null,
     _velocities: null,
+    _lengthScales: null,
     _active: false,
     _coverage: null,
 
     init(scene) {
-        if (this.points || !scene) return;
+        if (this.mesh || !scene) return;
 
         const SF = WorldMetrics.SCALE_FACTOR;
         const cover = getRainCoverage(1);
-        const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(PARTICLE_COUNT * 3);
         const velocities = new Float32Array(PARTICLE_COUNT * 2);
+        const lengthScales = new Float32Array(PARTICLE_COUNT);
 
         for (let i = 0; i < PARTICLE_COUNT; i++) {
             const i3 = i * 3;
@@ -82,49 +136,67 @@ export const RainSystem = {
             positions[i3 + 2] = (Math.random() * 2 - 1) * cover.halfD;
             velocities[i * 2] = (Math.random() - 0.5) * WIND_DRIFT * SF;
             velocities[i * 2 + 1] = (0.7 + Math.random() * 0.6) * FALL_SPEED * SF;
+            lengthScales[i] = 0.7 + Math.random() * 0.6;
         }
 
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-        const material = new THREE.PointsMaterial({
+        const geometry = new THREE.PlaneGeometry(STREAK_WIDTH, STREAK_LENGTH);
+        const material = new THREE.MeshBasicMaterial({
             map: createDropTexture(),
-            color: 0xc8d4e8,
-            size: 11,
+            color: 0xd8e4f4,
             transparent: true,
-            opacity: 0.48,
+            opacity: 0.72,
             depthWrite: false,
             depthTest: false,
-            sizeAttenuation: false,
             fog: false,
-            alphaTest: 0.03,
+            side: THREE.DoubleSide,
             blending: THREE.NormalBlending,
+            alphaTest: 0.02,
         });
 
-        this.points = new THREE.Points(geometry, material);
-        this.points.frustumCulled = false;
-        this.points.renderOrder = 200;
-        this.points.visible = false;
+        const mesh = new THREE.InstancedMesh(geometry, material, PARTICLE_COUNT);
+        mesh.frustumCulled = false;
+        mesh.renderOrder = 200;
+        mesh.visible = false;
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            const i3 = i * 3;
+            writeInstanceMatrix(
+                mesh,
+                i,
+                positions[i3],
+                positions[i3 + 1],
+                positions[i3 + 2],
+                velocities[i * 2],
+                velocities[i * 2 + 1],
+                lengthScales[i],
+            );
+        }
+        mesh.instanceMatrix.needsUpdate = true;
+
+        this.mesh = mesh;
         this._positions = positions;
         this._velocities = velocities;
+        this._lengthScales = lengthScales;
         this._coverage = cover;
-        scene.add(this.points);
+        scene.add(mesh);
     },
 
     setActive(active) {
         this._active = Boolean(active);
-        if (this.points) {
-            this.points.visible = this._active;
+        if (this.mesh) {
+            this.mesh.visible = this._active;
         }
     },
 
     update(dt, focusX, focusZ, cameraZoom = 1, aspect = 4 / 3) {
-        if (!this.points || !this._active) return;
+        if (!this.mesh || !this._active) return;
 
         const safeDt = Math.min(dt || 0.016, 0.05);
         const cover = getRainCoverage(cameraZoom, aspect);
         this._coverage = cover;
 
-        this.points.position.set(
+        this.mesh.position.set(
             focusX + cover.offsetX,
             0,
             focusZ + cover.offsetZ,
@@ -132,12 +204,17 @@ export const RainSystem = {
 
         const positions = this._positions;
         const velocities = this._velocities;
+        const lengthScales = this._lengthScales;
         const { halfW, halfD, height } = cover;
+        const mesh = this.mesh;
 
         for (let i = 0; i < PARTICLE_COUNT; i++) {
             const i3 = i * 3;
-            positions[i3] += velocities[i * 2] * safeDt;
-            positions[i3 + 1] -= velocities[i * 2 + 1] * safeDt;
+            const windX = velocities[i * 2];
+            const fallY = velocities[i * 2 + 1];
+
+            positions[i3] += windX * safeDt;
+            positions[i3 + 1] -= fallY * safeDt;
 
             if (positions[i3 + 1] < 0) {
                 positions[i3 + 1] = height;
@@ -147,8 +224,19 @@ export const RainSystem = {
 
             positions[i3] = wrapCoord(positions[i3], halfW);
             positions[i3 + 2] = wrapCoord(positions[i3 + 2], halfD);
+
+            writeInstanceMatrix(
+                mesh,
+                i,
+                positions[i3],
+                positions[i3 + 1],
+                positions[i3 + 2],
+                windX,
+                fallY,
+                lengthScales[i],
+            );
         }
 
-        this.points.geometry.attributes.position.needsUpdate = true;
+        mesh.instanceMatrix.needsUpdate = true;
     },
 };

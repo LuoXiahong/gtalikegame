@@ -35,7 +35,7 @@ import { TimeOfDaySettings } from './TimeOfDaySettings.js';
 import { ScreenshotCapture } from './ScreenshotCapture.js';
 
 /** Base PointLight intensity from PropFactory lamp posts. */
-export const STREET_LIGHT_BASE = 550;
+export const STREET_LIGHT_BASE = 380;
 const TOD_TRANSITION_SEC = 1.5;
 /** Soft lamp/emissive glow — high threshold so white zebra paint does not bloom. */
 export const BLOOM_STRENGTH = 0.18;

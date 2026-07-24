@@ -11,7 +11,7 @@ import { createPropAt, PROP_TYPES } from './PropFactory.js';
 export const LAMP_EDGE_INSET = 30;
 /** Target spacing along a block edge (2D px) — corners + even steps. */
 export const LAMP_EDGE_SPACING = 220;
-/** Min 3D distance between a random prop and a lamp. */
+/** Min 3D distance between a tree/prop and a lamp. */
 const PROP_LAMP_CLEARANCE = 2.5;
 
 export const CityBuilder3D = {
@@ -78,12 +78,14 @@ export const CityBuilder3D = {
         }
 
         renderSystem.trees = [];
+        const lampSpots = this.collectLampSpots(SF);
         const treePositions = [];
         const treeOffsets = [
-            { x: -200, z: -200 }, { x: 200, z: -200 },
-            { x: -200, z: 200 }, { x: 200, z: 200 },
-            { x: -200, z: 0 }, { x: 200, z: 0 },
-            { x: 0, z: -200 }, { x: 0, z: 200 }
+            // ±170 (not ±200): corner/mid slots stay ≥~5u from lamp inset (30px)
+            { x: -170, z: -170 }, { x: 170, z: -170 },
+            { x: -170, z: 170 }, { x: 170, z: 170 },
+            { x: -170, z: 0 }, { x: 170, z: 0 },
+            { x: 0, z: -170 }, { x: 0, z: 170 }
         ];
 
         for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
@@ -101,10 +103,13 @@ export const CityBuilder3D = {
             }
         }
 
-        treePositions.sort(() => Math.random() - 0.5);
+        const freeTrees = treePositions.filter(pos =>
+            lampSpots.every(lamp => Math.hypot(pos.x - lamp.x, pos.z - lamp.z) >= PROP_LAMP_CLEARANCE)
+        );
+        freeTrees.sort(() => Math.random() - 0.5);
         const totalTreesCount = Math.floor(Math.random() * 8) + 18;
-        for (let i = 0; i < Math.min(totalTreesCount, treePositions.length); i++) {
-            const pos = treePositions[i];
+        for (let i = 0; i < Math.min(totalTreesCount, freeTrees.length); i++) {
+            const pos = freeTrees[i];
             const sizeType = Math.random() < 0.3 ? 'shrub' : 'tree';
             this.createTree(renderSystem, sizeType, pos.x, pos.z);
         }

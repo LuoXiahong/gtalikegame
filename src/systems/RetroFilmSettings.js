@@ -43,15 +43,15 @@ export const RETRO_PRESETS = {
     /** Cool mono film look — no warm sepia (used by night/rain ref parity). */
     noir: {
         enabled: true,
-        intensity: 90,
-        vignette: 48,
+        intensity: 92,
+        vignette: 50,
         flicker: 16,
         jitter: 5,
-        grain: 42,
-        scratches: 22,
+        grain: 62,
+        scratches: 24,
         dust: 0,
         sepia: 0,
-        contrast: 28,
+        contrast: 32,
     },
     ruined: {
         enabled: true,

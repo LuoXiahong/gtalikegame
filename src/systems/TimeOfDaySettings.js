@@ -33,13 +33,13 @@ export const TIME_PRESETS = {
         rim: { color: 0xa8b8d8, intensity: 0.22 },
     },
     night: {
-        ambient: { color: 0x252538, intensity: 0.10 },
-        hemi: { sky: 0x2a2e42, ground: 0x141210, intensity: 0.12 },
+        ambient: { color: 0x1e2230, intensity: 0.10 },
+        hemi: { sky: 0x262c40, ground: 0x101218, intensity: 0.12 },
         sun: { color: 0x6a7ba8, intensity: 0.06 },
-        fog: { color: 0x0e0e12, near: 30, far: 160 },
-        streetLightMultiplier: 2.2,
-        // Strong mono push for ref parity (was 0.42 — still left brick/teal readable)
-        grading: { desaturation: 0.74, tint: 0x9aa4b4 },
+        fog: { color: 0x0c0e14, near: 30, far: 160 },
+        streetLightMultiplier: 1.7,
+        // Silver-mono push for ref parity (was 0.74 / warm-gray 0x9aa4b4)
+        grading: { desaturation: 0.84, tint: 0x7a8ca0 },
         rim: { color: 0xb0c4e0, intensity: 0.45 },
     },
 };

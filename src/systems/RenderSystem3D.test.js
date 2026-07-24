@@ -167,7 +167,7 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.scene.environment).toBeDefined();
         expect(RenderSystem3D.composer).toBeDefined();
         expect(RenderSystem3D.ambientLight.intensity).toBeCloseTo(0.10);
-        expect(RenderSystem3D._streetLightMult).toBeCloseTo(2.2);
+        expect(RenderSystem3D._streetLightMult).toBeCloseTo(1.7);
         expect(RenderSystem3D.tiltShiftPass).toBeDefined();
         expect(RenderSystem3D.retroFilmPass).toBeDefined();
         expect(RenderSystem3D.retroFilmPass.uniforms.intensity).toBeDefined();
@@ -216,16 +216,16 @@ describe('RenderSystem3D', () => {
         RenderSystem3D.init();
         const lane = RenderSystem3D.laneMarkings[0];
         expect(lane.material.roughnessMap).toBeDefined();
-        // Default weather is rain → soft wet gloss (not glitter)
-        expect(lane.material.roughness).toBeCloseTo(0.62);
-        expect(lane.material.metalness).toBeCloseTo(0.08);
-        expect(lane.material.envMapIntensity).toBeCloseTo(0.35);
+        // Default weather is rain → matte road + puddle gloss via roughnessMap
+        expect(lane.material.roughness).toBeCloseTo(0.92);
+        expect(lane.material.metalness).toBeCloseTo(0.04);
+        expect(lane.material.envMapIntensity).toBeCloseTo(0.55);
     });
 
     it('should dry road materials when weather switches to clear', () => {
         RenderSystem3D.init();
         const lane = RenderSystem3D.laneMarkings[0];
-        expect(lane.material.envMapIntensity).toBeCloseTo(0.35);
+        expect(lane.material.envMapIntensity).toBeCloseTo(0.55);
 
         TimeOfDaySettings.applyWeather('clear');
         expect(lane.material.roughness).toBe(1);
@@ -233,8 +233,8 @@ describe('RenderSystem3D', () => {
         expect(lane.material.envMapIntensity).toBe(0);
 
         TimeOfDaySettings.applyWeather('rain');
-        expect(lane.material.envMapIntensity).toBeCloseTo(0.35);
-        expect(lane.material.metalness).toBeCloseTo(0.08);
+        expect(lane.material.envMapIntensity).toBeCloseTo(0.55);
+        expect(lane.material.metalness).toBeCloseTo(0.04);
     });
 
     it('should keep bloom pass before film grading with soft lamp glow settings', () => {
