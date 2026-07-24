@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import { WorldGrid } from '../world/WorldGrid.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { FacadeGenerator } from './FacadeGenerator.js';
-import { createPropAt, PROP_TYPES } from './PropFactory.js';
+import { createPropAt } from './PropFactory.js';
+import { createTreeAt, plantHash } from './TreeFactory.js';
 
 /** Inset from block outer edge onto sidewalk (2D px). */
 export const LAMP_EDGE_INSET = 30;
@@ -13,6 +14,33 @@ export const LAMP_EDGE_INSET = 30;
 export const LAMP_EDGE_SPACING = 220;
 /** Min 3D distance between a tree/prop and a lamp. */
 const PROP_LAMP_CLEARANCE = 2.5;
+
+/**
+ * Per-block plant slots (2D px offsets from block center).
+ * Corners → taller trees; mid-edges → shrubs/hedges; quarters → mixed.
+ * Type picked deterministically from `kinds` via plantHash(r,c,slot).
+ */
+export const TREE_SLOT_DEFS = [
+    // Corners
+    { ox: -170, oz: -170, kinds: ['oak', 'pine', 'birch'] },
+    { ox: 170, oz: -170, kinds: ['pine', 'oak', 'round'] },
+    { ox: -170, oz: 170, kinds: ['round', 'birch', 'oak'] },
+    { ox: 170, oz: 170, kinds: ['birch', 'pine', 'oak'] },
+    // Mid-edges
+    { ox: -170, oz: 0, kinds: ['hedge', 'tallBush', 'bush'] },
+    { ox: 170, oz: 0, kinds: ['bush', 'hedge', 'tallBush'] },
+    { ox: 0, oz: -170, kinds: ['tallBush', 'bush', 'round'] },
+    { ox: 0, oz: 170, kinds: ['bush', 'tallBush', 'hedge'] },
+    // Quarter curb — denser shrubs between corner and mid
+    { ox: -170, oz: -85, kinds: ['bush', 'hedge'] },
+    { ox: -170, oz: 85, kinds: ['hedge', 'bush'] },
+    { ox: 170, oz: -85, kinds: ['bush', 'tallBush'] },
+    { ox: 170, oz: 85, kinds: ['tallBush', 'bush'] },
+    { ox: -85, oz: -170, kinds: ['hedge', 'bush'] },
+    { ox: 85, oz: -170, kinds: ['bush', 'hedge'] },
+    { ox: -85, oz: 170, kinds: ['tallBush', 'bush'] },
+    { ox: 85, oz: 170, kinds: ['bush', 'hedge'] }
+];
 
 export const CityBuilder3D = {
     buildCity(renderSystem) {
@@ -79,39 +107,9 @@ export const CityBuilder3D = {
 
         renderSystem.trees = [];
         const lampSpots = this.collectLampSpots(SF);
-        const treePositions = [];
-        const treeOffsets = [
-            // ±170 (not ±200): corner/mid slots stay ≥~5u from lamp inset (30px)
-            { x: -170, z: -170 }, { x: 170, z: -170 },
-            { x: -170, z: 170 }, { x: 170, z: 170 },
-            { x: -170, z: 0 }, { x: 170, z: 0 },
-            { x: 0, z: -170 }, { x: 0, z: 170 }
-        ];
-
-        for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
-            for (let c = 0; c < WorldGrid.GRID_COLS; c++) {
-                const b = WorldGrid.getBlockBounds(r, c);
-                const posX = (b.x + b.w / 2) * SF;
-                const posZ = (b.y + b.h / 2) * SF;
-
-                treeOffsets.forEach(offset => {
-                    treePositions.push({
-                        x: posX + offset.x * SF,
-                        z: posZ + offset.z * SF
-                    });
-                });
-            }
-        }
-
-        const freeTrees = treePositions.filter(pos =>
-            lampSpots.every(lamp => Math.hypot(pos.x - lamp.x, pos.z - lamp.z) >= PROP_LAMP_CLEARANCE)
-        );
-        freeTrees.sort(() => Math.random() - 0.5);
-        const totalTreesCount = Math.floor(Math.random() * 8) + 18;
-        for (let i = 0; i < Math.min(totalTreesCount, freeTrees.length); i++) {
-            const pos = freeTrees[i];
-            const sizeType = Math.random() < 0.3 ? 'shrub' : 'tree';
-            this.createTree(renderSystem, sizeType, pos.x, pos.z);
+        for (const spot of this.collectTreeSpots(SF)) {
+            if (!this._clearOfLamps(spot.x, spot.z, lampSpots)) continue;
+            this.createTree(renderSystem, spot.type, spot.x, spot.z, spot.rot, spot.seed);
         }
 
         this.placeSidewalkProps(renderSystem);
@@ -125,8 +123,7 @@ export const CityBuilder3D = {
     },
 
     /**
-     * Lamps: deterministic corners + even spacing along every block edge.
-     * Other props: random on leftover sidewalk slots (clear of lamps).
+     * Lamps + street furniture: all deterministic (roles per block pattern).
      */
     placeSidewalkProps(renderSystem) {
         const SF = WorldMetrics.SCALE_FACTOR;
@@ -138,43 +135,131 @@ export const CityBuilder3D = {
             this._placeProp(renderSystem, 'lampPost', spot.x, spot.z, spot.rot);
         }
 
-        const propOffsets = [
-            { x: -220, z: -180 }, { x: 220, z: -180 },
-            { x: -220, z: 180 }, { x: 220, z: 180 },
-            { x: -180, z: -220 }, { x: 180, z: -220 },
-            { x: -180, z: 220 }, { x: 180, z: 220 },
-            { x: -230, z: 0 }, { x: 230, z: 0 },
-            { x: 0, z: -230 }, { x: 0, z: 230 }
-        ];
+        for (const spot of this.collectStreetPropSpots(SF)) {
+            if (!this._clearOfLamps(spot.x, spot.z, lampSpots)) continue;
+            this._placeProp(renderSystem, spot.type, spot.x, spot.z, spot.rot);
+        }
+    },
 
-        const candidates = [];
+    _clearOfLamps(x, z, lampSpots) {
+        return lampSpots.every(lamp => Math.hypot(x - lamp.x, z - lamp.z) >= PROP_LAMP_CLEARANCE);
+    },
+
+    /**
+     * Deterministic plant positions for every block sidewalk ring.
+     * @param {number} SF
+     * @returns {{ x: number, z: number, type: string, rot: number, seed: number }[]}
+     */
+    collectTreeSpots(SF) {
+        const spots = [];
         for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
             for (let c = 0; c < WorldGrid.GRID_COLS; c++) {
                 const b = WorldGrid.getBlockBounds(r, c);
                 const posX = (b.x + b.w / 2) * SF;
                 const posZ = (b.y + b.h / 2) * SF;
-                propOffsets.forEach(offset => {
-                    candidates.push({
-                        x: posX + offset.x * SF,
-                        z: posZ + offset.z * SF
+
+                TREE_SLOT_DEFS.forEach((def, slot) => {
+                    // Skip ~1/5 of quarter slots for breathing room (still deterministic)
+                    const h = plantHash(r, c, slot);
+                    if (slot >= 8 && h % 5 === 0) return;
+
+                    const type = def.kinds[h % def.kinds.length];
+                    const rot = ((h >>> 3) % 4) * (Math.PI / 2);
+                    spots.push({
+                        x: posX + def.ox * SF,
+                        z: posZ + def.oz * SF,
+                        type,
+                        rot,
+                        seed: h
                     });
                 });
             }
         }
+        return spots;
+    },
 
-        const free = candidates.filter(pos =>
-            lampSpots.every(lamp => Math.hypot(pos.x - lamp.x, pos.z - lamp.z) >= PROP_LAMP_CLEARANCE)
-        );
-        free.sort(() => Math.random() - 0.5);
+    /**
+     * Deterministic benches / trash cans / hydrants / kiosks per block.
+     * Bench back faces the building; seat looks toward the street.
+     * @param {number} SF
+     * @returns {{ x: number, z: number, type: string, rot: number }[]}
+     */
+    collectStreetPropSpots(SF) {
+        const spots = [];
 
-        const others = PROP_TYPES.filter(t => t !== 'lampPost');
-        const totalOthers = Math.floor(Math.random() * 5) + 10; // 10–14
-        for (let i = 0; i < Math.min(totalOthers, free.length); i++) {
-            const pos = free[i];
-            const type = others[Math.floor(Math.random() * others.length)];
-            const rot = (Math.floor(Math.random() * 4) * Math.PI) / 2;
-            this._placeProp(renderSystem, type, pos.x, pos.z, rot);
+        // Bench: local +Z is sitting direction (back is local -Z)
+        const benchNS = [
+            { ox: 0, oz: -185, rot: Math.PI }, // north curb → face street (-Z)
+            { ox: 0, oz: 185, rot: 0 }         // south curb → face street (+Z)
+        ];
+        const benchEW = [
+            { ox: -185, oz: 0, rot: Math.PI / 2 },  // west → street (-X)
+            { ox: 185, oz: 0, rot: -Math.PI / 2 }   // east → street (+X)
+        ];
+
+        const trashDiagA = [
+            { ox: -195, oz: -175 },
+            { ox: 195, oz: 175 }
+        ];
+        const trashDiagB = [
+            { ox: 195, oz: -175 },
+            { ox: -195, oz: 175 }
+        ];
+
+        for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
+            for (let c = 0; c < WorldGrid.GRID_COLS; c++) {
+                const b = WorldGrid.getBlockBounds(r, c);
+                const posX = (b.x + b.w / 2) * SF;
+                const posZ = (b.y + b.h / 2) * SF;
+                const pattern = (r + c) % 4;
+
+                const benches = pattern % 2 === 0 ? benchNS : benchEW;
+                for (const bench of benches) {
+                    spots.push({
+                        x: posX + bench.ox * SF,
+                        z: posZ + bench.oz * SF,
+                        type: 'bench',
+                        rot: bench.rot
+                    });
+                }
+
+                const trash = pattern < 2 ? trashDiagA : trashDiagB;
+                for (const t of trash) {
+                    spots.push({
+                        x: posX + t.ox * SF,
+                        z: posZ + t.oz * SF,
+                        type: 'trashCan',
+                        rot: 0
+                    });
+                }
+
+                // One hydrant on a free mid-side (not occupied by benches)
+                const hydrant = pattern % 2 === 0
+                    ? { ox: -200, oz: 70, rot: Math.PI / 2 }
+                    : { ox: 70, oz: -200, rot: 0 };
+                spots.push({
+                    x: posX + hydrant.ox * SF,
+                    z: posZ + hydrant.oz * SF,
+                    type: 'hydrant',
+                    rot: hydrant.rot
+                });
+
+                // Sparse kiosks (~every 3rd block)
+                if ((r * 3 + c) % 3 === 0) {
+                    const kiosk = pattern < 2
+                        ? { ox: 175, oz: 110, rot: -Math.PI / 2 }
+                        : { ox: -175, oz: -110, rot: Math.PI / 2 };
+                    spots.push({
+                        x: posX + kiosk.ox * SF,
+                        z: posZ + kiosk.oz * SF,
+                        type: 'kiosk',
+                        rot: kiosk.rot
+                    });
+                }
+            }
         }
+
+        return spots;
     },
 
     /**
@@ -543,55 +628,8 @@ export const CityBuilder3D = {
         renderSystem.billboards.push(billboardGroup);
     },
 
-    createTree(renderSystem, sizeType, x, z) {
-        const group = new THREE.Group();
-        group.position.set(x, WorldMetrics.SIDEWALK_HEIGHT, z);
-
-        const greenShades = [
-            0x2ecc71, 0x27ae60, 0x1abc9c, 0x16a085, 0x1e824c, 0x2d5a27
-        ];
-        const leafColor = greenShades[Math.floor(Math.random() * greenShades.length)];
-
-        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x795548, roughness: 0.9, metalness: 0.0 });
-        const leafMat = new THREE.MeshStandardMaterial({ color: leafColor, roughness: 0.8, metalness: 0.0, flatShading: true });
-
-        if (sizeType === 'shrub') {
-            const trunkGeom = new THREE.CylinderGeometry(0.15, 0.15, 0.6, 5);
-            const trunk = new THREE.Mesh(trunkGeom, trunkMat);
-            trunk.position.y = 0.3;
-            trunk.castShadow = true;
-            trunk.receiveShadow = true;
-            group.add(trunk);
-
-            const leafGeom = new THREE.SphereGeometry(0.8, 6, 6);
-            const leaf = new THREE.Mesh(leafGeom, leafMat);
-            leaf.position.y = 0.8;
-            leaf.castShadow = true;
-            leaf.receiveShadow = true;
-            group.add(leaf);
-        } else {
-            const trunkGeom = new THREE.CylinderGeometry(0.2, 0.2, 1.6, 6);
-            const trunk = new THREE.Mesh(trunkGeom, trunkMat);
-            trunk.position.y = 0.8;
-            trunk.castShadow = true;
-            trunk.receiveShadow = true;
-            group.add(trunk);
-
-            const leafGeom1 = new THREE.SphereGeometry(1.4, 8, 8);
-            const leaf1 = new THREE.Mesh(leafGeom1, leafMat);
-            leaf1.position.y = 2.0;
-            leaf1.castShadow = true;
-            leaf1.receiveShadow = true;
-            group.add(leaf1);
-
-            const leafGeom2 = new THREE.SphereGeometry(1.0, 8, 8);
-            const leaf2 = new THREE.Mesh(leafGeom2, leafMat);
-            leaf2.position.y = 2.8;
-            leaf2.castShadow = true;
-            leaf2.receiveShadow = true;
-            group.add(leaf2);
-        }
-
+    createTree(renderSystem, sizeType, x, z, rotationY = 0, variantSeed = 0) {
+        const group = createTreeAt(sizeType, x, z, rotationY, variantSeed);
         renderSystem.scene.add(group);
         renderSystem.trees.push(group);
         return group;

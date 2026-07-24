@@ -189,8 +189,9 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.zebras.length).toBeGreaterThan(0);
         expect(RenderSystem3D.box5u).toBeDefined();
 
-        expect(RenderSystem3D.trees.length).toBeGreaterThanOrEqual(18);
-        expect(RenderSystem3D.trees.length).toBeLessThanOrEqual(25);
+        // Deterministic ring slots (corners + mids + quarters); lamp clearance may drop a few
+        expect(RenderSystem3D.trees.length).toBeGreaterThanOrEqual(100);
+        expect(RenderSystem3D.trees.length).toBeLessThanOrEqual(144);
         expect(RenderSystem3D.billboards.length).toBe(2);
         expect(RenderSystem3D.props.length).toBeGreaterThanOrEqual(70);
         expect(RenderSystem3D.streetLights.length).toBeGreaterThan(0);

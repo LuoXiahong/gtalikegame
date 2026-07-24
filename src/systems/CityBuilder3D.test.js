@@ -26,6 +26,21 @@ function lampFingerprint(renderSystem) {
         .join('|');
 }
 
+function treeFingerprint(renderSystem) {
+    return renderSystem.trees
+        .map(t => `${t.userData.treeType}:${t.position.x.toFixed(3)},${t.position.z.toFixed(3)},${t.rotation.y.toFixed(4)}`)
+        .sort()
+        .join('|');
+}
+
+function propFingerprint(renderSystem) {
+    return renderSystem.props
+        .filter(p => p.userData.propType !== 'lampPost')
+        .map(p => `${p.userData.propType}:${p.position.x.toFixed(3)},${p.position.z.toFixed(3)},${p.rotation.y.toFixed(4)}`)
+        .sort()
+        .join('|');
+}
+
 describe('CityBuilder3D', () => {
     it('should build city elements and populate collections', () => {
         const mock = mockRenderSystem();
@@ -79,6 +94,25 @@ describe('CityBuilder3D', () => {
         expect(lampFingerprint(a)).toBe(lampFingerprint(b));
     });
 
+    it('places the same trees and street props across rebuilds', () => {
+        const a = mockRenderSystem();
+        const b = mockRenderSystem();
+        CityBuilder3D.buildCity(a);
+        CityBuilder3D.buildCity(b);
+
+        expect(a.trees.length).toBeGreaterThan(0);
+        expect(treeFingerprint(a)).toBe(treeFingerprint(b));
+        expect(propFingerprint(a)).toBe(propFingerprint(b));
+
+        const types = new Set(a.props.map(p => p.userData.propType));
+        expect(types.has('bench')).toBe(true);
+        expect(types.has('trashCan')).toBe(true);
+        expect(types.has('hydrant')).toBe(true);
+
+        const plantTypes = new Set(a.trees.map(t => t.userData.treeType));
+        expect(plantTypes.size).toBeGreaterThanOrEqual(4);
+    });
+
     it('keeps trees clear of lamp posts', () => {
         const mock = mockRenderSystem();
         CityBuilder3D.buildCity(mock);
@@ -87,6 +121,21 @@ describe('CityBuilder3D', () => {
         const minDist = Math.min(
             ...mock.trees.map(tree =>
                 Math.min(...lampSpots.map(l => Math.hypot(tree.position.x - l.x, tree.position.z - l.z)))
+            )
+        );
+        expect(minDist).toBeGreaterThanOrEqual(2.5);
+    });
+
+    it('keeps street props clear of lamp posts', () => {
+        const mock = mockRenderSystem();
+        CityBuilder3D.placeSidewalkProps(mock);
+        const SF = WorldMetrics.SCALE_FACTOR;
+        const lampSpots = CityBuilder3D.collectLampSpots(SF);
+        const others = mock.props.filter(p => p.userData.propType !== 'lampPost');
+        expect(others.length).toBeGreaterThan(0);
+        const minDist = Math.min(
+            ...others.map(prop =>
+                Math.min(...lampSpots.map(l => Math.hypot(prop.position.x - l.x, prop.position.z - l.z)))
             )
         );
         expect(minDist).toBeGreaterThanOrEqual(2.5);

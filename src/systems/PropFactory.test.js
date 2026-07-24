@@ -10,8 +10,8 @@ import { WorldMetrics } from '../world/WorldMetrics.js';
 import { STREET_LIGHT_BASE } from './RenderSystem3D.js';
 
 describe('PropFactory', () => {
-    it('exposes the four sidewalk archetypes', () => {
-        expect(PROP_TYPES).toEqual(['lampPost', 'hydrant', 'bench', 'kiosk']);
+    it('exposes the five sidewalk archetypes', () => {
+        expect(PROP_TYPES).toEqual(['lampPost', 'hydrant', 'bench', 'kiosk', 'trashCan']);
     });
 
     it.each(PROP_TYPES)('creates a Group for %s', (type) => {
@@ -19,6 +19,11 @@ describe('PropFactory', () => {
         expect(prop).toBeInstanceOf(THREE.Group);
         expect(prop.userData.propType).toBe(type);
         expect(prop.children.length).toBeGreaterThan(0);
+    });
+
+    it('maps fireHydrant alias to hydrant', () => {
+        const prop = createProp('fireHydrant');
+        expect(prop.userData.propType).toBe('hydrant');
     });
 
     it('attaches a PointLight on lampPost (no overlay pool disc)', () => {
@@ -48,7 +53,7 @@ describe('PropFactory', () => {
     });
 
     it('does not add lights to non-lamp props', () => {
-        for (const type of ['hydrant', 'bench', 'kiosk']) {
+        for (const type of ['hydrant', 'bench', 'kiosk', 'trashCan']) {
             const prop = createProp(type);
             let lightCount = 0;
             prop.traverse(obj => {

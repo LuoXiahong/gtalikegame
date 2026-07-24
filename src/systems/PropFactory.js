@@ -1,25 +1,26 @@
 /**
- * PropFactory — simple sidewalk props (lamp, hydrant, bench, kiosk).
+ * PropFactory — simple sidewalk props (lamp, hydrant, bench, kiosk, trash can).
  */
 import * as THREE from 'three';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { STREET_LIGHT_BASE } from './RenderSystem3D.js';
 
-export const PROP_TYPES = ['lampPost', 'hydrant', 'bench', 'kiosk'];
+export const PROP_TYPES = ['lampPost', 'hydrant', 'bench', 'kiosk', 'trashCan'];
 
 /** PointLight reach — local curb pool via lighting, not a fake disc overlay. */
 export const STREET_LIGHT_DISTANCE = 20;
 export const STREET_LIGHT_DECAY = 2;
 
 /**
- * @param {'lampPost'|'hydrant'|'bench'|'kiosk'} type
+ * @param {'lampPost'|'hydrant'|'bench'|'kiosk'|'trashCan'|string} type
  * @returns {THREE.Group}
  */
 export function createProp(type) {
     const group = new THREE.Group();
-    group.userData.propType = type;
+    const resolved = type === 'fireHydrant' ? 'hydrant' : type;
+    group.userData.propType = resolved;
 
-    switch (type) {
+    switch (resolved) {
         case 'lampPost':
             addLampPost(group);
             break;
@@ -31,6 +32,9 @@ export function createProp(type) {
             break;
         case 'kiosk':
             addKiosk(group);
+            break;
+        case 'trashCan':
+            addTrashCan(group);
             break;
         default:
             addHydrant(group);
@@ -183,9 +187,52 @@ function addKiosk(group) {
     group.add(win);
 }
 
+function addTrashCan(group) {
+    const bodyMat = new THREE.MeshStandardMaterial({
+        color: 0x3a3f3a,
+        roughness: 0.65,
+        metalness: 0.45
+    });
+    const rimMat = new THREE.MeshStandardMaterial({
+        color: 0x2a2a2a,
+        roughness: 0.5,
+        metalness: 0.6
+    });
+
+    const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.28, 0.32, 0.85, 10),
+        bodyMat
+    );
+    body.position.y = 0.425;
+    body.castShadow = true;
+    group.add(body);
+
+    const rim = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.3, 0.3, 0.06, 10),
+        rimMat
+    );
+    rim.position.y = 0.88;
+    group.add(rim);
+
+    const lid = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.26, 0.28, 0.08, 10),
+        rimMat
+    );
+    lid.position.y = 0.95;
+    group.add(lid);
+
+    // Side band / municipal stripe
+    const band = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.325, 0.325, 0.08, 10),
+        new THREE.MeshStandardMaterial({ color: 0x4a5a4a, roughness: 0.7, metalness: 0.3 })
+    );
+    band.position.y = 0.5;
+    group.add(band);
+}
+
 /**
  * Place prop on sidewalk height at world xz.
- * @param {'lampPost'|'hydrant'|'bench'|'kiosk'} type
+ * @param {'lampPost'|'hydrant'|'bench'|'kiosk'|'trashCan'|string} type
  * @param {number} x
  * @param {number} z
  * @param {number} [rotationY]
