@@ -1,12 +1,21 @@
 /**
  * Miniaturization / tilt-shift post-process blur.
+ * Strong edge falloff, sharp mid-band — diorama look (ref).
  */
+export const TILT_SHIFT_BLUR = 0.005;
+export const TILT_SHIFT_FOCUS = 0.5;
+/** Half-width of the sharp band (UV). Narrower = more diorama. */
+export const TILT_SHIFT_FALLOFF = 0.16;
+/** Soft ramp from sharp → full blur (UV). */
+export const TILT_SHIFT_SOFT = 0.28;
+
 export const TiltShiftShader = {
     uniforms: {
         'tDiffuse': { value: null },
-        'blur': { value: 0.0004 },       // Max blur amount
-        'focus': { value: 0.5 },        // Vertical focus (viewport center with player)
-        'falloff': { value: 0.28 }       // Sharp band width around focus
+        'blur': { value: TILT_SHIFT_BLUR },
+        'focus': { value: TILT_SHIFT_FOCUS },
+        'falloff': { value: TILT_SHIFT_FALLOFF },
+        'soft': { value: TILT_SHIFT_SOFT }
     },
     vertexShader: `
         varying vec2 vUv;
@@ -20,26 +29,39 @@ export const TiltShiftShader = {
         uniform float blur;
         uniform float focus;
         uniform float falloff;
+        uniform float soft;
         varying vec2 vUv;
 
         void main() {
             float dist = abs(vUv.y - focus);
-            float blurAmount = smoothstep(falloff, falloff + 0.15, dist) * blur;
+            // Ease-in ramp: mid band stays crisp; corners hit full blur hard
+            float t = smoothstep(falloff, falloff + soft, dist);
+            t = t * t;
+            float blurAmount = t * blur;
 
-            // 9-tap diagonal blur with UV clamp to avoid black edges
+            // Early-out keeps the focus strip unfiltered (no soft wash)
+            if (blurAmount < 1e-6) {
+                gl_FragColor = texture2D(tDiffuse, vUv);
+                return;
+            }
+
+            // 13-tap cross + diagonal — readable soft edges without streaking
             vec4 sum = vec4(0.0);
+            #define SAMPLE(ox, oy, w) texture2D(tDiffuse, clamp(vUv + vec2(ox, oy) * blurAmount, vec2(0.001), vec2(0.999))) * (w)
 
-            #define SAMPLE(offset) texture2D(tDiffuse, clamp(vUv + (offset) * blurAmount, vec2(0.001), vec2(0.999)))
-
-            sum += SAMPLE(vec2(-4.0, -4.0)) * 0.05;
-            sum += SAMPLE(vec2(-3.0, -3.0)) * 0.09;
-            sum += SAMPLE(vec2(-2.0, -2.0)) * 0.12;
-            sum += SAMPLE(vec2(-1.0, -1.0)) * 0.15;
-            sum += SAMPLE(vec2(0.0, 0.0)) * 0.18;
-            sum += SAMPLE(vec2(1.0, 1.0)) * 0.15;
-            sum += SAMPLE(vec2(2.0, 2.0)) * 0.12;
-            sum += SAMPLE(vec2(3.0, 3.0)) * 0.09;
-            sum += SAMPLE(vec2(4.0, 4.0)) * 0.05;
+            sum += SAMPLE( 0.0,  0.0, 0.16);
+            sum += SAMPLE( 1.0,  0.0, 0.09);
+            sum += SAMPLE(-1.0,  0.0, 0.09);
+            sum += SAMPLE( 0.0,  1.0, 0.09);
+            sum += SAMPLE( 0.0, -1.0, 0.09);
+            sum += SAMPLE( 2.5,  0.0, 0.06);
+            sum += SAMPLE(-2.5,  0.0, 0.06);
+            sum += SAMPLE( 0.0,  2.5, 0.06);
+            sum += SAMPLE( 0.0, -2.5, 0.06);
+            sum += SAMPLE( 2.0,  2.0, 0.06);
+            sum += SAMPLE(-2.0,  2.0, 0.06);
+            sum += SAMPLE( 2.0, -2.0, 0.06);
+            sum += SAMPLE(-2.0, -2.0, 0.06);
 
             gl_FragColor = sum;
         }
