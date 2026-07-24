@@ -1,8 +1,30 @@
 {
   "name": "lowge",
   "version": "1.0.0",
-  "description": "ECS-lite based game engine",
+  "description": "Lightweight Open World Game Engine — ECS-lite architecture with shared 2D Canvas + Three.js 3D world, noir 1930s–40s city sandbox, procedural generation, and film/kinescope post-processing",
   "type": "module",
+  "author": "Tomoneczek",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Tomoneczek/lowge.git"
+  },
+  "homepage": "https://tomoneczek.github.io/lowge/",
+  "bugs": {
+    "url": "https://github.com/Tomoneczek/lowge/issues"
+  },
+  "keywords": [
+    "game-engine",
+    "ecs",
+    "open-world",
+    "threejs",
+    "canvas",
+    "procedural-generation",
+    "noir",
+    "sandbox",
+    "javascript",
+    "vite"
+  ],
   "scripts": {
     "dev": "vite src",
     "build": "vite build src",

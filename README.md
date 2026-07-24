@@ -1,13 +1,13 @@
 # lowge - Lightweight Open World Game Engine 🚗💥
 
-[![GitHub Pages Deployment](https://github.com/LuoXiahong/lowge/actions/workflows/deploy.yml/badge.svg)](https://github.com/LuoXiahong/lowge/actions/workflows/deploy.yml)
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Play_Now!-brightgreen?style=flat-square&logo=gamepad)](https://luoxiahong.github.io/lowge/)
+[![GitHub Pages Deployment](https://github.com/Tomoneczek/lowge/actions/workflows/deploy.yml/badge.svg)](https://github.com/Tomoneczek/lowge/actions/workflows/deploy.yml)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Play_Now!-brightgreen?style=flat-square&logo=gamepad)](https://tomoneczek.github.io/lowge/)
 
 This project is an experiment in building a **lightweight open-world game engine** in modern vanilla JavaScript. It started with early top-down open-world games (GTA 1/2) and PS2-era design principles as a spark — and grew into a noir, 1930s–40s city sandbox focused on architecture, procedural content, and the illusion of a living world rather than photorealism or recreating any commercial title.
 
 Built around an **ECS-lite (Entity-Component-System)** core, it shares one world state across classic 2D Canvas and Three.js 3D, with a live, tweakable film / kinescope post-process — grain, flicker, scratches, and all.
 
-🎮 **[Play the Lfive Demo](https://luoxiahong.github.io/lowge/)**
+🎮 **[Play the Lfive Demo](https://tomoneczek.github.io/lowge/)**
 
 In ~15 seconds, this README should answer:
 

@@ -33,6 +33,10 @@ import { RainSystem } from './RainSystem.js';
 import { TiltShiftShader } from './TiltShiftShader.js';
 import { TimeOfDaySettings } from './TimeOfDaySettings.js';
 import { ScreenshotCapture } from './ScreenshotCapture.js';
+import {
+    createPuddleReflectors,
+    setPuddleReflectorsActive
+} from './PuddleReflector.js';
 
 /** Base PointLight intensity from PropFactory lamp posts. */
 export const STREET_LIGHT_BASE = 380;
@@ -73,6 +77,7 @@ export const RenderSystem3D = {
     streetLights: [],
     laneMarkings: [],
     zebras: [],
+    puddleReflectors: [],
 
     // Contact shadow texture (T-702)
     contactShadowTexture: null,
@@ -215,6 +220,9 @@ export const RenderSystem3D = {
         RainSystem.setActive(TimeOfDaySettings.isRaining());
         const roadMeshes = [...(this.laneMarkings || []), ...(this.zebras || [])];
         RoadTextureGenerator.setWetness(TimeOfDaySettings.weather, roadMeshes);
+        this.puddleReflectors = createPuddleReflectors(this.scene, {
+            active: TimeOfDaySettings.isRaining()
+        });
 
         if (this.screenshotMode) {
             // Signal capture script as soon as the scene exists (2 frames for composer settle)
@@ -313,6 +321,7 @@ export const RenderSystem3D = {
         RainSystem.setActive(weather === 'rain');
         const roadMeshes = [...(this.laneMarkings || []), ...(this.zebras || [])];
         RoadTextureGenerator.setWetness(weather, roadMeshes);
+        setPuddleReflectorsActive(this.puddleReflectors, weather === 'rain');
     },
 
     startTimeOfDayTransition() {
