@@ -9,6 +9,7 @@
     "preview": "vite preview src",
     "test": "vitest run",
     "test:watch": "vitest",
+    "screenshot": "node scripts/take-screenshot.mjs",
     "screenshots": "node scripts/take-screenshots.mjs",
     "prepare": "husky"
   },
