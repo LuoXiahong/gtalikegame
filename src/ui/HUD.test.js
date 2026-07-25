@@ -61,11 +61,14 @@ describe('UISystem Speedometer & Minimap Logic', () => {
             strokeRect: vi.fn(),
             beginPath: vi.fn(),
             arc: vi.fn(),
+            clip: vi.fn(),
             fill: vi.fn(),
             stroke: vi.fn(),
             moveTo: vi.fn(),
             lineTo: vi.fn(),
-            closePath: vi.fn()
+            closePath: vi.fn(),
+            createConicGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+            createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() }))
         };
         mockMinimapCanvas = {
             width: 130,

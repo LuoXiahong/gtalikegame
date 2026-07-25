@@ -41,9 +41,12 @@ const CSS = `
     border-radius: 2px;
 }
 #gameContainer.retro-film #uiLayer,
-#gameContainer.retro-film #mobileHUD,
-#gameContainer.retro-film #minimap {
+#gameContainer.retro-film #mobileHUD {
     filter: sepia(0.22) contrast(1.04) brightness(1.0);
+}
+/* Keep minimap bezel cool/metallic — don't sepia the chrome ring */
+#gameContainer.retro-film #minimap {
+    filter: contrast(1.04) brightness(1.02);
 }
 `;
 

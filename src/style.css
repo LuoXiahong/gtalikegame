@@ -30,11 +30,23 @@ canvas {
     background-color: #000000;
 }
 
+/* Minimap: metal ring is drawn on the canvas (MinimapBezel); CSS only frames it. */
 #minimap {
+    position: absolute;
+    top: 20px;
+    left: 20px;
     width: 130px !important;
     height: 130px !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.72);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.18),
+        0 6px 16px rgba(0, 0, 0, 0.65),
+        0 0 0 1px rgba(0, 0, 0, 0.45);
+    z-index: 11;
+    display: none;
+    pointer-events: none;
 }
 
 #mobileHUD {

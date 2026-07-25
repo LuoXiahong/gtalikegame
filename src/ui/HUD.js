@@ -10,6 +10,7 @@ import { Tilemap, TILE_COLORS } from '../world/Tilemap.js';
 import { VehicleSystem } from '../systems/VehicleSystem.js';
 import { UISettings } from './UISettings.js';
 import { I18n } from '../i18n/I18n.js';
+import { clipMinimapContent, drawMinimapBezel, drawMinimapGlass } from './MinimapBezel.js';
 
 /** Minimap: top 20 + 130 + border ≈ 156 → mission text sits below map */
 const MISSION_TOP_PX = 162;
@@ -201,6 +202,10 @@ export const UISystem = {
 
         ctx.clearRect(0, 0, width, height);
 
+        // Map disc (clipped so tiles don't bleed under the metal ring)
+        ctx.save();
+        clipMinimapContent(ctx, cx, cy, width, height);
+
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(-pAngle - Math.PI / 2);
@@ -275,10 +280,9 @@ export const UISystem = {
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
-        ctx.beginPath();
-        ctx.arc(cx, cy, 65, 0, Math.PI, true);
-        ctx.closePath();
-        ctx.fill();
+        ctx.restore(); // end content clip
+
+        drawMinimapGlass(ctx, width, height);
+        drawMinimapBezel(ctx, width, height);
     }
 };
