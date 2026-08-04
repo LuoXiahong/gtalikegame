@@ -7,7 +7,7 @@ This project is an experiment in building a **lightweight open-world game engine
 
 Built around an **ECS-lite (Entity-Component-System)** core, it shares one world state across classic 2D Canvas and Three.js 3D, with a live, tweakable film / kinescope post-process — grain, flicker, scratches, and all.
 
-🎮 **[Play the Lfive Demo](https://tomoneczek.github.io/lowge/)**
+🎮 **[Play the Live Demo](https://tomoneczek.github.io/lowge/)**
 
 In ~15 seconds, this README should answer:
 
@@ -17,16 +17,16 @@ In ~15 seconds, this README should answer:
 
 ## What this project demonstrates
 
-*   ECS-lite architecture design
-*   Game loop design
-*   Event-driven systems
-*   2D and 3D rendering pipelines sharing one world
-*   Three.js post-processing
-*   Procedural content generation
-*   Automated testing (including UI security regression)
-*   Internationalization (custom catalog, 5 locales)
-*   CI/CD deployment (GitHub Pages)
-*   Performance-oriented, separation-of-concerns design
+- ECS-lite architecture design
+- Game loop design
+- Event-driven systems
+- 2D and 3D rendering pipelines sharing one world
+- Three.js post-processing
+- Procedural content generation
+- Automated testing (including UI security regression)
+- Internationalization (custom catalog, 5 locales)
+- CI/CD deployment (GitHub Pages)
+- Performance-oriented, separation-of-concerns design
 
 ## Screenshots
 
@@ -40,12 +40,12 @@ In ~15 seconds, this README should answer:
 
 ## ✨ Features
 
-*   **Procedural 1930s–40s vehicles** — `VehicleModelFactory` builds sedans, coupes, and panel vans from data-driven archetypes (rounded fenders, running boards, exposed round headlamps, whitewall tires) instead of licensed or overly detailed 3D assets.
-*   **Retro film / kinescope post-processing** — a custom `ShaderPass` with film grain, gate jitter, flicker, animated scratches, dust, and vignette, plus four live-tweakable presets (`off`, `subtle`, `classic`, `ruined`).
-*   **Full internationalization** — UI strings across 5 locales (`pl`, `en`, `de`, `es`, `fr`) via a small custom `I18n` catalog system.
-*   **Adaptive input UI** — on-screen touch controls auto-detected via pointer/hover media queries, with manual override in Settings.
-*   **Dual rendering modes** — 2D top-down Canvas and full 3D (Three.js) sharing the same ECS world/state.
-*   **Security-conscious UI layer** — HUD rendering has dedicated regression tests guarding against XSS through entity/display data.
+- **Procedural 1930s–40s vehicles** — `VehicleModelFactory` builds sedans, coupes, and panel vans from data-driven archetypes (rounded fenders, running boards, exposed round headlamps, whitewall tires) instead of licensed or overly detailed 3D assets.
+- **Retro film / kinescope post-processing** — a custom `ShaderPass` with film grain, gate jitter, flicker, animated scratches, dust, and vignette, plus four live-tweakable presets (`off`, `subtle`, `classic`, `ruined`).
+- **Full internationalization** — UI strings across 5 locales (`pl`, `en`, `de`, `es`, `fr`) via a small custom `I18n` catalog system.
+- **Adaptive input UI** — on-screen touch controls auto-detected via pointer/hover media queries, with manual override in Settings.
+- **Dual rendering modes** — 2D top-down Canvas and full 3D (Three.js) sharing the same ECS world/state.
+- **Security-conscious UI layer** — HUD rendering has dedicated regression tests guarding against XSS through entity/display data.
 
 ---
 
@@ -74,9 +74,9 @@ The core design strictly separates data from logic, allowing flexibility and tar
 
 ### Core Concepts
 
-*   **Entities** are purely containers of data components (such as `transform`, `physics`, `visual`, `ai`). They **do not contain** gameplay logic.
-*   **Systems** are stateless, single-purpose logic processors. They query and manipulate components from entities stored in the `World` but do not store state themselves.
-*   **EventBus** acts as the central decoupled communication layer. Systems communicate exclusively using events (`EventBus.publish` / `subscribe`), preventing hard coupling.
+- **Entities** are purely containers of data components (such as `transform`, `physics`, `visual`, `ai`). They **do not contain** gameplay logic.
+- **Systems** are stateless, single-purpose logic processors. They query and manipulate components from entities stored in the `World` but do not store state themselves.
+- **EventBus** acts as the central decoupled communication layer. Systems communicate exclusively using events (`EventBus.publish` / `subscribe`), preventing hard coupling.
 
 ### Strict Architectural Rules
 
@@ -93,6 +93,7 @@ The core design strictly separates data from logic, allowing flexibility and tar
 The engine intentionally favors inexpensive visual and architectural techniques over heavy simulation.
 
 Examples include:
+
 - Procedural vehicle generation instead of detailed meshes.
 - Shared world state across 2D and 3D renderers.
 - Stateless systems for predictable updates.
@@ -105,12 +106,12 @@ The goal is not photorealism, but maximizing perceived world complexity per unit
 
 ## ⚡ Technical Stack
 
-*   **Logic & Runtime**: Vanilla ES Modules JavaScript
-*   **Graphics (2D)**: HTML5 Canvas API
-*   **Graphics (3D)**: Three.js (custom `EffectComposer` post-processing pipeline)
-*   **Internationalization**: Custom lightweight `I18n` catalog system (5 locales)
-*   **Build Tool & Dev Server**: Vite
-*   **Testing Suite**: Vitest + JSDOM
+- **Logic & Runtime**: Vanilla ES Modules JavaScript
+- **Graphics (2D)**: HTML5 Canvas API
+- **Graphics (3D)**: Three.js (custom `EffectComposer` post-processing pipeline)
+- **Internationalization**: Custom lightweight `I18n` catalog system (5 locales)
+- **Build Tool & Dev Server**: Vite
+- **Testing Suite**: Vitest + JSDOM
 
 ---
 
@@ -118,8 +119,8 @@ The goal is not photorealism, but maximizing perceived world complexity per unit
 
 ### Prerequisites
 
-*   **Node.js** (v20 or higher recommended)
-*   **npm** (comes bundled with Node)
+- **Node.js** (v20 or higher recommended)
+- **npm** (comes bundled with Node)
 
 ### Installation
 
@@ -169,13 +170,13 @@ npm run test:watch
 
 ### Testing Strategy
 
-| Layer | What is Tested | Method |
-|---|---|---|
-| **Core** (`EventBus`, `Time`, `GameState`) | 100% public API functionality | Unit testing, argument validation |
-| **Entities** | Default components upon instantiation | Constructor verification (e.g., does `Car` have `physics`?) |
-| **Systems** | Logic behavior inside `update(dt)` | Mock entities with components, assert state changes after update |
-| **Renderers** | Sorting logic, layers, and viewport culling | Logical checks via unit tests; visual correctness verified manually |
-| **UI Security** | Injection safety in dynamically rendered text (HUD) | Regression tests with malicious payloads (`<img onerror>`, `<svg onload>`, etc.) |
+| Layer                                      | What is Tested                                      | Method                                                                           |
+| ------------------------------------------ | --------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **Core** (`EventBus`, `Time`, `GameState`) | 100% public API functionality                       | Unit testing, argument validation                                                |
+| **Entities**                               | Default components upon instantiation               | Constructor verification (e.g., does `Car` have `physics`?)                      |
+| **Systems**                                | Logic behavior inside `update(dt)`                  | Mock entities with components, assert state changes after update                 |
+| **Renderers**                              | Sorting logic, layers, and viewport culling         | Logical checks via unit tests; visual correctness verified manually              |
+| **UI Security**                            | Injection safety in dynamically rendered text (HUD) | Regression tests with malicious payloads (`<img onerror>`, `<svg onload>`, etc.) |
 
 ---
 
@@ -183,7 +184,7 @@ npm run test:watch
 
 > **"Low effort / High impact"** — maximize the illusion of a living, breathing 1930s–40s city with minimal computational complexity.
 
-*   **Retro inspiration (PS2 era + golden-age noir)**: procedural geometry, canvas-based facades, and shader post-processing instead of heavy simulation or licensed art.
-*   **Arcade feel**: vehicle and character controls prioritize player expectations over strict real-world physics.
-*   **Rapid iteration**: get a feature working first, polish visually, optimize only when bottlenecks appear.
-*   **Engine over clone**: the sandbox demos architecture — modular systems, shared world state, extensible pipelines. Early open-world games were only a starting inspiration; the result is its own noir city experiment.
+- **Retro inspiration (PS2 era + golden-age noir)**: procedural geometry, canvas-based facades, and shader post-processing instead of heavy simulation or licensed art.
+- **Arcade feel**: vehicle and character controls prioritize player expectations over strict real-world physics.
+- **Rapid iteration**: get a feature working first, polish visually, optimize only when bottlenecks appear.
+- **Engine over clone**: the sandbox demos architecture — modular systems, shared world state, extensible pipelines. Early open-world games were only a starting inspiration; the result is its own noir city experiment.
