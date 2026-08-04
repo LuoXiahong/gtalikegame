@@ -182,8 +182,9 @@ describe('RenderSystem3D', () => {
 
         expect(RenderSystem3D.groundPlane).toBeDefined();
         expect(RenderSystem3D.asphaltPlane).toBeDefined();
-        expect(RenderSystem3D.sidewalks.length).toBe(9);
-        expect(RenderSystem3D.buildingZones.length).toBe(9);
+        // Merged into one draw call per material (was 9 individual meshes each)
+        expect(RenderSystem3D.sidewalks.length).toBe(1);
+        expect(RenderSystem3D.buildingZones.length).toBe(1);
         expect(RenderSystem3D.buildings.length).toBe(24); // cluster building count
         expect(RenderSystem3D.laneMarkings.length).toBeGreaterThan(0);
         expect(RenderSystem3D.zebras.length).toBeGreaterThan(0);

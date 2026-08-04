@@ -69,6 +69,7 @@ export const catalogs = {
         'help.key.help': 'Pomoc — pokaż / ukryj ten ekran',
         'help.key.esc': 'Zamknij ten ekran',
 
+        'menu.loading': 'ŁADOWANIE…',
         'menu.pressStart': 'NACIŚNIJ ENTER ABY ZACZĄĆ',
         'menu.controls': 'WASD — ruch | F — wsiądź/wysiądź | Spacja — strzał',
         'menu.hints': '? — pomoc  ·  O — opcje',
@@ -149,6 +150,7 @@ export const catalogs = {
         'help.key.help': 'Help — show / hide this screen',
         'help.key.esc': 'Close this screen',
 
+        'menu.loading': 'LOADING…',
         'menu.pressStart': 'PRESS ENTER TO START',
         'menu.controls': 'WASD — Move | F — Enter/Exit Vehicle | Space — Shoot',
         'menu.hints': '? — Help  ·  O — Options',
@@ -229,6 +231,7 @@ export const catalogs = {
         'help.key.help': 'Hilfe — diesen Bildschirm zeigen / verbergen',
         'help.key.esc': 'Diesen Bildschirm schließen',
 
+        'menu.loading': 'LADEN…',
         'menu.pressStart': 'ENTER ZUM STARTEN',
         'menu.controls': 'WASD — Bewegen | F — Ein-/Aussteigen | Leertaste — Schießen',
         'menu.hints': '? — Hilfe  ·  O — Optionen',
@@ -309,6 +312,7 @@ export const catalogs = {
         'help.key.help': 'Ayuda — mostrar / ocultar esta pantalla',
         'help.key.esc': 'Cerrar esta pantalla',
 
+        'menu.loading': 'CARGANDO…',
         'menu.pressStart': 'PULSA ENTER PARA EMPEZAR',
         'menu.controls': 'WASD — Mover | F — Subir/Bajar | Espacio — Disparar',
         'menu.hints': '? — Ayuda  ·  O — Opciones',
@@ -389,6 +393,7 @@ export const catalogs = {
         'help.key.help': 'Aide — afficher / masquer cet écran',
         'help.key.esc': 'Fermer cet écran',
 
+        'menu.loading': 'CHARGEMENT…',
         'menu.pressStart': 'APPUYEZ SUR ENTRÉE POUR COMMENCER',
         'menu.controls': 'WASD — Bouger | F — Monter/Descendre | Espace — Tirer',
         'menu.hints': '? — Aide  ·  O — Options',

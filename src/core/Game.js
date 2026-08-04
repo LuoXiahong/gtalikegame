@@ -4,6 +4,7 @@
 import { Time } from './Time.js';
 import { EventBus } from './EventBus.js';
 import { GameConfig } from './GameConfig.js';
+import { AssetLoader } from './AssetLoader.js';
 import { World } from '../world/World.js';
 import { Camera } from '../world/Camera.js';
 import { InputSystem } from '../input/InputManager.js';
@@ -30,6 +31,7 @@ import { PedestrianPaths } from '../world/PedestrianPaths.js';
 
 import { GameState, GAME_STATES } from './GameState.js';
 import { MenuScreen } from '../ui/MenuScreen.js';
+import { LoadingScreen } from '../ui/LoadingScreen.js';
 import { KeyboardHelpOverlay } from '../ui/KeyboardHelpOverlay.js';
 import { OptionsOverlay } from '../ui/OptionsOverlay.js';
 import { FilmGateOverlay } from '../ui/FilmGateOverlay.js';
@@ -43,11 +45,29 @@ import { ScreenshotCapture } from '../systems/ScreenshotCapture.js';
 export const Game = {
     is3D: true,
 
-    init() {
+    async init() {
         UISettings.init();
         RetroFilmSettings.init();
         TimeOfDaySettings.init();
         I18n.init(UISettings.getLocale());
+
+        this.screenshotMode = new URLSearchParams(window.location.search).get('screenshot');
+
+        LoadingScreen.init();
+        LoadingScreen.show();
+
+        const assetTasks = [
+            () => AssetLoader.loadFont("16px 'Yomogi'"),
+            () => AssetLoader.loadImage('./assets/logo.png')
+        ];
+        const onProgress = (done, total) => LoadingScreen.setProgress(total ? done / total : 1);
+
+        // Screenshot automation shouldn't wait on the artificial min-display offset.
+        if (this.screenshotMode) {
+            await AssetLoader.load(assetTasks, onProgress);
+        } else {
+            await AssetLoader.loadWithMinDelay(assetTasks, onProgress);
+        }
 
         World.init();
         InputSystem.init();
@@ -78,8 +98,6 @@ export const Game = {
         FilmGateOverlay.init();
         FpsOverlay.init();
 
-        this.screenshotMode = new URLSearchParams(window.location.search).get('screenshot');
-
         if (!this.screenshotMode) {
             this.spawnEntities();
         } else {
@@ -99,6 +117,19 @@ export const Game = {
         if (this._onRestart) EventBus.off('game_restart', this._onRestart);
         this._onRestart = () => this.restart();
         EventBus.on('game_restart', this._onRestart);
+
+        // Prime WebGL shader compilation (city/prop materials + bloom/tiltshift/retro-film
+        // passes) while the loader is still up. Without this, the first frame drawn by the
+        // real game loop below pays the compile cost, which can stall the main thread long
+        // enough to visibly stutter the menu's CSS blink right as it appears.
+        if (this.is3D) {
+            RenderSystem3D.update();
+            RenderSystem3D.update();
+        }
+
+        // Hide right as the menu/scene is about to paint — no blank gap between
+        // the loader disappearing and the (heavy, synchronous) scene bootstrap above.
+        LoadingScreen.hide();
 
         if (this.screenshotMode) {
             GameState.setState(GAME_STATES.PLAY);

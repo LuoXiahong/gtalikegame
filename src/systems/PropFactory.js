@@ -12,6 +12,32 @@ export const STREET_LIGHT_DISTANCE = 20;
 export const STREET_LIGHT_DECAY = 2;
 
 /**
+ * Every prop type repeats dozens of times (72 lamp posts alone) with fixed
+ * shape/color — share geometry + material instances instead of allocating a
+ * fresh GPU buffer + material per prop. Only PointLights stay per-instance
+ * since each needs its own scene position.
+ */
+const _geomCache = new Map();
+function sharedGeom(key, factory) {
+    let g = _geomCache.get(key);
+    if (!g) {
+        g = factory();
+        _geomCache.set(key, g);
+    }
+    return g;
+}
+
+const _matCache = new Map();
+function sharedMat(key, factory) {
+    let m = _matCache.get(key);
+    if (!m) {
+        m = factory();
+        _matCache.set(key, m);
+    }
+    return m;
+}
+
+/**
  * @param {'lampPost'|'hydrant'|'bench'|'kiosk'|'trashCan'|string} type
  * @returns {THREE.Group}
  */
@@ -47,17 +73,17 @@ export function createProp(type) {
 function addLampPost(group) {
     // Unlit matte paint — Standard/Lambert still pick a white streak from the
     // PointLight on this same post (thin cylinder → specular alias flicker).
-    const poleMat = new THREE.MeshBasicMaterial({ color: 0x3a3a42 });
+    const poleMat = sharedMat('lamp-pole', () => new THREE.MeshBasicMaterial({ color: 0x3a3a42 }));
     // Base plinth so the pole reads grounded from the isometric view
     const base = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.22, 0.28, 0.35, 8),
+        sharedGeom('lamp-base', () => new THREE.CylinderGeometry(0.22, 0.28, 0.35, 8)),
         poleMat
     );
     base.position.y = 0.17;
     group.add(base);
 
     const pole = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.11, 0.14, 5.2, 8),
+        sharedGeom('lamp-pole', () => new THREE.CylinderGeometry(0.11, 0.14, 5.2, 8)),
         poleMat
     );
     pole.position.y = 2.6;
@@ -66,20 +92,20 @@ function addLampPost(group) {
     group.add(pole);
 
     const arm = new THREE.Mesh(
-        new THREE.BoxGeometry(0.9, 0.09, 0.09),
+        sharedGeom('lamp-arm', () => new THREE.BoxGeometry(0.9, 0.09, 0.09)),
         poleMat
     );
     arm.position.set(0.35, 5.05, 0);
     group.add(arm);
 
-    const globeMat = new THREE.MeshStandardMaterial({
+    const globeMat = sharedMat('lamp-globe', () => new THREE.MeshStandardMaterial({
         color: 0xe4e8f0,
         roughness: 0.55,
         metalness: 0.05,
         emissive: 0xc8d0e0,
         emissiveIntensity: 0.35
-    });
-    const globe = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 10), globeMat);
+    }));
+    const globe = new THREE.Mesh(sharedGeom('lamp-globe', () => new THREE.SphereGeometry(0.32, 10, 10)), globeMat);
     globe.position.set(0.75, 4.9, 0);
     group.add(globe);
 
@@ -98,13 +124,13 @@ function addLampPost(group) {
 }
 
 function addHydrant(group) {
-    const mat = new THREE.MeshStandardMaterial({
+    const mat = sharedMat('hydrant-body', () => new THREE.MeshStandardMaterial({
         color: 0xa83228,
         roughness: 0.7,
         metalness: 0.25
-    });
+    }));
     const body = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.14, 0.16, 0.55, 8),
+        sharedGeom('hydrant-body', () => new THREE.CylinderGeometry(0.14, 0.16, 0.55, 8)),
         mat
     );
     body.position.y = 0.28;
@@ -112,14 +138,14 @@ function addHydrant(group) {
     group.add(body);
 
     const cap = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.1, 0.12, 0.12, 8),
+        sharedGeom('hydrant-cap', () => new THREE.CylinderGeometry(0.1, 0.12, 0.12, 8)),
         mat
     );
     cap.position.y = 0.6;
     group.add(cap);
 
     const nozzle = new THREE.Mesh(
-        new THREE.BoxGeometry(0.28, 0.1, 0.1),
+        sharedGeom('hydrant-nozzle', () => new THREE.BoxGeometry(0.28, 0.1, 0.1)),
         mat
     );
     nozzle.position.set(0, 0.38, 0);
@@ -127,80 +153,81 @@ function addHydrant(group) {
 }
 
 function addBench(group) {
-    const wood = new THREE.MeshStandardMaterial({
+    const wood = sharedMat('bench-wood', () => new THREE.MeshStandardMaterial({
         color: 0x6b4f2a,
         roughness: 0.9,
         metalness: 0.05
-    });
-    const iron = new THREE.MeshStandardMaterial({
+    }));
+    const iron = sharedMat('bench-iron', () => new THREE.MeshStandardMaterial({
         color: 0x2c2c2c,
         roughness: 0.5,
         metalness: 0.7
-    });
+    }));
 
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.4), wood);
+    const seat = new THREE.Mesh(sharedGeom('bench-seat', () => new THREE.BoxGeometry(1.2, 0.08, 0.4)), wood);
     seat.position.y = 0.42;
     seat.castShadow = true;
     group.add(seat);
 
-    const back = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.35, 0.06), wood);
+    const back = new THREE.Mesh(sharedGeom('bench-back', () => new THREE.BoxGeometry(1.2, 0.35, 0.06)), wood);
     back.position.set(0, 0.62, -0.17);
     group.add(back);
 
+    const legGeom = sharedGeom('bench-leg', () => new THREE.BoxGeometry(0.06, 0.4, 0.35));
     for (const x of [-0.45, 0.45]) {
-        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.4, 0.35), iron);
+        const leg = new THREE.Mesh(legGeom, iron);
         leg.position.set(x, 0.2, 0);
         group.add(leg);
     }
 }
 
 function addKiosk(group) {
-    const bodyMat = new THREE.MeshStandardMaterial({
+    const bodyMat = sharedMat('kiosk-body', () => new THREE.MeshStandardMaterial({
         color: 0x3d5a4c,
         roughness: 0.85,
         metalness: 0.05
-    });
-    const roofMat = new THREE.MeshStandardMaterial({
+    }));
+    const roofMat = sharedMat('kiosk-roof', () => new THREE.MeshStandardMaterial({
         color: 0x2a2a2a,
         roughness: 0.7,
         metalness: 0.2
-    });
+    }));
 
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.4, 0.8), bodyMat);
+    const body = new THREE.Mesh(sharedGeom('kiosk-body', () => new THREE.BoxGeometry(1.0, 1.4, 0.8)), bodyMat);
     body.position.y = 0.7;
     body.castShadow = true;
     group.add(body);
 
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 1.0), roofMat);
+    const roof = new THREE.Mesh(sharedGeom('kiosk-roof', () => new THREE.BoxGeometry(1.2, 0.1, 1.0)), roofMat);
     roof.position.y = 1.45;
     group.add(roof);
 
-    const windowMat = new THREE.MeshStandardMaterial({
+    const windowMat = sharedMat('kiosk-window', () => new THREE.MeshStandardMaterial({
         color: 0xc9a227,
         roughness: 0.4,
         metalness: 0.1,
         emissive: 0xc9a227,
         emissiveIntensity: 0.25
-    });
-    const win = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 0.05), windowMat);
+    }));
+    const win = new THREE.Mesh(sharedGeom('kiosk-window', () => new THREE.BoxGeometry(0.7, 0.45, 0.05)), windowMat);
     win.position.set(0, 0.85, 0.42);
     group.add(win);
 }
 
 function addTrashCan(group) {
-    const bodyMat = new THREE.MeshStandardMaterial({
+    const bodyMat = sharedMat('trash-body', () => new THREE.MeshStandardMaterial({
         color: 0x3a3f3a,
         roughness: 0.65,
         metalness: 0.45
-    });
-    const rimMat = new THREE.MeshStandardMaterial({
+    }));
+    const rimMat = sharedMat('trash-rim', () => new THREE.MeshStandardMaterial({
         color: 0x2a2a2a,
         roughness: 0.5,
         metalness: 0.6
-    });
+    }));
 
     const body = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.28, 0.32, 0.85, 10),
+        sharedGeom('trash-body', () => new THREE.CylinderGeometry(0.28, 0.32, 0.85, 10)),
         bodyMat
     );
     body.position.y = 0.425;
@@ -208,14 +235,14 @@ function addTrashCan(group) {
     group.add(body);
 
     const rim = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.3, 0.3, 0.06, 10),
+        sharedGeom('trash-rim', () => new THREE.CylinderGeometry(0.3, 0.3, 0.06, 10)),
         rimMat
     );
     rim.position.y = 0.88;
     group.add(rim);
 
     const lid = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.26, 0.28, 0.08, 10),
+        sharedGeom('trash-lid', () => new THREE.CylinderGeometry(0.26, 0.28, 0.08, 10)),
         rimMat
     );
     lid.position.y = 0.95;
@@ -223,8 +250,8 @@ function addTrashCan(group) {
 
     // Side band / municipal stripe
     const band = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.325, 0.325, 0.08, 10),
-        new THREE.MeshStandardMaterial({ color: 0x4a5a4a, roughness: 0.7, metalness: 0.3 })
+        sharedGeom('trash-band', () => new THREE.CylinderGeometry(0.325, 0.325, 0.08, 10)),
+        sharedMat('trash-band', () => new THREE.MeshStandardMaterial({ color: 0x4a5a4a, roughness: 0.7, metalness: 0.3 }))
     );
     band.position.y = 0.5;
     group.add(band);

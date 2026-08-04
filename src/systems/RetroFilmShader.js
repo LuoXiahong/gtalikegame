@@ -169,15 +169,29 @@ export const RetroFilmShader = {
             float edgeY = smoothstep(0.0, 0.008, vUv.y) * smoothstep(0.0, 0.008, 1.0 - vUv.y);
             col *= mix(1.0, edgeX * edgeY, 0.45 * i);
 
-            // Narrow sprocket strip — limited frame loss
-            float strip = 0.022;
+            // Film-stock edge strip — wide dark margins with rounded sprocket perforations
+            float strip = 0.065;
             if (vUv.x < strip || vUv.x > 1.0 - strip) {
-                col *= 0.25;
-                float holeY = fract(vUv.y * 9.0);
-                float hole = step(0.30, holeY) * step(holeY, 0.70);
-                float hx = vUv.x < 0.5 ? vUv.x / strip : (1.0 - vUv.x) / strip;
-                float holeX = step(0.25, hx) * step(hx, 0.75);
-                col = mix(col, vec3(0.0), hole * holeX * i);
+                // sx: 0 at the outer screen edge .. 1 at the boundary with the visible frame
+                float sx = (vUv.x < 0.5 ? vUv.x : 1.0 - vUv.x) / strip;
+
+                // Dark, slightly warm film-base tone (not flat black — reads as physical stock)
+                vec3 stockCol = vec3(0.050, 0.042, 0.035);
+                col = mix(col, stockCol, 0.92);
+
+                // Rounded-rect perforations, evenly spaced down the strip (35mm-style, tall > wide)
+                float rows = 10.0;
+                vec2 p = vec2(sx - 0.5, fract(vUv.y * rows) - 0.5);
+                vec2 b = vec2(0.24, 0.34);
+                float r = 0.10;
+                vec2 q = abs(p) - b + r;
+                float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+                float perf = 1.0 - smoothstep(-0.015, 0.015, d);
+                col = mix(col, vec3(0.0), perf);
+
+                // Faint bright rebate line where the stock meets the visible frame
+                float rebate = smoothstep(0.90, 0.94, sx) - smoothstep(0.96, 1.0, sx);
+                col += rebate * 0.05;
             }
 
             col = mix(raw.rgb, clamp(col, 0.0, 1.0), i);

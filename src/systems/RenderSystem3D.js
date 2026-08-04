@@ -116,7 +116,9 @@ export const RenderSystem3D = {
             antialias: true,
             powerPreference: 'high-performance',
         });
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, screenshotMode ? 1 : 1.5));
+        // Post-processing runs 4+ full-screen passes every frame — capping below native
+        // HiDPI ratio (was 1.5) noticeably cuts fragment-shader cost with minimal visible loss.
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, screenshotMode ? 1 : 1.25));
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 0.72;   // darkens overall before light tweaks
         this.renderer.setSize(width, height, false);
@@ -492,9 +494,11 @@ export const RenderSystem3D = {
         this.scene.add(sun.target);
 
         sun.castShadow = true;
-        sun.shadow.bias = -0.0005;
-        sun.shadow.mapSize.width = 2048;
-        sun.shadow.mapSize.height = 2048;
+        // 1024 halves the shadow depth-pass fill cost vs the previous 2048 map;
+        // bias roughly doubled to match the larger texel footprint (avoids acne).
+        sun.shadow.bias = -0.001;
+        sun.shadow.mapSize.width = 1024;
+        sun.shadow.mapSize.height = 1024;
         // Softer cast shadows (Three r155+)
         if (sun.shadow.intensity !== undefined) {
             sun.shadow.intensity = 0.55;

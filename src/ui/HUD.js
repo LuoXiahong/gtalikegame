@@ -282,7 +282,41 @@ export const UISystem = {
 
         ctx.restore(); // end content clip
 
+        // Bezel + glass are static (never depend on player/entity state) — cache
+        // the composited overlay once instead of re-allocating gradients every frame.
+        const overlay = this.getBezelOverlay(width, height);
+        if (overlay) {
+            ctx.drawImage(overlay, 0, 0);
+        } else {
+            drawMinimapGlass(ctx, width, height);
+            drawMinimapBezel(ctx, width, height);
+        }
+    },
+
+    /**
+     * Lazily builds (and caches by size) an offscreen canvas with the glass + bezel
+     * overlay pre-rendered. Falls back to null if canvas creation isn't available
+     * (e.g. minimal document stubs in tests), letting callers draw directly instead.
+     */
+    getBezelOverlay(width, height) {
+        if (this._bezelOverlay && this._bezelOverlayW === width && this._bezelOverlayH === height) {
+            return this._bezelOverlay;
+        }
+        if (typeof document === 'undefined' || typeof document.createElement !== 'function') {
+            return null;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext ? canvas.getContext('2d') : null;
+        if (!ctx) return null;
+
         drawMinimapGlass(ctx, width, height);
         drawMinimapBezel(ctx, width, height);
+
+        this._bezelOverlay = canvas;
+        this._bezelOverlayW = width;
+        this._bezelOverlayH = height;
+        return canvas;
     }
 };

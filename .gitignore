@@ -23,3 +23,6 @@ src/dist/
 .oracle/
 .ibm/
 .baidu/
+CLAUDE.md
+AGENT.md
+AI_AGENTS.md

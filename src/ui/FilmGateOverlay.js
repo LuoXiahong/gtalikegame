@@ -19,13 +19,14 @@ const CSS = `
 }
 #filmTally {
     position: absolute;
-    top: 10px;
-    right: 14px;
-    width: 9px;
-    height: 9px;
+    top: 14px;
+    /* Clear of the sprocket strip (RetroFilmShader "strip" = 0.065 of width) — sits on the visible frame */
+    right: calc(6.5% + 14px);
+    width: 13px;
+    height: 13px;
     border-radius: 50%;
     background: #e2703f;
-    box-shadow: 0 0 8px 2px #e2703f;
+    box-shadow: 0 0 12px 3px #e2703f;
     opacity: 0.85;
 }
 #filmFrameCounter {

@@ -2,6 +2,7 @@
  * CityBuilder3D — buildings, sidewalks, trees, and billboards.
  */
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { WorldGrid } from '../world/WorldGrid.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { FacadeGenerator } from './FacadeGenerator.js';
@@ -47,8 +48,6 @@ export const CityBuilder3D = {
         const SF = WorldMetrics.SCALE_FACTOR;
         // Removed groundPlane and asphaltPlane to allow 2D tilemap to show through
 
-        renderSystem.sidewalks = [];
-        renderSystem.buildingZones = [];
         renderSystem.buildings = [];
         const shops = [];
 
@@ -65,6 +64,11 @@ export const CityBuilder3D = {
             envMapIntensity: 0.15
         });
 
+        // Sidewalk + building-zone pads are static and share one material each —
+        // merge all 9 blocks into a single mesh per material instead of 18 draw calls.
+        const sidewalkGeoms = [];
+        const buildingZoneGeoms = [];
+
         for (let r = 0; r < WorldGrid.GRID_ROWS; r++) {
             for (let c = 0; c < WorldGrid.GRID_COLS; c++) {
                 const b = WorldGrid.getBlockBounds(r, c);
@@ -72,18 +76,12 @@ export const CityBuilder3D = {
                 const posZ = (b.y + b.h / 2) * SF;
 
                 const swGeom = new THREE.BoxGeometry(b.w * SF, WorldMetrics.SIDEWALK_HEIGHT, b.h * SF);
-                const swMesh = new THREE.Mesh(swGeom, sidewalkMat);
-                swMesh.position.set(posX, WorldMetrics.SIDEWALK_HEIGHT / 2, posZ);
-                swMesh.receiveShadow = true;
-                renderSystem.scene.add(swMesh);
-                renderSystem.sidewalks.push(swMesh);
+                swGeom.translate(posX, WorldMetrics.SIDEWALK_HEIGHT / 2, posZ);
+                sidewalkGeoms.push(swGeom);
 
                 const bzGeom = new THREE.BoxGeometry(300 * SF, 0.05, 300 * SF);
-                const bzMesh = new THREE.Mesh(bzGeom, buildingZoneMat);
-                bzMesh.position.set(posX, WorldMetrics.SIDEWALK_HEIGHT + 0.025, posZ);
-                bzMesh.receiveShadow = true;
-                renderSystem.scene.add(bzMesh);
-                renderSystem.buildingZones.push(bzMesh);
+                bzGeom.translate(posX, WorldMetrics.SIDEWALK_HEIGHT + 0.025, posZ);
+                buildingZoneGeoms.push(bzGeom);
 
                 const pattern = (r + c) % 3;
                 if (pattern === 0) {
@@ -104,6 +102,16 @@ export const CityBuilder3D = {
                 }
             }
         }
+
+        const swMesh = new THREE.Mesh(mergeGeometries(sidewalkGeoms), sidewalkMat);
+        swMesh.receiveShadow = true;
+        renderSystem.scene.add(swMesh);
+        renderSystem.sidewalks = [swMesh];
+
+        const bzMesh = new THREE.Mesh(mergeGeometries(buildingZoneGeoms), buildingZoneMat);
+        bzMesh.receiveShadow = true;
+        renderSystem.scene.add(bzMesh);
+        renderSystem.buildingZones = [bzMesh];
 
         renderSystem.trees = [];
         const lampSpots = this.collectLampSpots(SF);

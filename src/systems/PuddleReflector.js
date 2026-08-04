@@ -24,6 +24,13 @@ export const GHOST_Y_SCALE = -0.35;
 
 const RT_SIZE = 256;
 
+/**
+ * Puddles re-render their reflection every Nth frame instead of every frame.
+ * The reflected view barely changes between frames (small, blurred, alpha-blended
+ * disc), so a 1-2 frame lag is imperceptible but halves the extra scene renders.
+ */
+const REFLECTOR_UPDATE_INTERVAL = 2;
+
 export const PuddleReflectorShader = {
     name: 'PuddleReflectorShader',
     uniforms: {
@@ -220,7 +227,12 @@ export function createPuddleReflectors(scene, opts = {}) {
         reflector.renderOrder = 2;
 
         const prevOnBefore = reflector.onBeforeRender;
+        let frameCount = 0;
         reflector.onBeforeRender = function (renderer, scn, camera) {
+            frameCount++;
+            // Skip most frames — the mesh still draws with its last captured
+            // texture, so visibility/appearance is unaffected between updates.
+            if (frameCount % REFLECTOR_UPDATE_INTERVAL !== 0) return;
             const fog = scn.fog;
             scn.fog = null;
             prevOnBefore.call(this, renderer, scn, camera);
