@@ -93,8 +93,28 @@ describe('InteractionSystem', () => {
         mockCar.transform.x = 80;
         mockCar.transform.y = 80;
         InputSystem.consumeAction.mockReturnValue(true);
-        
+
         InteractionSystem.update();
         expect(EventBus.emit).toHaveBeenCalledWith('enter_vehicle', { player: mockPlayer, car: mockCar });
+    });
+
+    it('should enter the nearest car when multiple cars are in range', () => {
+        const nearCar = { id: 'carNear', transform: { x: 90, y: 100, width: 40, height: 40 } }; // dist 10
+        const farCar = { id: 'carFar', transform: { x: 140, y: 100, width: 40, height: 40 } }; // dist 40, still in radius
+
+        World.getEntitiesByType.mockImplementation((type) => {
+            if (type === 'player') return [mockPlayer];
+            if (type === 'npc') return [mockNPC];
+            // Farther car listed first, so a "last match wins" bug would pick it instead.
+            if (type === 'car') return [farCar, nearCar];
+            return [];
+        });
+        InputSystem.consumeAction.mockReturnValue(true);
+
+        InteractionSystem.update();
+
+        expect(EventBus.emit).toHaveBeenCalledWith('player_near_car', { carId: 'carNear' });
+        expect(EventBus.emit).toHaveBeenCalledWith('enter_vehicle', { player: mockPlayer, car: nearCar });
+        expect(EventBus.emit).not.toHaveBeenCalledWith('enter_vehicle', { player: mockPlayer, car: farCar });
     });
 });

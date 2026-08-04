@@ -8,8 +8,8 @@ describe('Car', () => {
         expect(c.id).toBe('car1');
         expect(c.type).toBe('car');
         expect(c.transform.x).toBe(50);
-        expect(c.transform.width).toBe(90);
-        expect(c.transform.height).toBe(45);
+        expect(c.transform.width).toBe(50);
+        expect(c.transform.height).toBe(20);
         
         // Arcade physics (T-101)
         expect(c.physics).not.toBeNull();

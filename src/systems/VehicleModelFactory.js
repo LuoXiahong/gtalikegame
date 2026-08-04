@@ -153,8 +153,8 @@ export function createVehicleModel(color, archetypeKey) {
         const axleX = L * 0.32;
         [[axleX, -1], [axleX, 1], [-axleX, -1], [-axleX, 1]].forEach(([x, side]) => {
             const fender = new THREE.Mesh(fenderGeom, bodyMat);
-            fender.rotation.z = Math.PI / 2;
-            fender.rotation.y = side > 0 ? 0 : Math.PI;
+            fender.rotation.x = Math.PI / 2;
+            fender.rotation.y = Math.PI / 2;
             fender.position.set(x, clearance + arch.wheelRadius * 0.55, side * (W * 0.48));
             group.add(fender);
         });
@@ -276,7 +276,7 @@ function addWheel(group, x, radius, z, whitewall) {
         new THREE.CylinderGeometry(radius, radius, 0.22, 12),
         tireMat
     );
-    tire.rotation.z = Math.PI / 2;
+    tire.rotation.x = Math.PI / 2;
     tire.position.set(x, radius, z);
     group.add(tire);
 
@@ -285,7 +285,7 @@ function addWheel(group, x, radius, z, whitewall) {
             new THREE.CylinderGeometry(radius * 0.72, radius * 0.72, 0.24, 12),
             new THREE.MeshStandardMaterial({ color: 0xf5f0e6, roughness: 0.7, metalness: 0 })
         );
-        wall.rotation.z = Math.PI / 2;
+        wall.rotation.x = Math.PI / 2;
         wall.position.set(x, radius, z);
         group.add(wall);
     }
@@ -294,7 +294,7 @@ function addWheel(group, x, radius, z, whitewall) {
         new THREE.CylinderGeometry(radius * 0.28, radius * 0.28, 0.26, 8),
         new THREE.MeshStandardMaterial({ color: 0xb0b0b0, roughness: 0.4, metalness: 0.7 })
     );
-    hub.rotation.z = Math.PI / 2;
+    hub.rotation.x = Math.PI / 2;
     hub.position.set(x, radius, z);
     group.add(hub);
 }

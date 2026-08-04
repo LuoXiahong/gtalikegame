@@ -91,14 +91,16 @@ export const InteractionSystem = {
 
         const cars = World.getEntitiesByType('car');
         let carInZone = null;
+        let nearestCarDist = Infinity;
 
         cars.forEach(car => {
             const dx = p.transform.x - car.transform.x;
             const dy = p.transform.y - car.transform.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
-            if (dist < GameConfig.INTERACTION.VEHICLE_RADIUS) {
+            if (dist < GameConfig.INTERACTION.VEHICLE_RADIUS && dist < nearestCarDist) {
                 carInZone = car;
+                nearestCarDist = dist;
             }
         });
 

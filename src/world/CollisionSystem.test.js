@@ -21,6 +21,7 @@ describe('CollisionSystem', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        World.buildings = [];
         mockPlayer = {
             id: 'player1',
             type: 'player',
@@ -58,7 +59,7 @@ describe('CollisionSystem', () => {
     it('should allow sliding along walls (only zeroing velocity on the hit axis)', () => {
         mockPlayer.physics.velX = 10;
         mockPlayer.physics.velY = 10;
-        
+
         const building = { x: 105, y: 50, w: 50, h: 100 }; // Vertical wall on the right
         World.buildings = [building];
 
@@ -66,5 +67,100 @@ describe('CollisionSystem', () => {
 
         expect(mockPlayer.physics.velX).toBe(0);
         expect(mockPlayer.physics.velY).toBe(10); // Still moving vertically
+    });
+
+    it('zeroes physics.speed (not just velX/velY) when a car hits a building', () => {
+        const mockCar = {
+            id: 'car1',
+            type: 'car',
+            transform: { x: 100, y: 100, width: 20, height: 20, angle: 0 },
+            physics: { velX: 50, velY: 0, speed: 120 }
+        };
+        VehicleSystem.getControlledEntity.mockReturnValue(mockCar);
+
+        const building = { x: 105, y: 80, w: 50, h: 50 };
+        World.buildings = [building];
+
+        CollisionSystem.update();
+
+        expect(mockCar.physics.velX).toBe(0);
+        expect(mockCar.physics.speed).toBe(0);
+    });
+
+    it('uses the oriented (OBB) footprint for a rotated car, not its axis-aligned box', () => {
+        // Long car (width 40, height 16) rotated 90deg to face along world Y.
+        // Its true footprint is now only 16 wide on the world x-axis (half-extent 8),
+        // even though the raw width/height (half-extent 20) would suggest otherwise.
+        const mockCar = {
+            id: 'car1',
+            type: 'car',
+            transform: { x: 100, y: 100, width: 40, height: 16, angle: Math.PI / 2 },
+            physics: { velX: 0, velY: 0, speed: 80 }
+        };
+        VehicleSystem.getControlledEntity.mockReturnValue(mockCar);
+
+        // Building's left edge is 12px away from the car center: inside the naive
+        // (unrotated) half-width of 20, but outside the true rotated half-width of 8.
+        const building = { x: 112, y: 90, w: 50, h: 20 };
+        World.buildings = [building];
+
+        // A naive axis-aligned check (ignoring rotation) would call this a collision.
+        expect(CollisionSystem.checkAABB(mockCar.transform, building)).toBe(true);
+
+        CollisionSystem.update();
+
+        // With OBB/SAT, the rotated car's true (narrower) footprint doesn't reach
+        // the building, so nothing should move or be zeroed out.
+        expect(mockCar.transform.x).toBe(100);
+        expect(mockCar.transform.y).toBe(100);
+        expect(mockCar.physics.speed).toBe(80);
+    });
+
+    it('resolves car-vs-car collisions: splits the push and stops the driven car', () => {
+        const drivenCar = {
+            id: 'car1',
+            type: 'car',
+            transform: { x: 100, y: 100, width: 90, height: 45, angle: 0 },
+            physics: { velX: 30, velY: 5, speed: 200 }
+        };
+        const otherCar = {
+            id: 'car2',
+            type: 'car',
+            transform: { x: 150, y: 100, width: 90, height: 45, angle: 0 },
+            physics: { velX: 0, velY: 0, speed: 0 }
+        };
+        VehicleSystem.getControlledEntity.mockReturnValue(drivenCar);
+
+        World.getEntitiesByType.mockImplementation((type) => {
+            if (type === 'player') return [mockPlayer];
+            if (type === 'car') return [drivenCar, otherCar];
+            return [];
+        });
+
+        // Centers 50 apart, half-widths 45 each -> overlap of 40 along x.
+        CollisionSystem.update();
+
+        expect(drivenCar.transform.x).toBe(80); // 100 - 40 * 0.5
+        expect(otherCar.transform.x).toBe(170); // 150 + 40 * 0.5
+        expect(drivenCar.physics.velX).toBe(0);
+        expect(drivenCar.physics.velY).toBe(5); // untouched: normal is purely on x
+        expect(drivenCar.physics.speed).toBe(0);
+    });
+
+    it('does not resolve collisions between two cars neither of which is controlled', () => {
+        const carA = { id: 'car1', type: 'car', transform: { x: 100, y: 100, width: 90, height: 45, angle: 0 }, physics: { velX: 0, velY: 0, speed: 0 } };
+        const carB = { id: 'car2', type: 'car', transform: { x: 150, y: 100, width: 90, height: 45, angle: 0 }, physics: { velX: 0, velY: 0, speed: 0 } };
+        VehicleSystem.getControlledEntity.mockReturnValue(mockPlayer); // on foot, far from both cars
+
+        World.getEntitiesByType.mockImplementation((type) => {
+            if (type === 'player') return [mockPlayer];
+            if (type === 'car') return [carA, carB];
+            return [];
+        });
+
+        CollisionSystem.update();
+
+        expect(carA.transform.x).toBe(100);
+        expect(carB.transform.x).toBe(150);
     });
 });
