@@ -11,6 +11,7 @@ const KEYBINDING_DEFS = [
     { key: 'D / →', descKey: 'help.key.turnRight' },
     { key: 'F', descKey: 'help.key.vehicle' },
     { key: 'Spacja / Space', descKey: 'help.key.shoot' },
+    { key: 'Shift', descKey: 'help.key.handbrake' },
     { key: 'E', descKey: 'help.key.explode' },
     { key: 'V', descKey: 'help.key.view' },
     { key: 'Z', descKey: 'help.key.zoom' },

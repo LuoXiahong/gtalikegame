@@ -4,6 +4,12 @@
  */
 import { InputSystem } from '../input/InputManager.js';
 
+// Handbrake drift tuning (T22). Held handbrake breaks rear-axle traction: the velocity
+// vector lags further behind the car's heading (visible slide) and steering tightens.
+export const HANDBRAKE_DRIFT_INERTIA = 0.05; // vs. normal driftInertia = 0.2 (lower = more slide)
+export const HANDBRAKE_STEER_BOOST = 1.5;    // multiplies steeringPower while drifting
+export const HANDBRAKE_SPEED_DECAY = 0.985;  // per-frame speed scrub from locked rear wheels
+
 export const VehiclePhysicsSystem = {
     update(dt, entity) {
         if (!entity || entity.type !== 'car') return;
@@ -44,26 +50,33 @@ export const VehiclePhysicsSystem = {
         // Micro-movement deadzone
         if (Math.abs(p.speed) < 1) p.speed = 0;
 
+        const isHandbraking = InputSystem.keys.handbrake && Math.abs(p.speed) > 5;
+        if (isHandbraking) p.speed *= HANDBRAKE_SPEED_DECAY;
+
         // 2. Arcade Steering
         if (Math.abs(p.speed) > 5) {
             const steerDir = (InputSystem.keys.left ? -1 : 0) + (InputSystem.keys.right ? 1 : 0);
-            
+
             // Turn rate scales with speed (vehicles cannot rotate in place)
             const speedFactor = Math.min(Math.abs(p.speed) / 150, 1.0);
-            
+
             // Invert steering when reversing
             const reverseFactor = p.speed < 0 ? -1 : 1;
-            
-            t.angle += steerDir * p.steeringPower * speedFactor * reverseFactor * dt;
+
+            // Handbrake tightens the turn radius (locked rear wheels pivot the car faster)
+            const steerBoost = isHandbraking ? HANDBRAKE_STEER_BOOST : 1.0;
+
+            t.angle += steerDir * p.steeringPower * steerBoost * speedFactor * reverseFactor * dt;
         }
 
         // 3. Movement vector conversion for MovementSystem
         const moveStep = p.speed * dt;
         const targetVelX = Math.cos(t.angle) * moveStep;
         const targetVelY = Math.sin(t.angle) * moveStep;
-        
-        // Simple drift inertia: velocity vector catches up to car angle with latency
-        const driftInertia = 0.2; 
+
+        // Drift inertia: velocity vector catches up to car angle with latency.
+        // Handbrake drops traction so the rear axle slides instead of gripping (drift).
+        const driftInertia = isHandbraking ? HANDBRAKE_DRIFT_INERTIA : 0.2;
         p.velX += (targetVelX - p.velX) * driftInertia;
         p.velY += (targetVelY - p.velY) * driftInertia;
     }

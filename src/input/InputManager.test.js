@@ -51,4 +51,15 @@ describe('InputSystem', () => {
         expect(consumed).toBe(true);
         expect(InputSystem.screenshotJustPressed).toBe(false);
     });
+
+    it('should set handbrake state on ShiftLeft/ShiftRight keydown/keyup', () => {
+        InputSystem.setKey('ShiftLeft', true);
+        expect(InputSystem.keys.handbrake).toBe(true);
+
+        InputSystem.setKey('ShiftLeft', false);
+        expect(InputSystem.keys.handbrake).toBe(false);
+
+        InputSystem.setKey('ShiftRight', true);
+        expect(InputSystem.keys.handbrake).toBe(true);
+    });
 });

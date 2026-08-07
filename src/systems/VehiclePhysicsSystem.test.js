@@ -4,7 +4,7 @@ import { InputSystem } from '../input/InputManager.js';
 
 vi.mock('../input/InputManager.js', () => ({
     InputSystem: {
-        keys: { up: false, down: false, left: false, right: false }
+        keys: { up: false, down: false, left: false, right: false, handbrake: false }
     }
 }));
 
@@ -31,6 +31,7 @@ describe('VehiclePhysicsSystem', () => {
         InputSystem.keys.down = false;
         InputSystem.keys.left = false;
         InputSystem.keys.right = false;
+        InputSystem.keys.handbrake = false;
     });
 
     it('should accelerate when UP is pressed', () => {
@@ -106,5 +107,50 @@ describe('VehiclePhysicsSystem', () => {
         const accelAtHigh = mockCar.physics.speed - 300;
         
         expect(accelAtHigh).toBeLessThan(accelAtZero);
+    });
+
+    it('should reduce traction (drift) when handbraking through a turn', () => {
+        mockCar.physics.speed = 200;
+        InputSystem.keys.right = true;
+        InputSystem.keys.handbrake = true;
+        VehiclePhysicsSystem.update(0.1, mockCar);
+
+        // With low drift inertia the velocity vector lags well behind the new heading —
+        // it should NOT have caught up to cos/sin(angle)*moveStep the way normal grip would.
+        const moveStep = mockCar.physics.speed * 0.1;
+        const fullyGrippedVelX = Math.cos(mockCar.transform.angle) * moveStep;
+        expect(mockCar.physics.velX).toBeLessThan(fullyGrippedVelX);
+        expect(mockCar.physics.velX).toBeGreaterThan(0);
+    });
+
+    it('should steer tighter when handbraking than with normal grip', () => {
+        mockCar.physics.speed = 200;
+        InputSystem.keys.right = true;
+        VehiclePhysicsSystem.update(0.1, mockCar);
+        const normalAngle = mockCar.transform.angle;
+
+        mockCar.transform.angle = 0;
+        mockCar.physics.speed = 200;
+        InputSystem.keys.handbrake = true;
+        VehiclePhysicsSystem.update(0.1, mockCar);
+        const handbrakeAngle = mockCar.transform.angle;
+
+        expect(handbrakeAngle).toBeGreaterThan(normalAngle);
+    });
+
+    it('should scrub off speed while handbraking', () => {
+        mockCar.physics.speed = 200;
+        InputSystem.keys.handbrake = true;
+        VehiclePhysicsSystem.update(0.1, mockCar);
+        // no throttle input → rolling resistance (0.98) AND handbrake decay (0.985) both apply
+        expect(mockCar.physics.speed).toBeCloseTo(200 * 0.98 * 0.985);
+    });
+
+    it('should not apply handbrake drift/steer effects when nearly stationary', () => {
+        mockCar.physics.speed = 3;
+        InputSystem.keys.right = true;
+        InputSystem.keys.handbrake = true;
+        VehiclePhysicsSystem.update(0.1, mockCar);
+        expect(mockCar.transform.angle).toBe(0);
     });
 });

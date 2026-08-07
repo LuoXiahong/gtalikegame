@@ -2,7 +2,7 @@
  * Keyboard and on-screen HUD input.
  */
 export const InputSystem = {
-    keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false, debugAI: false, viewToggle: false, zoomToggle: false, help: false, screenshot: false },
+    keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false, debugAI: false, viewToggle: false, zoomToggle: false, help: false, screenshot: false, handbrake: false },
     actionJustPressed: false,
     shootJustPressed: false,
     explodeJustPressed: false,
@@ -42,6 +42,9 @@ export const InputSystem = {
         if (code === "Space") {
             if (state && !this.keys.shoot) this.shootJustPressed = true;
             this.keys.shoot = state;
+        }
+        if (code === "ShiftLeft" || code === "ShiftRight") {
+            this.keys.handbrake = state;
         }
         if (code === "KeyE") {
             if (state && !this.keys.explode) this.explodeJustPressed = true;
