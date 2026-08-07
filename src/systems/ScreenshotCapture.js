@@ -17,11 +17,11 @@ const STYLE_PROPS = [
     'z-index', 'overflow', 'pointer-events', 'visibility',
 ];
 
-function downloadDataUrl(dataUrl, prefix) {
+function downloadDataUrl(dataUrl, prefix, exact) {
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const a = document.createElement('a');
     a.href = dataUrl;
-    a.download = `${prefix}-${stamp}.png`;
+    a.download = exact ? `${prefix}.png` : `${prefix}-${stamp}.png`;
     a.rel = 'noopener';
     document.body.appendChild(a);
     a.click();
@@ -127,9 +127,10 @@ export const ScreenshotCapture = {
      * Must start in the same turn as the WebGL/2D draw.
      * @param {HTMLCanvasElement|null|undefined} canvas
      * @param {string} [prefix]
+     * @param {boolean} [exact] - if true, filename is `${prefix}.png` with no timestamp
      * @returns {boolean} true if a capture was started
      */
-    flushFromCanvas(canvas, prefix = 'lowge') {
+    flushFromCanvas(canvas, prefix = 'lowge', exact = false) {
         if (!this._pending) return false;
         this._pending = false;
         if (!canvas || typeof canvas.toDataURL !== 'function') return false;
@@ -143,14 +144,14 @@ export const ScreenshotCapture = {
         }
         if (!gameUrl || gameUrl === 'data:,') return false;
 
-        void this._composeAndDownload(canvas, gameUrl, prefix);
+        void this._composeAndDownload(canvas, gameUrl, prefix, exact);
         return true;
     },
 
-    async _composeAndDownload(gameCanvas, gameUrl, prefix) {
+    async _composeAndDownload(gameCanvas, gameUrl, prefix, exact) {
         const container = document.getElementById('gameContainer') || gameCanvas.parentElement;
         if (!container) {
-            downloadDataUrl(gameUrl, prefix);
+            downloadDataUrl(gameUrl, prefix, exact);
             return;
         }
 
@@ -164,7 +165,7 @@ export const ScreenshotCapture = {
         out.height = outH;
         const ctx = out.getContext('2d');
         if (!ctx) {
-            downloadDataUrl(gameUrl, prefix);
+            downloadDataUrl(gameUrl, prefix, exact);
             return;
         }
 
@@ -192,9 +193,9 @@ export const ScreenshotCapture = {
                 if (el) await drawDomOverlay(ctx, el, containerRect, scale);
             }
 
-            downloadDataUrl(out.toDataURL('image/png'), prefix);
+            downloadDataUrl(out.toDataURL('image/png'), prefix, exact);
         } catch {
-            downloadDataUrl(gameUrl, prefix);
+            downloadDataUrl(gameUrl, prefix, exact);
         }
     },
 };

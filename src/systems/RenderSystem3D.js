@@ -630,7 +630,11 @@ export const RenderSystem3D = {
         }
 
         if (ScreenshotCapture.isPending()) {
-            ScreenshotCapture.flushFromCanvas(this.renderer?.domElement, 'lowge');
+            ScreenshotCapture.flushFromCanvas(
+                this.renderer?.domElement,
+                this.screenshotMode || 'lowge',
+                !!this.screenshotMode,
+            );
         }
     }
 };
