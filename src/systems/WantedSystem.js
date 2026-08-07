@@ -3,6 +3,7 @@
  */
 import { EventBus } from '../core/EventBus.js';
 import { Time } from '../core/Time.js';
+import { PoliceSystem } from './PoliceSystem.js';
 
 export const WantedSystem = {
     stars: 0,
@@ -14,10 +15,23 @@ export const WantedSystem = {
     init() {
         this.reset();
         if (this._onNpcHit) EventBus.off('npc_hit', this._onNpcHit);
+        if (this._onGunshot) EventBus.off('gunshot', this._onGunshot);
+        if (this._onExplosion) EventBus.off('explosion', this._onExplosion);
+
         this._onNpcHit = () => {
             this.handleIncident();
         };
         EventBus.on('npc_hit', this._onNpcHit);
+
+        this._onGunshot = () => {
+            this.handleIncident();
+        };
+        EventBus.on('gunshot', this._onGunshot);
+
+        this._onExplosion = () => {
+            this.handleIncident();
+        };
+        EventBus.on('explosion', this._onExplosion);
     },
 
     reset() {
@@ -44,6 +58,7 @@ export const WantedSystem = {
 
     update(dt) {
         if (this.stars > 0) {
+            if (PoliceSystem.isActive) return;
             this.timer -= dt;
             if (this.timer <= 0) {
                 this.stars--;

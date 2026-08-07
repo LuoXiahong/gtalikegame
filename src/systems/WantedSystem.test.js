@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WantedSystem } from './WantedSystem.js';
+import { PoliceSystem } from './PoliceSystem.js';
 import { EventBus } from '../core/EventBus.js';
 import { Time } from '../core/Time.js';
 
@@ -8,6 +9,7 @@ describe('WantedSystem', () => {
         // Reset EventBus
         EventBus.listeners = {};
         Time.time = 0;
+        PoliceSystem.isActive = false;
         WantedSystem.init();
     });
 
@@ -47,6 +49,42 @@ describe('WantedSystem', () => {
             EventBus.emit('npc_hit', {});
         }
         expect(WantedSystem.stars).toBe(WantedSystem.maxStars);
+    });
+
+    it('should increase stars on gunshot', () => {
+        EventBus.emit('gunshot', { x: 0, y: 0 });
+
+        expect(WantedSystem.stars).toBe(1);
+        expect(WantedSystem.timer).toBe(WantedSystem.resetTime);
+    });
+
+    it('should increase stars on explosion', () => {
+        EventBus.emit('explosion', { x: 0, y: 0, radius: 100 });
+
+        expect(WantedSystem.stars).toBe(1);
+        expect(WantedSystem.timer).toBe(WantedSystem.resetTime);
+    });
+
+    it('should not decay timer while police chase is active', () => {
+        EventBus.emit('npc_hit', {}); // stars = 1
+        PoliceSystem.isActive = true;
+
+        WantedSystem.update(WantedSystem.resetTime + 5);
+
+        expect(WantedSystem.stars).toBe(1);
+        expect(WantedSystem.timer).toBe(WantedSystem.resetTime);
+    });
+
+    it('should resume decaying once police chase ends', () => {
+        EventBus.emit('npc_hit', {}); // stars = 1
+        PoliceSystem.isActive = true;
+        WantedSystem.update(WantedSystem.resetTime + 5);
+        expect(WantedSystem.stars).toBe(1);
+
+        PoliceSystem.isActive = false;
+        WantedSystem.update(WantedSystem.resetTime + 0.1);
+
+        expect(WantedSystem.stars).toBe(0);
     });
 
     it('should reset state correctly', () => {
