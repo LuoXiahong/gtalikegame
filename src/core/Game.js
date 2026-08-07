@@ -105,8 +105,17 @@ export const Game = {
             this.spawnEntities();
             window.__SCREENSHOT_READY__ = false;
             this._screenshotFrames = 0;
+            // Auto-download only for a human browsing with ?screenshot= directly (fast
+            // iteration, no manual F9 + rename). `npm run screenshots` drives this same
+            // page via Playwright (navigator.webdriver === true) and grabs pixels itself
+            // via CDP, so it must not also trigger a browser download here.
+            this._markScreenshotReady = () => {
+                if (window.__SCREENSHOT_READY__) return;
+                window.__SCREENSHOT_READY__ = true;
+                if (!navigator.webdriver) ScreenshotCapture.request();
+            };
             // Failsafe if rAF is starved (software GL / GPU stalls)
-            setTimeout(() => { window.__SCREENSHOT_READY__ = true; }, 2500);
+            setTimeout(this._markScreenshotReady, 2500);
             const uiElements = ['menuLayer', 'mobileHUD'];
             uiElements.forEach(id => {
                 const el = document.getElementById(id);
@@ -255,7 +264,7 @@ export const Game = {
             this._screenshotFrames = (this._screenshotFrames || 0) + 1;
             // 2 painted frames is enough — long waits starve under software GL
             if (this._screenshotFrames >= 2) {
-                window.__SCREENSHOT_READY__ = true;
+                this._markScreenshotReady();
             }
         }
 
