@@ -4,6 +4,7 @@ import { RenderSystem3D, BLOOM_STRENGTH, BLOOM_RADIUS, BLOOM_THRESHOLD } from '.
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { RetroFilmSettings } from './RetroFilmSettings.js';
 import { TimeOfDaySettings } from './TimeOfDaySettings.js';
+import { VehicleSystem } from './VehicleSystem.js';
 import { EventBus } from '../core/EventBus.js';
 
 // JSDOM has no WebGL — mock Three.js WebGLRenderer + PMREM
@@ -131,7 +132,10 @@ describe('RenderSystem3D', () => {
         EventBus.clear();
         RetroFilmSettings.reset();
         TimeOfDaySettings.reset();
-        
+        VehicleSystem.controlledEntity = null;
+        RenderSystem3D.lookAheadX = 0;
+        RenderSystem3D.lookAheadZ = 0;
+
         mockParent = {
             clientWidth: 800,
             clientHeight: 600
@@ -370,5 +374,63 @@ describe('RenderSystem3D', () => {
         expect(leafMesh).toBeDefined();
         expect(leafMesh.castShadow).toBe(true);
         expect(leafMesh.receiveShadow).toBe(true);
+    });
+
+    it('should push camera focus ahead of a fast-moving controlled car (look-ahead)', () => {
+        RenderSystem3D.init();
+
+        VehicleSystem.controlledEntity = {
+            type: 'car',
+            transform: { x: 1000, y: 1000, angle: 0 },
+            physics: { speed: 300 }
+        };
+
+        // Look-ahead lerps in gradually over many frames — subtle, not a snap.
+        for (let i = 0; i < 200; i++) {
+            RenderSystem3D.update();
+        }
+
+        expect(RenderSystem3D.lookAheadX).toBeGreaterThan(80);
+        expect(RenderSystem3D.lookAheadX).toBeLessThan(95);
+        expect(RenderSystem3D.lookAheadZ).toBeCloseTo(0, 1);
+
+        const camPos = RenderSystem3D.camera.position;
+        const carSceneX = 1000 * WorldMetrics.SCALE_FACTOR;
+        // Camera keeps the fixed iso offset from the (look-ahead-shifted) focus point,
+        // so with angle=0 the focus — and camera — moves further along +X than the car itself.
+        expect(camPos.x).toBeGreaterThan(carSceneX + 1200 * WorldMetrics.SCALE_FACTOR * Math.cos(45 * Math.PI / 180) * Math.cos(35.264 * Math.PI / 180));
+    });
+
+    it('should not look ahead when the controlled car is stationary', () => {
+        RenderSystem3D.init();
+
+        VehicleSystem.controlledEntity = {
+            type: 'car',
+            transform: { x: 1000, y: 1000, angle: 0.7 },
+            physics: { speed: 0 }
+        };
+
+        for (let i = 0; i < 30; i++) {
+            RenderSystem3D.update();
+        }
+
+        expect(RenderSystem3D.lookAheadX).toBeCloseTo(0);
+        expect(RenderSystem3D.lookAheadZ).toBeCloseTo(0);
+    });
+
+    it('should freeze look-ahead smoothing in screenshot mode', () => {
+        RenderSystem3D.init();
+        RenderSystem3D.screenshotMode = 'street-intersection';
+
+        VehicleSystem.controlledEntity = {
+            type: 'car',
+            transform: { x: 1000, y: 1000, angle: 0 },
+            physics: { speed: 300 }
+        };
+
+        RenderSystem3D.update();
+
+        expect(RenderSystem3D.lookAheadX).toBe(0);
+        expect(RenderSystem3D.lookAheadZ).toBe(0);
     });
 });

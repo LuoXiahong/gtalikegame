@@ -46,6 +46,14 @@ export const BLOOM_STRENGTH = 0.18;
 export const BLOOM_RADIUS = 0.38;
 export const BLOOM_THRESHOLD = 0.92;
 
+// Speed-based camera dynamics (T21 — Speed Zoom / Look-ahead). Tune these to adjust intensity.
+export const SPEED_ZOOM_REF = 300;      // physics.speed (px/s) at which the effects are fully ramped up
+export const SPEED_ZOOM_SMOOTHING = 0.05; // lerp factor/frame for zoom-out (higher = snappier)
+export const ZOOM_OUT_MAX = 0.2;        // max fractional zoom-out at SPEED_ZOOM_REF (0.2 = 20%)
+
+const LOOK_AHEAD_MAX = 90;              // world px (pre-SF) the focus shifts ahead at SPEED_ZOOM_REF
+const LOOK_AHEAD_SMOOTHING = 0.04;      // lerp factor/frame for look-ahead (higher = snappier)
+
 export const RenderSystem3D = {
     renderer: null,
     scene: null,
@@ -56,6 +64,8 @@ export const RenderSystem3D = {
     retroFilmPass: null,
     isZoomedIn: false,
     currentZoom: 1,
+    lookAheadX: 0,
+    lookAheadZ: 0,
     _todFrom: null,
     _todTo: null,
     _todT: 1,
@@ -551,10 +561,10 @@ export const RenderSystem3D = {
         if (controlled && controlled.physics && controlled.type === 'car') {
             speed = Math.abs(controlled.physics.speed || 0);
         }
-        const speedRatio = Math.min(speed / 300, 1.0);
+        const speedRatio = Math.min(speed / SPEED_ZOOM_REF, 1.0);
         if (!this.screenshotMode) {
-            const targetZoom = baseZoom * (1.0 - 0.2 * speedRatio);
-            this.currentZoom += (targetZoom - this.currentZoom) * 0.05;
+            const targetZoom = baseZoom * (1.0 - ZOOM_OUT_MAX * speedRatio);
+            this.currentZoom += (targetZoom - this.currentZoom) * SPEED_ZOOM_SMOOTHING;
             this.camera.zoom = this.currentZoom;
             this.camera.updateProjectionMatrix();
         }
@@ -570,6 +580,25 @@ export const RenderSystem3D = {
         if (controlled && controlled.transform) {
             focusX = controlled.transform.x;
             focusZ = controlled.transform.y;
+        }
+
+        // Look-ahead: nudge the focus point toward the direction of travel so fast
+        // turns/obstacles are visible sooner, proportional to controlled.physics.speed.
+        // Squared ratio keeps it subtle at low/mid speed and only pronounced near top speed.
+        let targetLookAheadX = 0;
+        let targetLookAheadZ = 0;
+        if (controlled && controlled.transform && controlled.physics && controlled.type === 'car') {
+            const signedSpeed = controlled.physics.speed || 0;
+            const lookAheadRatio = Math.min(Math.abs(signedSpeed) / SPEED_ZOOM_REF, 1.0) ** 2;
+            const dir = Math.sign(signedSpeed);
+            targetLookAheadX = Math.cos(controlled.transform.angle) * LOOK_AHEAD_MAX * lookAheadRatio * dir;
+            targetLookAheadZ = Math.sin(controlled.transform.angle) * LOOK_AHEAD_MAX * lookAheadRatio * dir;
+        }
+        if (!this.screenshotMode) {
+            this.lookAheadX += (targetLookAheadX - this.lookAheadX) * LOOK_AHEAD_SMOOTHING;
+            this.lookAheadZ += (targetLookAheadZ - this.lookAheadZ) * LOOK_AHEAD_SMOOTHING;
+            focusX += this.lookAheadX;
+            focusZ += this.lookAheadZ;
         }
 
         let sFocusX = focusX * SF;
