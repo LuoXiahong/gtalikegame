@@ -8,6 +8,7 @@ import { WorldMetrics } from '../world/WorldMetrics.js';
 import { FacadeGenerator } from './FacadeGenerator.js';
 import { createPropAt } from './PropFactory.js';
 import { createTreeAt, plantHash } from './TreeFactory.js';
+import { addContactShadow } from './ContactShadow.js';
 
 /** Inset from block outer edge onto sidewalk (2D px). */
 export const LAMP_EDGE_INSET = 30;
@@ -339,18 +340,14 @@ export const CityBuilder3D = {
         let roofWidth = width;
         let roofDepth = depth;
 
-        const shadowGeom = new THREE.PlaneGeometry(width * 1.15, depth * 1.15);
-        const shadowMat = new THREE.MeshBasicMaterial({
-            color: 0x000000,
-            map: renderSystem.contactShadowTexture,
-            transparent: true,
-            opacity: 0.45,
-            depthWrite: false
+        // Shared blob decal (NPCs/vehicles use the same helper) — reacts to
+        // weather_change (rain) by offsetting/stretching to match the rain angle.
+        addContactShadow(group, {
+            width: width * 1.15,
+            depth: depth * 1.15,
+            y: WorldMetrics.SIDEWALK_HEIGHT + 0.005,
+            opacity: 0.45
         });
-        const shadowMesh = new THREE.Mesh(shadowGeom, shadowMat);
-        shadowMesh.rotation.x = -Math.PI / 2;
-        shadowMesh.position.set(0, WorldMetrics.SIDEWALK_HEIGHT + 0.005, 0);
-        group.add(shadowMesh);
 
         if (type === 'skyscraper') {
             // Art Deco "wedding cake": stacked setbacks, each smaller than the last

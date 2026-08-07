@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { CityBuilder3D, LAMP_EDGE_INSET, LAMP_EDGE_SPACING } from './CityBuilder3D.js';
 import { FacadeGenerator } from './FacadeGenerator.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { WorldGrid } from '../world/WorldGrid.js';
+import { EventBus } from '../core/EventBus.js';
 
 function mockRenderSystem() {
     return {
@@ -42,6 +43,10 @@ function propFingerprint(renderSystem) {
 }
 
 describe('CityBuilder3D', () => {
+    afterEach(() => {
+        EventBus.emit('weather_change', 'clear');
+    });
+
     it('should build city elements and populate collections', () => {
         const mock = mockRenderSystem();
         CityBuilder3D.buildCity(mock);
@@ -139,5 +144,27 @@ describe('CityBuilder3D', () => {
             )
         );
         expect(minDist).toBeGreaterThanOrEqual(2.5);
+    });
+
+    it('keeps building ground shadow centered on clear weather and skews it on rain', () => {
+        const mock = mockRenderSystem();
+        const group = CityBuilder3D.createBuilding(mock, {
+            type: 'residential', x: 0, z: 0, height: 20, width: 10, depth: 10
+        });
+        const shadow = group.children.find(c => c.name === 'contactShadow');
+        expect(shadow).toBeDefined();
+
+        const clearX = shadow.position.x;
+        const clearScaleX = shadow.scale.x;
+        expect(clearX).toBeCloseTo(0);
+        expect(clearScaleX).toBeCloseTo(1);
+
+        EventBus.emit('weather_change', 'rain');
+        expect(shadow.position.x).not.toBeCloseTo(clearX);
+        expect(shadow.scale.x).toBeGreaterThan(clearScaleX);
+
+        EventBus.emit('weather_change', 'clear');
+        expect(shadow.position.x).toBeCloseTo(clearX);
+        expect(shadow.scale.x).toBeCloseTo(clearScaleX);
     });
 });

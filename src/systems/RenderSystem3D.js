@@ -134,8 +134,10 @@ export const RenderSystem3D = {
         this.renderer.setSize(width, height, false);
         const clearColor = 0x000000;
         this.renderer.setClearColor(clearColor, 1.0);
-        // Shadows are expensive; skip in screenshot captures
-        this.renderer.shadowMap.enabled = !screenshotMode;
+        // Screenshots are one-off renders, not realtime gameplay, so there is no FPS-cost
+        // reason to skip shadows here — doing so made captures show flat, contrast-less
+        // shadows on vehicles/NPCs/buildings vs. live gameplay (T26).
+        this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.info.autoReset = false;
 
@@ -509,9 +511,11 @@ export const RenderSystem3D = {
         sun.shadow.bias = -0.001;
         sun.shadow.mapSize.width = 1024;
         sun.shadow.mapSize.height = 1024;
-        // Softer cast shadows (Three r155+)
+        // Soften cast shadows a touch (Three r155+), but stay close to full occlusion —
+        // 0.55 let too much direct sun bleed through onto shadowed vehicles/NPCs, making
+        // the building-cast shadow nearly invisible on them relative to buildings (T26).
         if (sun.shadow.intensity !== undefined) {
-            sun.shadow.intensity = 0.55;
+            sun.shadow.intensity = 0.85;
         }
 
         const d = 1600 * SF;

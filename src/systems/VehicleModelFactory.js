@@ -6,6 +6,55 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { addContactShadow } from './ContactShadow.js';
+import { EventBus } from '../core/EventBus.js';
+
+// Wet/dim look on rain: lower roughness (subtle sheen) + darker albedo.
+// Kept subtle so vehicles read as "wet/dim", not shiny plastic or blacked-out.
+const WET_ROUGHNESS_MULT = 0.6;
+const WET_COLOR_MULT = 0.8;
+
+// All live vehicle materials created by createVehicleModel(), so a single
+// weather_change event can re-tune every currently-existing vehicle at once
+// (materials are created fresh per-instance, never shared). Plain Set: a
+// stale/disposed material left here just means one harmless wasted write on
+// the next weather change, not an unbounded leak worth a dedicated cleanup hook.
+const liveMaterials = new Set();
+
+/**
+ * Register a freshly-created material's baseline (for reversible wet/dry
+ * toggles with no cumulative drift), then track it for weather updates.
+ * @param {THREE.MeshStandardMaterial} mat
+ */
+function trackMaterial(mat) {
+    mat.userData.baseRoughness = mat.roughness;
+    mat.userData.baseColorHex = mat.color.getHex();
+    liveMaterials.add(mat);
+}
+
+/**
+ * Apply/revert the wet-look to every tracked vehicle material.
+ * @param {string} weather - 'rain' or 'clear'
+ */
+function applyWeatherToMaterials(weather) {
+    const wet = weather === 'rain';
+    for (const mat of liveMaterials) {
+        if (!mat) continue;
+        if (wet) {
+            mat.roughness = mat.userData.baseRoughness * WET_ROUGHNESS_MULT;
+            mat.color.setHex(mat.userData.baseColorHex).multiplyScalar(WET_COLOR_MULT);
+        } else {
+            mat.roughness = mat.userData.baseRoughness;
+            mat.color.setHex(mat.userData.baseColorHex);
+        }
+        mat.needsUpdate = true;
+    }
+}
+
+// Subscribe once at module load (guarded so repeated imports/HMR don't stack listeners).
+if (!globalThis.__vehicleModelFactoryWeatherSubscribed) {
+    EventBus.on('weather_change', applyWeatherToMaterials);
+    globalThis.__vehicleModelFactoryWeatherSubscribed = true;
+}
 
 /**
  * Soft box with clamped corner radius (2 segments keep cost low).
@@ -115,16 +164,19 @@ export function createVehicleModel(color, archetypeKey) {
         roughness: 0.55,
         metalness: 0.25
     });
+    trackMaterial(bodyMat);
     const darkMat = new THREE.MeshStandardMaterial({
         color: 0x1a1a1a,
         roughness: 0.35,
         metalness: 0.6
     });
+    trackMaterial(darkMat);
     const chromeMat = new THREE.MeshStandardMaterial({
         color: 0xc0c0c0,
         roughness: 0.25,
         metalness: 0.9
     });
+    trackMaterial(chromeMat);
 
     // --- Chassis (long low body) ---
     const chassis = new THREE.Mesh(

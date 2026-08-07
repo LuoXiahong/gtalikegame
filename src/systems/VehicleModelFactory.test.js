@@ -5,6 +5,7 @@ import {
     pickArchetypeKey,
     VEHICLE_ARCHETYPES
 } from './VehicleModelFactory.js';
+import { EventBus } from '../core/EventBus.js';
 
 describe('VehicleModelFactory', () => {
     it('exposes period archetypes with silhouette flags', () => {
@@ -46,5 +47,65 @@ describe('VehicleModelFactory', () => {
         const model = createVehicleModel(0x5c1a1a, 'does_not_exist');
         expect(model).toBeInstanceOf(THREE.Group);
         expect(model.children.length).toBeGreaterThan(0);
+    });
+
+    describe('weather reactivity', () => {
+        function findMaterial(model, colorHex) {
+            let found = null;
+            model.traverse(child => {
+                if (!found && child.isMesh && child.material?.color?.getHex() === colorHex) {
+                    found = child.material;
+                }
+            });
+            return found;
+        }
+
+        it('dims roughness and albedo on rain, restores exactly on clear', () => {
+            const model = createVehicleModel(0x2266aa, 'sedan_30s');
+            const bodyMat = model.children[0].material; // chassis (paint body)
+            const darkMat = model.children[1].material; // cabin
+            const chromeMat = findMaterial(model, 0xc0c0c0);
+            expect(chromeMat).toBeTruthy();
+
+            const baseBodyRoughness = bodyMat.roughness;
+            const baseBodyColor = bodyMat.color.getHex();
+            const baseDarkRoughness = darkMat.roughness;
+            const baseDarkColor = darkMat.color.getHex();
+            const baseChromeRoughness = chromeMat.roughness;
+            const baseChromeColor = chromeMat.color.getHex();
+
+            EventBus.emit('weather_change', 'rain');
+
+            expect(bodyMat.roughness).toBeLessThan(baseBodyRoughness);
+            expect(bodyMat.color.getHex()).not.toBe(baseBodyColor);
+            expect(darkMat.roughness).toBeLessThan(baseDarkRoughness);
+            expect(darkMat.color.getHex()).not.toBe(baseDarkColor);
+            expect(chromeMat.roughness).toBeLessThan(baseChromeRoughness);
+            expect(chromeMat.color.getHex()).not.toBe(baseChromeColor);
+
+            EventBus.emit('weather_change', 'clear');
+
+            expect(bodyMat.roughness).toBeCloseTo(baseBodyRoughness);
+            expect(bodyMat.color.getHex()).toBe(baseBodyColor);
+            expect(darkMat.roughness).toBeCloseTo(baseDarkRoughness);
+            expect(darkMat.color.getHex()).toBe(baseDarkColor);
+            expect(chromeMat.roughness).toBeCloseTo(baseChromeRoughness);
+            expect(chromeMat.color.getHex()).toBe(baseChromeColor);
+        });
+
+        it('does not drift after repeated rain/clear toggles', () => {
+            const model = createVehicleModel(0x334455, 'coupe_30s');
+            const bodyMat = model.children[0].material;
+            const baseRoughness = bodyMat.roughness;
+            const baseColor = bodyMat.color.getHex();
+
+            for (let i = 0; i < 3; i++) {
+                EventBus.emit('weather_change', 'rain');
+                EventBus.emit('weather_change', 'clear');
+            }
+
+            expect(bodyMat.roughness).toBeCloseTo(baseRoughness);
+            expect(bodyMat.color.getHex()).toBe(baseColor);
+        });
     });
 });

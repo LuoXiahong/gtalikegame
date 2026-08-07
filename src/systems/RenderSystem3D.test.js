@@ -418,6 +418,20 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.lookAheadZ).toBeCloseTo(0);
     });
 
+    it('should keep shadowMap enabled in screenshot mode (T26 regression)', () => {
+        // screenshotMode is detected from window.location.search — captures are one-off
+        // renders, not realtime gameplay, so shadows must stay on or comparison
+        // screenshots show flat, contrast-less lighting vs. live gameplay.
+        history.pushState({}, '', '?screenshot=street-intersection');
+        try {
+            RenderSystem3D.init();
+            expect(RenderSystem3D.screenshotMode).toBe('street-intersection');
+            expect(RenderSystem3D.renderer.shadowMap.enabled).toBe(true);
+        } finally {
+            history.pushState({}, '', '/');
+        }
+    });
+
     it('should freeze look-ahead smoothing in screenshot mode', () => {
         RenderSystem3D.init();
         RenderSystem3D.screenshotMode = 'street-intersection';
