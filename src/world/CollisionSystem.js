@@ -87,7 +87,10 @@ export const CollisionSystem = {
 
                         // Also kill scalar drive speed, otherwise VehiclePhysicsSystem's drift
                         // inertia rebuilds the cancelled velocity from pre-impact speed next tick.
-                        if (controlled.physics.speed !== undefined) {
+                        // Cars only: for an on-foot player, physics.speed is the constant walk
+                        // speed (not a live velocity magnitude) — zeroing it would permanently
+                        // strand the player after any building touch.
+                        if (controlled.type === 'car' && controlled.physics.speed !== undefined) {
                             controlled.physics.speed = 0;
                         }
                     }

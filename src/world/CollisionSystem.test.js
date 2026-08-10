@@ -69,6 +69,21 @@ describe('CollisionSystem', () => {
         expect(mockPlayer.physics.velY).toBe(10); // Still moving vertically
     });
 
+    it('does not zero physics.speed for an on-foot player hitting a building (speed is walk-speed, not velocity magnitude)', () => {
+        // Regression: physics.speed=0 on building hit must be car-only. For the player,
+        // physics.speed is PlayerMovementSystem's constant walk-speed multiplier — zeroing
+        // it here would permanently strand the player (can rotate but never move again).
+        mockPlayer.physics.speed = 100;
+
+        const building = { x: 105, y: 80, w: 50, h: 50 };
+        World.buildings = [building];
+
+        CollisionSystem.update();
+
+        expect(mockPlayer.physics.velX).toBe(0);
+        expect(mockPlayer.physics.speed).toBe(100);
+    });
+
     it('zeroes physics.speed (not just velX/velY) when a car hits a building', () => {
         const mockCar = {
             id: 'car1',
