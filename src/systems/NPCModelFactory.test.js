@@ -1,54 +1,89 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { createNPCModel, NPC_COLOR_PALETTE } from './NPCModelFactory.js';
+import { createNPCModel, NPC_COLOR_PALETTE, NPC_RIG } from './NPCModelFactory.js';
 import { EventBus } from '../core/EventBus.js';
 
+/** First mesh found under a node (limb joints wrap their mesh). */
+function firstMesh(node) {
+    let found = null;
+    node.traverse(c => {
+        if (!found && c.isMesh) found = c;
+    });
+    return found;
+}
+
 describe('NPCModelFactory', () => {
-    it('should create a THREE.Group with torso, head, fedora, and contact shadow', () => {
+    it('exposes a named rig with pelvis, torso, head, arms and legs', () => {
         const model = createNPCModel(0x3d3d3d);
 
         expect(model).toBeInstanceOf(THREE.Group);
-        expect(model.children.length).toBe(5);
+        const rig = model.userData.rig;
+        expect(rig).toBeDefined();
+        ['pelvis', 'torso', 'head', 'hat', 'armL', 'armR', 'legL', 'legR'].forEach(name => {
+            expect(rig[name]).toBeInstanceOf(THREE.Group);
+        });
+    });
 
-        const bodyMesh = model.children[0];
-        expect(bodyMesh).toBeInstanceOf(THREE.Mesh);
-        expect(bodyMesh.geometry).toBeInstanceOf(THREE.BoxGeometry);
-        expect(bodyMesh.material).toBeInstanceOf(THREE.MeshStandardMaterial);
-        expect(bodyMesh.material.color.getHex()).toBe(0x3d3d3d);
-        expect(bodyMesh.position.y).toBeCloseTo(0.7);
+    it('pivots limbs at the joint, not at the segment centre', () => {
+        const rig = createNPCModel(0x3d3d3d).userData.rig;
 
-        const headMesh = model.children[1];
-        expect(headMesh).toBeInstanceOf(THREE.Mesh);
-        expect(headMesh.geometry).toBeInstanceOf(THREE.BoxGeometry);
-        expect(headMesh.material.color.getHex()).toBe(0xf1c27d);
-        expect(headMesh.position.y).toBeCloseTo(1.6);
+        // Joint groups sit at hip/shoulder height; their mesh hangs below the pivot.
+        expect(rig.pelvis.position.y).toBeCloseTo(NPC_RIG.HIP_Y);
+        expect(firstMesh(rig.legL).position.y).toBeLessThan(0);
+        expect(firstMesh(rig.armL).position.y).toBeLessThan(0);
 
-        const brim = model.children[2];
-        const crown = model.children[3];
-        expect(brim.geometry).toBeInstanceOf(THREE.CylinderGeometry);
-        expect(crown.geometry).toBeInstanceOf(THREE.CylinderGeometry);
-        expect(brim.position.y).toBeGreaterThan(headMesh.position.y);
-        expect(crown.position.y).toBeGreaterThan(brim.position.y);
+        // Shoulder pivot in world terms = torso pivot + local offset.
+        const shoulderWorldY = rig.torso.position.y + rig.armL.position.y;
+        expect(shoulderWorldY).toBeCloseTo(NPC_RIG.SHOULDER_Y);
+    });
 
-        const shadow = model.children.find(c => c.name === 'contactShadow');
-        expect(shadow).toBeDefined();
-        expect(shadow.material.transparent).toBe(true);
-        expect(shadow.rotation.x).toBeCloseTo(-Math.PI / 2);
+    it('mirrors limbs across the shoulder/hip span (Z axis)', () => {
+        const rig = createNPCModel(0x3d3d3d).userData.rig;
+
+        expect(rig.armL.position.z).toBeCloseTo(-rig.armR.position.z);
+        expect(rig.legL.position.z).toBeCloseTo(-rig.legR.position.z);
+        expect(rig.armL.position.z).not.toBeCloseTo(0);
+        expect(rig.legL.position.z).not.toBeCloseTo(0);
+    });
+
+    it('keeps feet on the ground and the head near NPC_HEIGHT', () => {
+        const model = createNPCModel(0x3d3d3d);
+        model.updateMatrixWorld(true);
+
+        const box = new THREE.Box3().setFromObject(model);
+        expect(box.min.y).toBeCloseTo(0, 1);
+        // Head crown ~1.8m; the fedora adds a little on top.
+        expect(box.max.y).toBeGreaterThan(1.8);
+        expect(box.max.y).toBeLessThan(2.1);
+    });
+
+    it('breaks front/back symmetry so facing is readable from above', () => {
+        const rig = createNPCModel(0x3d3d3d).userData.rig;
+
+        // Fedora brim leans toward +X (forward), collar toward -X (back).
+        const brim = rig.hat.children.find(c => c.geometry?.type === 'CylinderGeometry');
+        expect(brim.position.x).toBeGreaterThan(0);
+
+        const collar = rig.torso.children.find(c => c.isMesh && c.position.x < 0);
+        expect(collar).toBeDefined();
+
+        // A lighter lapel panel on the chest side, offset forward.
+        const lapel = rig.torso.children.find(c => c.isMesh && c.position.x > 0.1);
+        expect(lapel).toBeDefined();
     });
 
     it('should select a random color from the muted palette if no color is provided', () => {
-        const model = createNPCModel();
-        const bodyMesh = model.children[0];
-        const bodyColorHex = bodyMesh.material.color.getHex();
+        const rig = createNPCModel().userData.rig;
+        // Torso wears the coat material verbatim; sleeves/trousers are shaded from it.
+        const coatColorHex = firstMesh(rig.torso).material.color.getHex();
 
-        expect(NPC_COLOR_PALETTE).toContain(bodyColorHex);
+        expect(NPC_COLOR_PALETTE).toContain(coatColorHex);
     });
 
     it('should correctly parse a CSS hex string color', () => {
-        const model = createNPCModel('#5c4033');
-        const bodyMesh = model.children[0];
+        const rig = createNPCModel('#5c4033').userData.rig;
 
-        expect(bodyMesh.material.color.getHex()).toBe(0x5c4033);
+        expect(firstMesh(rig.torso).material.color.getHex()).toBe(0x5c4033);
     });
 
     it('uses period-muted clothing colors (no bright primaries)', () => {
@@ -57,55 +92,78 @@ describe('NPCModelFactory', () => {
         forbidden.forEach(c => expect(NPC_COLOR_PALETTE).not.toContain(c));
     });
 
+    it('shares geometry between NPCs but keeps materials per-instance', () => {
+        const a = createNPCModel(0x3d3d3d).userData.rig;
+        const b = createNPCModel(0x5c4033).userData.rig;
+
+        // Same geometry object → one upload for the whole crowd.
+        expect(firstMesh(a.legL).geometry).toBe(firstMesh(b.legL).geometry);
+        expect(firstMesh(a.armL).geometry).toBe(firstMesh(b.armL).geometry);
+
+        // Materials must stay separate — weather re-tinting is per-material.
+        expect(firstMesh(a.armL).material).not.toBe(firstMesh(b.armL).material);
+    });
+
+    it('flags shared geometry so despawning one NPC cannot dispose another', () => {
+        const model = createNPCModel(0x3d3d3d);
+
+        model.traverse(child => {
+            if (!child.isMesh || child.name === 'contactShadow') return;
+            expect(child.geometry.userData.shared).toBe(true);
+        });
+    });
+
+    it('attaches a contact shadow at the model root', () => {
+        const model = createNPCModel(0x3d3d3d);
+        const shadow = model.children.find(c => c.name === 'contactShadow');
+
+        expect(shadow).toBeDefined();
+        expect(shadow.material.transparent).toBe(true);
+        expect(shadow.rotation.x).toBeCloseTo(-Math.PI / 2);
+    });
+
     describe('weather reactivity', () => {
         it('dims roughness and albedo on rain, restores exactly on clear', () => {
-            const model = createNPCModel(0x3d3d3d);
-            const bodyMesh = model.children[0];
-            const headMesh = model.children[1];
-            const hatMesh = model.children[2];
-            const bodyMat = bodyMesh.material;
-            const headMat = headMesh.material;
-            const hatMat = hatMesh.material;
-
-            const baseBodyRoughness = bodyMat.roughness;
-            const baseBodyColor = bodyMat.color.getHex();
-            const baseHeadRoughness = headMat.roughness;
-            const baseHeadColor = headMat.color.getHex();
-            const baseHatRoughness = hatMat.roughness;
-            const baseHatColor = hatMat.color.getHex();
+            const rig = createNPCModel(0x3d3d3d).userData.rig;
+            // Every clothing/skin material must stay weather-tracked after the
+            // rig rewrite — coat (arm), trousers (leg), skin (head), dark (hat).
+            const mats = [
+                firstMesh(rig.torso).material,
+                firstMesh(rig.armL).material,
+                firstMesh(rig.legL).material,
+                firstMesh(rig.head).material,
+                firstMesh(rig.hat).material
+            ];
+            const base = mats.map(m => ({ roughness: m.roughness, color: m.color.getHex() }));
 
             EventBus.emit('weather_change', 'rain');
 
-            expect(bodyMat.roughness).toBeLessThan(baseBodyRoughness);
-            expect(bodyMat.color.getHex()).not.toBe(baseBodyColor);
-            expect(headMat.roughness).toBeLessThan(baseHeadRoughness);
-            expect(headMat.color.getHex()).not.toBe(baseHeadColor);
-            expect(hatMat.roughness).toBeLessThan(baseHatRoughness);
-            expect(hatMat.color.getHex()).not.toBe(baseHatColor);
+            mats.forEach((m, i) => {
+                expect(m.roughness).toBeLessThan(base[i].roughness);
+                expect(m.color.getHex()).not.toBe(base[i].color);
+            });
 
             EventBus.emit('weather_change', 'clear');
 
-            expect(bodyMat.roughness).toBeCloseTo(baseBodyRoughness);
-            expect(bodyMat.color.getHex()).toBe(baseBodyColor);
-            expect(headMat.roughness).toBeCloseTo(baseHeadRoughness);
-            expect(headMat.color.getHex()).toBe(baseHeadColor);
-            expect(hatMat.roughness).toBeCloseTo(baseHatRoughness);
-            expect(hatMat.color.getHex()).toBe(baseHatColor);
+            mats.forEach((m, i) => {
+                expect(m.roughness).toBeCloseTo(base[i].roughness);
+                expect(m.color.getHex()).toBe(base[i].color);
+            });
         });
 
         it('does not drift after repeated rain/clear toggles', () => {
-            const model = createNPCModel(0x5a5a5a);
-            const bodyMat = model.children[0].material;
-            const baseRoughness = bodyMat.roughness;
-            const baseColor = bodyMat.color.getHex();
+            const rig = createNPCModel(0x5a5a5a).userData.rig;
+            const coatMat = firstMesh(rig.torso).material;
+            const baseRoughness = coatMat.roughness;
+            const baseColor = coatMat.color.getHex();
 
             for (let i = 0; i < 3; i++) {
                 EventBus.emit('weather_change', 'rain');
                 EventBus.emit('weather_change', 'clear');
             }
 
-            expect(bodyMat.roughness).toBeCloseTo(baseRoughness);
-            expect(bodyMat.color.getHex()).toBe(baseColor);
+            expect(coatMat.roughness).toBeCloseTo(baseRoughness);
+            expect(coatMat.color.getHex()).toBe(baseColor);
         });
     });
 });

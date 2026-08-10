@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { PlayerMovementSystem } from './PlayerMovementSystem.js';
+import { PlayerMovementSystem, SPRINT_MULT } from './PlayerMovementSystem.js';
 import { InputSystem } from '../input/InputManager.js';
 
 vi.mock('../input/InputManager.js', () => ({
     InputSystem: {
-        keys: { up: false, down: false, left: false, right: false }
+        keys: { up: false, down: false, left: false, right: false, sprint: false }
     }
 }));
 
@@ -20,7 +20,7 @@ describe('PlayerMovementSystem', () => {
         };
         
         // Reset inputs
-        InputSystem.keys = { up: false, down: false, left: false, right: false };
+        InputSystem.keys = { up: false, down: false, left: false, right: false, sprint: false };
     });
 
     it('should apply velocity when UP is pressed', () => {
@@ -42,6 +42,37 @@ describe('PlayerMovementSystem', () => {
         InputSystem.keys.left = true;
         PlayerMovementSystem.update(0.1, mockCar);
         expect(mockCar.transform.angle).toBe(0);
+    });
+
+    it('should scale speed by SPRINT_MULT while sprinting', () => {
+        InputSystem.keys.up = true;
+        InputSystem.keys.sprint = true;
+
+        PlayerMovementSystem.update(0.1, mockPlayer);
+
+        expect(mockPlayer.physics.velX).toBeCloseTo(10 * SPRINT_MULT);
+    });
+
+    it('should reach the animation run threshold at sprint speed', () => {
+        // Friction 0.5 settles velocity at speed*dt per frame → speed px/s.
+        InputSystem.keys.up = true;
+        InputSystem.keys.sprint = true;
+        const dt = 1 / 60;
+
+        for (let i = 0; i < 60; i++) {
+            PlayerMovementSystem.update(dt, mockPlayer);
+            mockPlayer.physics.velX *= mockPlayer.physics.friction;
+        }
+
+        expect(mockPlayer.physics.velX / dt).toBeCloseTo(220, 0);
+    });
+
+    it('should not sprint without the sprint key', () => {
+        InputSystem.keys.up = true;
+
+        PlayerMovementSystem.update(0.1, mockPlayer);
+
+        expect(mockPlayer.physics.velX).toBeCloseTo(10);
     });
 
     it('should apply extra deceleration when no keys are pressed', () => {

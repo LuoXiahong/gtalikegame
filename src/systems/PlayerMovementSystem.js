@@ -3,6 +3,10 @@
  */
 import { InputSystem } from '../input/InputManager.js';
 
+// Base speed is 100 px/s, so this lands sprinting exactly on RUN_SPEED (220)
+// from CharacterAnimationSystem — sprinting reads as a full run, not a fast walk.
+export const SPRINT_MULT = 2.2;
+
 export const PlayerMovementSystem = {
     update(dt, entity) {
         if (!entity || entity.type !== 'player') return;
@@ -27,8 +31,9 @@ export const PlayerMovementSystem = {
 
         if (entity.physics) {
             if (isMoving) {
-                entity.physics.velX += intentX * entity.physics.speed * dt;
-                entity.physics.velY += intentY * entity.physics.speed * dt;
+                const speed = entity.physics.speed * (InputSystem.keys.sprint ? SPRINT_MULT : 1);
+                entity.physics.velX += intentX * speed * dt;
+                entity.physics.velY += intentY * speed * dt;
             } else {
                 // Extra hard stop when keys are released (game-like snap).
                 entity.physics.velX *= 0.3;

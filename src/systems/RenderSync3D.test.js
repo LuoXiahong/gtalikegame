@@ -136,38 +136,83 @@ describe('RenderSync3D', () => {
         expect(playerMesh.position.y).toBeCloseTo(WorldMetrics.SIDEWALK_HEIGHT);
     });
 
-    it('should apply procedural walk bounce animation for moving characters', () => {
-        Time.time = 0.5; // Set game time
-
+    it('should lift characters by the bounce from their animation pose', () => {
         World.entities = [
             {
                 id: 'player1',
                 type: 'player',
                 transform: { x: 100, y: 200, angle: 0 },
-                physics: { velX: 5.0, velY: 0 }, // Moving!
+                physics: { velX: 5.0, velY: 0 },
+                visual: { pose: { bounce: 0.02, legL: 0, legR: 0, armL: 0, armR: 0, lean: 0, head: 0 } },
                 visible: true
             },
             {
                 id: 'npc1',
                 type: 'npc',
                 transform: { x: 300, y: 400, angle: 0 },
-                physics: { velX: 0, velY: 0 }, // Standing still!
+                physics: { velX: 0, velY: 0 }, // Standing still — no pose yet
                 visible: true
             }
         ];
 
         RenderSync3D.update(mockScene);
 
-        const playerMesh = RenderSync3D.meshes.get('player1');
-        const npcMesh = RenderSync3D.meshes.get('npc1');
+        expect(RenderSync3D.meshes.get('player1').position.y).toBeCloseTo(0.02);
+        // No pose → plain ground height, no leftover bounce.
+        expect(RenderSync3D.meshes.get('npc1').position.y).toBeCloseTo(0);
+    });
 
-        // Player is moving, so Y position should be groundY + walkBounce (lerped)
-        const targetBounce = Math.abs(Math.sin(0.5 * 10)) * 0.025;
-        const expectedBounce = targetBounce * 0.2;
-        expect(playerMesh.position.y).toBeCloseTo(expectedBounce);
+    it('should copy pose angles onto the character rig joints', () => {
+        const pose = {
+            legL: 0.4, legR: -0.4, armL: -0.32, armR: 0.32,
+            lean: -0.12, head: 0.12, bounce: 0.01
+        };
+        World.entities = [
+            {
+                id: 'player1',
+                type: 'player',
+                transform: { x: 0, y: 0, angle: 0 },
+                physics: { velX: 3, velY: 0 },
+                visual: { pose },
+                visible: true
+            }
+        ];
 
-        // NPC is standing still, so Y position should be exactly groundY (0)
-        expect(npcMesh.position.y).toBeCloseTo(0);
+        RenderSync3D.update(mockScene);
+
+        const rig = RenderSync3D.meshes.get('player1').userData.rig;
+        expect(rig.legL.rotation.z).toBeCloseTo(pose.legL);
+        expect(rig.legR.rotation.z).toBeCloseTo(pose.legR);
+        expect(rig.armL.rotation.z).toBeCloseTo(pose.armL);
+        expect(rig.armR.rotation.z).toBeCloseTo(pose.armR);
+        expect(rig.torso.rotation.z).toBeCloseTo(pose.lean);
+        expect(rig.head.rotation.z).toBeCloseTo(pose.head);
+    });
+
+    it('should keep shared geometry alive when one character despawns', () => {
+        World.entities = [
+            { id: 'npc1', type: 'npc', transform: { x: 0, y: 0, angle: 0 }, visible: true },
+            { id: 'npc2', type: 'npc', transform: { x: 50, y: 0, angle: 0 }, visible: true }
+        ];
+        RenderSync3D.update(mockScene);
+
+        const survivor = RenderSync3D.meshes.get('npc2');
+        const sharedGeom = survivor.userData.rig.legL.children[0].geometry;
+        const disposeSpy = vi.spyOn(sharedGeom, 'dispose');
+
+        // npc1 despawns; its rig references the very same geometry object.
+        World.entities = World.entities.filter(e => e.id === 'npc2');
+        RenderSync3D.update(mockScene);
+
+        expect(disposeSpy).not.toHaveBeenCalled();
+        expect(sharedGeom.attributes.position).toBeDefined();
+    });
+
+    it('should leave non-character meshes untouched by applyPose', () => {
+        const car = new THREE.Group();
+
+        expect(() => RenderSync3D.applyPose(car, { legL: 1 })).not.toThrow();
+        expect(car.rotation.z).toBeCloseTo(0);
     });
 
     it('should create and update mission target indicator', () => {

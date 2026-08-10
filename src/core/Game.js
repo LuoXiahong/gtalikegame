@@ -10,6 +10,7 @@ import { Camera } from '../world/Camera.js';
 import { InputSystem } from '../input/InputManager.js';
 import { MovementSystem } from '../systems/MovementSystem.js';
 import { PlayerMovementSystem } from '../systems/PlayerMovementSystem.js';
+import { CharacterAnimationSystem } from '../systems/CharacterAnimationSystem.js';
 import { VehiclePhysicsSystem } from '../systems/VehiclePhysicsSystem.js';
 import { AISystem } from '../systems/AISystem.js';
 import { InteractionSystem } from '../systems/InteractionSystem.js';
@@ -228,6 +229,9 @@ export const Game = {
             InteractionSystem.update();
 
             CollisionSystem.update();
+
+            // After collisions so the gait reflects the velocity actually applied.
+            CharacterAnimationSystem.update(dt);
 
             if (controlled) Camera.follow(controlled, dt);
         }

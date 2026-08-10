@@ -62,4 +62,12 @@ describe('InputSystem', () => {
         InputSystem.setKey('ShiftRight', true);
         expect(InputSystem.keys.handbrake).toBe(true);
     });
+
+    it('should set sprint alongside handbrake on Shift (vehicle vs on-foot context)', () => {
+        InputSystem.setKey('ShiftLeft', true);
+        expect(InputSystem.keys.sprint).toBe(true);
+
+        InputSystem.setKey('ShiftLeft', false);
+        expect(InputSystem.keys.sprint).toBe(false);
+    });
 });

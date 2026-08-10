@@ -8,7 +8,6 @@ import { MissionSystem } from './MissionSystem.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { createNPCModel } from './NPCModelFactory.js';
 import { createVehicleModel, pickArchetypeKey } from './VehicleModelFactory.js';
-import { Time } from '../core/Time.js';
 
 export const RenderSync3D = {
     meshes: new Map(), // entityId -> THREE.Object3D
@@ -63,18 +62,11 @@ export const RenderSync3D = {
                 }
             }
 
-            // Procedural walk bounce for moving player/NPC (amplitude 2.5 cm)
-            let targetBounce = 0;
-            if ((ent.type === 'player' || ent.type === 'npc') && ent.physics) {
-                const isMoving = Math.abs(ent.physics.velX) > 0.1 || Math.abs(ent.physics.velY) > 0.1;
-                if (isMoving) {
-                    targetBounce = Math.abs(Math.sin(Time.time * 10)) * 0.025;
-                }
-            }
-            if (!ent.visual) ent.visual = {};
-            if (ent.visual.walkBounce === undefined) ent.visual.walkBounce = 0;
-            ent.visual.walkBounce += (targetBounce - ent.visual.walkBounce) * 0.2;
-            mesh.position.y = groundY + ent.visual.walkBounce;
+            // Pose comes from CharacterAnimationSystem; absent for non-characters
+            // and for entities that have not been animated yet.
+            const pose = ent.visual?.pose;
+            mesh.position.y = groundY + (pose?.bounce || 0);
+            this.applyPose(mesh, pose);
 
             // 2D angle → 3D yaw (Y)
             mesh.rotation.y = -ent.transform.angle;
@@ -115,6 +107,24 @@ export const RenderSync3D = {
     },
 
     /**
+     * Copies pose angles onto the character rig. Pure data → transforms; all
+     * cycle math lives in CharacterAnimationSystem.
+     * @param {THREE.Object3D} mesh - Model root (may be a non-character).
+     * @param {object} [pose] - `visual.pose` produced by CharacterAnimationSystem.
+     */
+    applyPose(mesh, pose) {
+        const rig = mesh.userData?.rig;
+        if (!rig || !pose) return;
+
+        rig.legL.rotation.z = pose.legL;
+        rig.legR.rotation.z = pose.legR;
+        rig.armL.rotation.z = pose.armL;
+        rig.armR.rotation.z = pose.armR;
+        rig.torso.rotation.z = pose.lean;
+        rig.head.rotation.z = pose.head;
+    },
+
+    /**
      * Instantiates a 3D visual representation for a given entity based on type
      */
     createEntityMesh(ent) {
@@ -144,12 +154,14 @@ export const RenderSync3D = {
     },
 
     /**
-     * Safely disposes geometry and materials to prevent WebGL memory leaks
+     * Safely disposes geometry and materials to prevent WebGL memory leaks.
+     * Geometry flagged `userData.shared` is owned by its factory's cache and is
+     * still in use by every other instance — despawning one must not free it.
      */
     disposeHierarchy(obj) {
         if (!obj || !obj.traverse) return;
         obj.traverse(child => {
-            if (child.geometry) child.geometry.dispose();
+            if (child.geometry && !child.geometry.userData?.shared) child.geometry.dispose();
             if (child.material) {
                 if (Array.isArray(child.material)) {
                     child.material.forEach(m => m.dispose());

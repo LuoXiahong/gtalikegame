@@ -2,7 +2,7 @@
  * Keyboard and on-screen HUD input.
  */
 export const InputSystem = {
-    keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false, debugAI: false, viewToggle: false, zoomToggle: false, help: false, screenshot: false, handbrake: false },
+    keys: { up: false, down: false, left: false, right: false, action: false, shoot: false, explode: false, debugAI: false, viewToggle: false, zoomToggle: false, help: false, screenshot: false, handbrake: false, sprint: false },
     actionJustPressed: false,
     shootJustPressed: false,
     explodeJustPressed: false,
@@ -43,8 +43,11 @@ export const InputSystem = {
             if (state && !this.keys.shoot) this.shootJustPressed = true;
             this.keys.shoot = state;
         }
+        // Shift is context-dependent: handbrake in a vehicle, sprint on foot.
+        // Two flags rather than one so neither system has to know about the other.
         if (code === "ShiftLeft" || code === "ShiftRight") {
             this.keys.handbrake = state;
+            this.keys.sprint = state;
         }
         if (code === "KeyE") {
             if (state && !this.keys.explode) this.explodeJustPressed = true;
