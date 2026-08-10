@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
-import { RenderSystem3D, BLOOM_STRENGTH, BLOOM_RADIUS, BLOOM_THRESHOLD } from './RenderSystem3D.js';
+import { RenderSystem3D, BLOOM_STRENGTH, BLOOM_RADIUS, BLOOM_THRESHOLD, ZOOM_LEVELS, DEFAULT_ZOOM_INDEX } from './RenderSystem3D.js';
+import { InputSystem } from '../input/InputManager.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { RetroFilmSettings } from './RetroFilmSettings.js';
 import { TimeOfDaySettings } from './TimeOfDaySettings.js';
@@ -166,6 +167,9 @@ describe('RenderSystem3D', () => {
 
         // Fog + post-processing + IBL environment (default TOD = night)
         expect(RenderSystem3D.scene.fog).toBeDefined();
+        // Fog distances are scaled by the live zoom; normalise to read base values.
+        RenderSystem3D.camera.zoom = 1;
+        RenderSystem3D._applyFogForCurrentZoom();
         expect(RenderSystem3D.scene.fog.near).toBe(30);
         expect(RenderSystem3D.scene.fog.far).toBe(160);
         expect(RenderSystem3D.scene.environment).toBeDefined();
@@ -302,6 +306,8 @@ describe('RenderSystem3D', () => {
         RenderSystem3D.updateTimeOfDay(1.0);
         expect(RenderSystem3D._todTo).toBeNull();
         expect(RenderSystem3D.ambientLight.intensity).toBeCloseTo(0.42);
+        RenderSystem3D.camera.zoom = 1;
+        RenderSystem3D._applyFogForCurrentZoom();
         expect(RenderSystem3D.scene.fog.near).toBe(60);
         expect(RenderSystem3D._streetLightMult).toBeCloseTo(1.0);
     });
@@ -309,6 +315,8 @@ describe('RenderSystem3D', () => {
     it('should scale fog near/far with camera zoom', () => {
         RenderSystem3D.init();
         // night base: near 30, far 160 at zoom 1
+        RenderSystem3D.camera.zoom = 1;
+        RenderSystem3D._applyFogForCurrentZoom();
         expect(RenderSystem3D.scene.fog.near).toBe(30);
         expect(RenderSystem3D.scene.fog.far).toBe(160);
 
@@ -416,6 +424,39 @@ describe('RenderSystem3D', () => {
 
         expect(RenderSystem3D.lookAheadX).toBeCloseTo(0);
         expect(RenderSystem3D.lookAheadZ).toBeCloseTo(0);
+    });
+
+    it('should start at the default zoom step and cycle through Z', () => {
+        RenderSystem3D.init();
+        VehicleSystem.controlledEntity = null;
+
+        expect(RenderSystem3D.zoomIndex).toBe(DEFAULT_ZOOM_INDEX);
+        expect(RenderSystem3D.currentZoom).toBeCloseTo(ZOOM_LEVELS[DEFAULT_ZOOM_INDEX]);
+        // Default sits between a wider and a tighter step, not at either end.
+        expect(DEFAULT_ZOOM_INDEX).toBeGreaterThan(0);
+        expect(DEFAULT_ZOOM_INDEX).toBeLessThan(ZOOM_LEVELS.length - 1);
+
+        const seen = [];
+        for (let press = 0; press < ZOOM_LEVELS.length; press++) {
+            InputSystem.zoomToggleJustPressed = true;
+            RenderSystem3D.update();
+            seen.push(ZOOM_LEVELS[RenderSystem3D.zoomIndex]);
+        }
+
+        // Steps forward through the list, then wraps back to the default.
+        expect(seen).toEqual([
+            ZOOM_LEVELS[2], ZOOM_LEVELS[0], ZOOM_LEVELS[1]
+        ]);
+    });
+
+    it('should ease the camera toward a newly selected zoom step', () => {
+        RenderSystem3D.init();
+        VehicleSystem.controlledEntity = null;
+
+        InputSystem.zoomToggleJustPressed = true;
+        for (let i = 0; i < 400; i++) RenderSystem3D.update();
+
+        expect(RenderSystem3D.camera.zoom).toBeCloseTo(ZOOM_LEVELS[2], 1);
     });
 
     it('should keep shadowMap enabled in screenshot mode (T26 regression)', () => {

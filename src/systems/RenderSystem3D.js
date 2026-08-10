@@ -54,6 +54,15 @@ export const ZOOM_OUT_MAX = 0.2;        // max fractional zoom-out at SPEED_ZOOM
 const LOOK_AHEAD_MAX = 90;              // world px (pre-SF) the focus shifts ahead at SPEED_ZOOM_REF
 const LOOK_AHEAD_SMOOTHING = 0.04;      // lerp factor/frame for look-ahead (higher = snappier)
 
+/**
+ * Camera zoom steps cycled by Z, ordered wide → tight. The old two-state
+ * toggle (1.0 / 2.0) made the wide shot the default and left no way to get
+ * closer; 2.0 is now the starting point, with a wider and a tighter step
+ * around it. Pressing Z walks the list and wraps around.
+ */
+export const ZOOM_LEVELS = [1.0, 2.0, 3.0];
+export const DEFAULT_ZOOM_INDEX = 1;
+
 export const RenderSystem3D = {
     renderer: null,
     scene: null,
@@ -62,8 +71,8 @@ export const RenderSystem3D = {
     bloomPass: null,
     tiltShiftPass: null,
     retroFilmPass: null,
-    isZoomedIn: false,
-    currentZoom: 1,
+    zoomIndex: DEFAULT_ZOOM_INDEX,
+    currentZoom: ZOOM_LEVELS[DEFAULT_ZOOM_INDEX],
     lookAheadX: 0,
     lookAheadZ: 0,
     _todFrom: null,
@@ -157,7 +166,11 @@ export const RenderSystem3D = {
             1000
         );
 
-        this.camera.zoom = 1.0;
+        // Start on the default step so the first frame is already framed right
+        // (screenshot scenarios override this below).
+        this.zoomIndex = DEFAULT_ZOOM_INDEX;
+        this.currentZoom = ZOOM_LEVELS[DEFAULT_ZOOM_INDEX];
+        this.camera.zoom = this.currentZoom;
         this.camera.updateProjectionMatrix();
 
         this.composer = new EffectComposer(this.renderer);
@@ -555,12 +568,12 @@ export const RenderSystem3D = {
         const SF = WorldMetrics.SCALE_FACTOR;
 
         if (InputSystem.consumeZoomToggle()) {
-            this.isZoomedIn = !this.isZoomedIn;
+            this.zoomIndex = (this.zoomIndex + 1) % ZOOM_LEVELS.length;
         }
 
         const controlled = VehicleSystem.getControlledEntity() || World.getEntitiesByType('player')[0];
 
-        const baseZoom = this.isZoomedIn ? 2.0 : 1.0;
+        const baseZoom = ZOOM_LEVELS[this.zoomIndex] ?? ZOOM_LEVELS[DEFAULT_ZOOM_INDEX];
         let speed = 0;
         if (controlled && controlled.physics && controlled.type === 'car') {
             speed = Math.abs(controlled.physics.speed || 0);
