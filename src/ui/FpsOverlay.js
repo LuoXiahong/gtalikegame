@@ -3,6 +3,7 @@
  * Visibility driven by UISettings.showFps (default OFF).
  */
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 import { UISettings } from './UISettings.js';
 
 const CSS = `
@@ -52,7 +53,7 @@ export const FpsOverlay = {
         this._el = el;
 
         this.setVisible(UISettings.getShowFps());
-        EventBus.on('ui_settings_change', ({ showFps } = {}) => {
+        EventBus.on(EVENTS.UI_SETTINGS_CHANGE, ({ showFps } = {}) => {
             if (typeof showFps === 'boolean') {
                 this.setVisible(showFps);
             }

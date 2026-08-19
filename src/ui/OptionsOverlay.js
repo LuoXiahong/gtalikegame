@@ -6,6 +6,7 @@ import { RetroFilmSettings, RETRO_PARAM_KEYS } from '../systems/RetroFilmSetting
 import { TimeOfDaySettings } from '../systems/TimeOfDaySettings.js';
 import { RenderSystem } from '../systems/RenderSystem.js';
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 import { UISettings } from './UISettings.js';
 import { I18n } from '../i18n/I18n.js';
 
@@ -425,7 +426,7 @@ export const OptionsOverlay = {
         this._onScreenControlsEl.checked = UISettings.getOnScreenControls();
         this._onScreenControlsEl.addEventListener('change', () => {
             UISettings.setOnScreenControls(this._onScreenControlsEl.checked);
-            EventBus.emit('ui_settings_change', {
+            EventBus.emit(EVENTS.UI_SETTINGS_CHANGE, {
                 showOnScreenControls: UISettings.showOnScreenControls,
             });
         });
@@ -450,7 +451,7 @@ export const OptionsOverlay = {
         this._debugAIEl.addEventListener('change', () => {
             RenderSystem.debugAI = this._debugAIEl.checked;
             UISettings.setDebugAI(this._debugAIEl.checked);
-            EventBus.emit('ui_settings_change', {
+            EventBus.emit(EVENTS.UI_SETTINGS_CHANGE, {
                 debugAI: RenderSystem.debugAI,
             });
         });
@@ -470,7 +471,7 @@ export const OptionsOverlay = {
         this._showFpsEl.checked = UISettings.getShowFps();
         this._showFpsEl.addEventListener('change', () => {
             UISettings.setShowFps(this._showFpsEl.checked);
-            EventBus.emit('ui_settings_change', {
+            EventBus.emit(EVENTS.UI_SETTINGS_CHANGE, {
                 showFps: UISettings.getShowFps(),
             });
         });
@@ -644,7 +645,7 @@ export const OptionsOverlay = {
             }
         });
 
-        EventBus.on('locale_change', () => this.applyLabels());
+        EventBus.on(EVENTS.LOCALE_CHANGE, () => this.applyLabels());
         this.applyLabels();
     },
 
@@ -736,7 +737,7 @@ export const OptionsOverlay = {
     },
 
     _notifyRetro() {
-        EventBus.emit('retro_settings_change', RetroFilmSettings.toJSON());
+        EventBus.emit(EVENTS.RETRO_SETTINGS_CHANGE, RetroFilmSettings.toJSON());
     },
 
     show() {

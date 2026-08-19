@@ -3,7 +3,6 @@ import { PoliceSystem } from './PoliceSystem.js';
 import { EventBus } from '../core/EventBus.js';
 import { GameState, GAME_STATES } from '../core/GameState.js';
 import { World } from '../world/World.js';
-import { VehicleSystem } from './VehicleSystem.js';
 
 describe('PoliceSystem', () => {
     beforeEach(() => {

@@ -3,11 +3,11 @@
  */
 import { World } from '../world/World.js';
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 import { GameState, GAME_STATES } from '../core/GameState.js';
 import { GameConfig } from '../core/GameConfig.js';
 import { Waypoints } from '../world/Waypoints.js';
 import { Car } from '../entities/Car.js';
-import { VehicleSystem } from './VehicleSystem.js';
 
 function wrapAngle(a) {
     while (a > Math.PI) a -= Math.PI * 2;
@@ -27,8 +27,8 @@ export const PoliceSystem = {
 
     init() {
         this.reset();
-        if (this._onWantedChange) EventBus.off('wanted_level_change', this._onWantedChange);
-        if (this._onWantedReset) EventBus.off('wanted_reset', this._onWantedReset);
+        if (this._onWantedChange) EventBus.off(EVENTS.WANTED_LEVEL_CHANGE, this._onWantedChange);
+        if (this._onWantedReset) EventBus.off(EVENTS.WANTED_RESET, this._onWantedReset);
 
         this._onWantedChange = ({ stars }) => {
             if (stars >= 2) {
@@ -38,13 +38,13 @@ export const PoliceSystem = {
                 this.despawnAll();
             }
         };
-        EventBus.on('wanted_level_change', this._onWantedChange);
+        EventBus.on(EVENTS.WANTED_LEVEL_CHANGE, this._onWantedChange);
 
         this._onWantedReset = () => {
             this.isActive = false;
             this.despawnAll();
         };
-        EventBus.on('wanted_reset', this._onWantedReset);
+        EventBus.on(EVENTS.WANTED_RESET, this._onWantedReset);
     },
 
     reset() {
@@ -93,7 +93,7 @@ export const PoliceSystem = {
 
     spawnPoliceIfNeeded() {
         if (this.policeCars.length === 0) {
-            const target = VehicleSystem.getControlledEntity() || World.getEntitiesByType('player')[0];
+            const target = World.getControlled() || World.getEntitiesByType('player')[0];
             if (!target) return;
 
             const pos = this.findRoadSpawnNear(target);
@@ -140,7 +140,7 @@ export const PoliceSystem = {
         this.cleanUpDestroyedCars();
         this.spawnPoliceIfNeeded();
 
-        const target = VehicleSystem.getControlledEntity() || World.getEntitiesByType('player')[0];
+        const target = World.getControlled() || World.getEntitiesByType('player')[0];
         if (!target) return;
 
         const steerRate = GameConfig.POLICE.STEER_RATE;

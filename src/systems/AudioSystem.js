@@ -2,13 +2,14 @@
  * Audio playback only — no gameplay logic.
  */
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 
 export const AudioSystem = {
     sounds: {},
 
     init() {
         this.reset();
-        if (this._onAudioPlay) EventBus.off('audio_play', this._onAudioPlay);
+        if (this._onAudioPlay) EventBus.off(EVENTS.AUDIO_PLAY, this._onAudioPlay);
 
         // Skip when Audio API is unavailable (e.g. some test envs)
         if (typeof Audio !== 'undefined') {
@@ -29,7 +30,7 @@ export const AudioSystem = {
                 }
             }
         };
-        EventBus.on('audio_play', this._onAudioPlay);
+        EventBus.on(EVENTS.AUDIO_PLAY, this._onAudioPlay);
     },
 
     reset() {

@@ -3,6 +3,7 @@
  */
 import * as THREE from 'three';
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 
 let cachedTexture = null;
 
@@ -76,7 +77,7 @@ function applyWeatherState(mesh, entry) {
     }
 }
 
-EventBus.on('weather_change', (weather) => {
+EventBus.on(EVENTS.WEATHER_CHANGE, (weather) => {
     _raining = weather === 'rain';
     for (const entry of _tracked) {
         const mesh = entry.ref.deref();

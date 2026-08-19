@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RenderSystem } from './RenderSystem.js';
 import { World } from '../world/World.js';
 import { Camera } from '../world/Camera.js';
-import { VehicleSystem } from './VehicleSystem.js';
 
 describe('RenderSystem', () => {
     let mockCtx;

@@ -41,4 +41,6 @@ export const EVENTS = {
     LOCALE_CHANGE: 'locale_change',
     UI_SETTINGS_CHANGE: 'ui_settings_change',
     RETRO_SETTINGS_CHANGE: 'retro_settings_change',
+    WEATHER_CHANGE: 'weather_change',
+    TIME_OF_DAY_CHANGE: 'time_of_day_change',
 };

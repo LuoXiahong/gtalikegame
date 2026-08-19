@@ -10,6 +10,7 @@ vi.mock('../world/World.js', () => ({
             transform: { x: 1000, y: 1000, angle: 0 },
             health: { current: 100, max: 100, dead: false }
         }]),
+        getControlled: vi.fn(() => null),
         buildings: []
     }
 }));
@@ -21,12 +22,6 @@ vi.mock('../world/Tilemap.js', () => ({
         data: Array(30).fill(0).map(() => Array(30).fill(0))
     },
     TILE_TYPES: { GRASS: 0, ROAD: 1, SIDEWALK: 2, BUILDING_ZONE: 3 }
-}));
-
-vi.mock('../systems/VehicleSystem.js', () => ({
-    VehicleSystem: {
-        getControlledEntity: vi.fn(() => null)
-    }
 }));
 
 describe('UISystem Speedometer & Minimap Logic', () => {

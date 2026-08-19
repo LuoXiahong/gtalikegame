@@ -22,9 +22,9 @@ import { createPooledStreetLight } from './PropFactory.js';
 import { FacadeGenerator } from './FacadeGenerator.js';
 import { RenderSync3D } from './RenderSync3D.js';
 import { RoadTextureGenerator } from './RoadTextureGenerator.js';
-import { VehicleSystem } from './VehicleSystem.js';
 
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 import { Time } from '../core/Time.js';
 import { CityBuilder3D } from './CityBuilder3D.js';
 import { RetroFilmSettings } from './RetroFilmSettings.js';
@@ -211,9 +211,9 @@ export const RenderSystem3D = {
         this.composer.addPass(this.retroFilmPass);
         this.applyRetroSettings();
 
-        EventBus.on('retro_settings_change', () => this.applyRetroSettings());
-        EventBus.on('time_of_day_change', () => this.startTimeOfDayTransition());
-        EventBus.on('weather_change', (weather) => this._onWeatherChange(weather));
+        EventBus.on(EVENTS.RETRO_SETTINGS_CHANGE, () => this.applyRetroSettings());
+        EventBus.on(EVENTS.TIME_OF_DAY_CHANGE, () => this.startTimeOfDayTransition());
+        EventBus.on(EVENTS.WEATHER_CHANGE, (weather) => this._onWeatherChange(weather));
 
         const outputPass = new OutputPass();
         this.composer.addPass(outputPass);
@@ -653,7 +653,7 @@ export const RenderSystem3D = {
             this.zoomIndex = (this.zoomIndex + 1) % ZOOM_LEVELS.length;
         }
 
-        const controlled = VehicleSystem.getControlledEntity() || World.getEntitiesByType('player')[0];
+        const controlled = World.getControlled() || World.getEntitiesByType('player')[0];
 
         const baseZoom = ZOOM_LEVELS[this.zoomIndex] ?? ZOOM_LEVELS[DEFAULT_ZOOM_INDEX];
         let speed = 0;
@@ -669,7 +669,7 @@ export const RenderSystem3D = {
         }
         this._applyFogForCurrentZoom();
 
-        const time = Date.now() * 0.001;
+        const time = Time.time;
         this.box5u.position.x = (1500 + Math.sin(time) * 1000) * SF;
         this.box5u.position.z = 1100 * SF;
 

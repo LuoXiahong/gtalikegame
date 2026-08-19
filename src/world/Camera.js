@@ -1,4 +1,5 @@
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 
 /**
  * Shared camera offset so render code does not recompute it ad hoc.
@@ -11,10 +12,10 @@ export const Camera = {
     _needsSnap: false,
 
     init() {
-        EventBus.on('vehicle_entered', () => {
+        EventBus.on(EVENTS.VEHICLE_ENTERED, () => {
             this._needsSnap = true;
         });
-        EventBus.on('vehicle_exited', () => {
+        EventBus.on(EVENTS.VEHICLE_EXITED, () => {
             this._needsSnap = true;
         });
     },

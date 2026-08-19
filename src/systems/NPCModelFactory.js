@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { addContactShadow } from './ContactShadow.js';
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 
 // Wet/dim look on rain: lower roughness (subtle sheen) + darker albedo.
 // Kept subtle so NPCs read as "wet/dim", not shiny plastic or blacked-out.
@@ -50,7 +51,7 @@ function applyWeatherToMaterials(weather) {
 
 // Subscribe once at module load (guarded so repeated imports/HMR don't stack listeners).
 if (!globalThis.__npcModelFactoryWeatherSubscribed) {
-    EventBus.on('weather_change', applyWeatherToMaterials);
+    EventBus.on(EVENTS.WEATHER_CHANGE, applyWeatherToMaterials);
     globalThis.__npcModelFactoryWeatherSubscribed = true;
 }
 

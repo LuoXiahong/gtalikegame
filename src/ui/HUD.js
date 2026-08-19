@@ -2,12 +2,12 @@
  * UISystem (HUD) — missions, dialogue, wanted stars, speedometer, minimap.
  */
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 
 import { GameState, GAME_STATES } from '../core/GameState.js';
 
 import { World } from '../world/World.js';
 import { Tilemap, TILE_TYPES } from '../world/Tilemap.js';
-import { VehicleSystem } from '../systems/VehicleSystem.js';
 import { UISettings } from './UISettings.js';
 import { I18n } from '../i18n/I18n.js';
 import { clipMinimapContent, drawMinimapBezel, drawMinimapGlass } from './MinimapBezel.js';
@@ -94,7 +94,7 @@ export const UISystem = {
         UISettings.init();
         this.syncOnScreenControls();
 
-        EventBus.on('state_change', ({ to }) => {
+        EventBus.on(EVENTS.STATE_CHANGE, ({ to }) => {
             const isPlay = to === GAME_STATES.PLAY;
             this.playActive = isPlay;
             this.layer.style.display = isPlay ? 'block' : 'none';
@@ -104,33 +104,33 @@ export const UISystem = {
             this.syncOnScreenControls();
         });
 
-        EventBus.on('ui_settings_change', () => {
+        EventBus.on(EVENTS.UI_SETTINGS_CHANGE, () => {
             this.syncOnScreenControls();
             this.lastStateHash = null;
             this.updateDOM();
         });
 
-        EventBus.on('locale_change', () => {
+        EventBus.on(EVENTS.LOCALE_CHANGE, () => {
             this.lastStateHash = null;
             this.updateDOM();
         });
 
-        EventBus.on('ui_show_dialogue', (text) => {
+        EventBus.on(EVENTS.UI_SHOW_DIALOGUE, (text) => {
             this.currentDialogue = text;
             this.updateDOM();
         });
 
-        EventBus.on('mission_update', (text) => {
+        EventBus.on(EVENTS.MISSION_UPDATE, (text) => {
             this.missionText = text;
             this.updateDOM();
         });
 
-        EventBus.on('ui_show_action_hint', (text) => {
+        EventBus.on(EVENTS.UI_SHOW_ACTION_HINT, (text) => {
             this.actionHint = text;
             this.updateDOM();
         });
 
-        EventBus.on('wanted_level_change', ({ stars }) => {
+        EventBus.on(EVENTS.WANTED_LEVEL_CHANGE, ({ stars }) => {
             if (stars > this.wantedStars) {
                 this.isBlinking = true;
                 setTimeout(() => {
@@ -142,22 +142,22 @@ export const UISystem = {
             this.updateDOM();
         });
 
-        EventBus.on('wanted_reset', () => {
+        EventBus.on(EVENTS.WANTED_RESET, () => {
             this.wantedStars = 0;
             this.updateDOM();
         });
 
-        EventBus.on('speed_update', (speed) => {
+        EventBus.on(EVENTS.SPEED_UPDATE, (speed) => {
             this.speedValue = speed;
             this.updateDOM();
         });
 
-        EventBus.on('vehicle_entered', () => {
+        EventBus.on(EVENTS.VEHICLE_ENTERED, () => {
             this.showSpeed = true;
             this.updateDOM();
         });
 
-        EventBus.on('vehicle_exited', () => {
+        EventBus.on(EVENTS.VEHICLE_EXITED, () => {
             this.showSpeed = false;
             this.speedValue = 0;
             this.updateDOM();
@@ -248,7 +248,7 @@ export const UISystem = {
     },
 
     drawMinimap() {
-        const controlled = VehicleSystem.getControlledEntity() || World.getEntitiesByType('player')[0];
+        const controlled = World.getControlled() || World.getEntitiesByType('player')[0];
         if (!controlled) return;
 
         const px = controlled.transform.x;

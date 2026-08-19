@@ -2,6 +2,7 @@
  * GameState — app states (Menu, Play, end screens).
  */
 import { EventBus } from './EventBus.js';
+import { EVENTS } from '../core/Events.js';
 
 export const GAME_STATES = {
     MENU: 'MENU',
@@ -28,7 +29,7 @@ export const GameState = {
         const oldState = currentState;
         currentState = newState;
 
-        EventBus.emit('state_change', { 
+        EventBus.emit(EVENTS.STATE_CHANGE, { 
             from: oldState, 
             to: currentState 
         });

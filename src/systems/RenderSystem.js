@@ -4,7 +4,7 @@
  */
 import { World } from '../world/World.js';
 import { Camera } from '../world/Camera.js';
-import { VehicleSystem } from './VehicleSystem.js';
+import { Time } from '../core/Time.js';
 import { MissionSystem } from './MissionSystem.js';
 import { TILE_COLORS } from '../world/Tilemap.js';
 import { ScreenshotCapture } from './ScreenshotCapture.js';
@@ -176,7 +176,7 @@ export const RenderSystem = {
         });
 
         // 2. Draw flat entities (NPCs, Player)
-        const controlled = VehicleSystem.getControlledEntity();
+        const controlled = World.getControlled();
 
         World.entities.forEach(ent => {
             if ((ent.type !== 'npc' && ent.type !== 'player') || ent.visible === false) return;
@@ -292,7 +292,7 @@ export const RenderSystem = {
         const loc = MissionSystem.targetLocation;
         this.ctx.save();
         
-        const pulse = Math.sin(Date.now() / 200) * 10;
+        const pulse = Math.sin(Time.time * 5) * 10;
         this.ctx.strokeStyle = '#f1c40f';
         this.ctx.lineWidth = 4;
         this.ctx.setLineDash([10, 5]);

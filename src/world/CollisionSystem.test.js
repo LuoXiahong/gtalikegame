@@ -1,18 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CollisionSystem } from './CollisionSystem.js';
 import { World } from './World.js';
-import { VehicleSystem } from '../systems/VehicleSystem.js';
 
 vi.mock('./World.js', () => ({
     World: {
         getEntitiesByType: vi.fn(),
+        getControlled: vi.fn(),
         buildings: []
-    }
-}));
-
-vi.mock('../systems/VehicleSystem.js', () => ({
-    VehicleSystem: {
-        getControlledEntity: vi.fn()
     }
 }));
 
@@ -32,7 +26,7 @@ describe('CollisionSystem', () => {
             if (type === 'player') return [mockPlayer];
             return [];
         });
-        VehicleSystem.getControlledEntity.mockReturnValue(mockPlayer);
+        World.getControlled.mockReturnValue(mockPlayer);
     });
 
     it('should push player out of a building on the shortest axis', () => {
@@ -91,7 +85,7 @@ describe('CollisionSystem', () => {
             transform: { x: 100, y: 100, width: 20, height: 20, angle: 0 },
             physics: { velX: 50, velY: 0, speed: 120 }
         };
-        VehicleSystem.getControlledEntity.mockReturnValue(mockCar);
+        World.getControlled.mockReturnValue(mockCar);
 
         const building = { x: 105, y: 80, w: 50, h: 50 };
         World.buildings = [building];
@@ -112,7 +106,7 @@ describe('CollisionSystem', () => {
             transform: { x: 100, y: 100, width: 40, height: 16, angle: Math.PI / 2 },
             physics: { velX: 0, velY: 0, speed: 80 }
         };
-        VehicleSystem.getControlledEntity.mockReturnValue(mockCar);
+        World.getControlled.mockReturnValue(mockCar);
 
         // Building's left edge is 12px away from the car center: inside the naive
         // (unrotated) half-width of 20, but outside the true rotated half-width of 8.
@@ -144,7 +138,7 @@ describe('CollisionSystem', () => {
             transform: { x: 150, y: 100, width: 90, height: 45, angle: 0 },
             physics: { velX: 0, velY: 0, speed: 0 }
         };
-        VehicleSystem.getControlledEntity.mockReturnValue(drivenCar);
+        World.getControlled.mockReturnValue(drivenCar);
 
         World.getEntitiesByType.mockImplementation((type) => {
             if (type === 'player') return [mockPlayer];
@@ -180,7 +174,7 @@ describe('CollisionSystem', () => {
         });
         const live = [makeNpc('npc1'), makeNpc('npc2'), makeNpc('npc3')];
 
-        VehicleSystem.getControlledEntity.mockReturnValue(car);
+        World.getControlled.mockReturnValue(car);
         World.getEntitiesByType.mockImplementation((type) => {
             if (type === 'player') return [mockPlayer];
             if (type === 'car') return [car];
@@ -204,7 +198,7 @@ describe('CollisionSystem', () => {
     it('does not resolve collisions between two cars neither of which is controlled', () => {
         const carA = { id: 'car1', type: 'car', transform: { x: 100, y: 100, width: 90, height: 45, angle: 0 }, physics: { velX: 0, velY: 0, speed: 0 } };
         const carB = { id: 'car2', type: 'car', transform: { x: 150, y: 100, width: 90, height: 45, angle: 0 }, physics: { velX: 0, velY: 0, speed: 0 } };
-        VehicleSystem.getControlledEntity.mockReturnValue(mockPlayer); // on foot, far from both cars
+        World.getControlled.mockReturnValue(mockPlayer); // on foot, far from both cars
 
         World.getEntitiesByType.mockImplementation((type) => {
             if (type === 'player') return [mockPlayer];

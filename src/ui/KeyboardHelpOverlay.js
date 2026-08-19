@@ -2,6 +2,7 @@
  * KeyboardHelpOverlay — full keybinding list (? / / to open; same keys, Esc, or backdrop to close).
  */
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 import { I18n } from '../i18n/I18n.js';
 
 const KEYBINDING_DEFS = [
@@ -183,7 +184,7 @@ export const KeyboardHelpOverlay = {
             }
         });
 
-        EventBus.on('locale_change', () => this.applyLabels());
+        EventBus.on(EVENTS.LOCALE_CHANGE, () => this.applyLabels());
         this.applyLabels();
     },
 

@@ -2,6 +2,7 @@
  * Mission flow: event-driven stages plus update loop for timers/zones.
  */
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 import { GameState, GAME_STATES } from '../core/GameState.js';
 import { World } from '../world/World.js';
 import { I18n } from '../i18n/I18n.js';
@@ -15,9 +16,9 @@ export const MissionSystem = {
 
     init() {
         this.reset();
-        if (this._onNearNpc) EventBus.off('player_near_npc', this._onNearNpc);
-        if (this._onNearCar) EventBus.off('player_near_car', this._onNearCar);
-        if (this._onLocale) EventBus.off('locale_change', this._onLocale);
+        if (this._onNearNpc) EventBus.off(EVENTS.PLAYER_NEAR_NPC, this._onNearNpc);
+        if (this._onNearCar) EventBus.off(EVENTS.PLAYER_NEAR_CAR, this._onNearCar);
+        if (this._onLocale) EventBus.off(EVENTS.LOCALE_CHANGE, this._onLocale);
 
         this._onNearNpc = () => {
             if (this.stage === 0) {
@@ -26,10 +27,10 @@ export const MissionSystem = {
                 this.timerActive = true;
                 this._hurryActive = false;
                 this.publishMissionText();
-                EventBus.emit('audio_play', 'beep');
+                EventBus.emit(EVENTS.AUDIO_PLAY, 'beep');
             }
         };
-        EventBus.on('player_near_npc', this._onNearNpc);
+        EventBus.on(EVENTS.PLAYER_NEAR_NPC, this._onNearNpc);
 
         this._onNearCar = () => {
             if (this.stage === 1) {
@@ -39,13 +40,13 @@ export const MissionSystem = {
                 this._hurryActive = false;
                 this.targetLocation = { x: 3000, y: 3000, radius: 150 };
                 this.publishMissionText();
-                EventBus.emit('audio_play', 'beep');
+                EventBus.emit(EVENTS.AUDIO_PLAY, 'beep');
             }
         };
-        EventBus.on('player_near_car', this._onNearCar);
+        EventBus.on(EVENTS.PLAYER_NEAR_CAR, this._onNearCar);
 
         this._onLocale = () => this.publishMissionText();
-        EventBus.on('locale_change', this._onLocale);
+        EventBus.on(EVENTS.LOCALE_CHANGE, this._onLocale);
 
         setTimeout(() => this.publishMissionText(), 100);
     },
@@ -79,7 +80,7 @@ export const MissionSystem = {
     },
 
     publishMissionText() {
-        EventBus.emit('mission_update', this.getMissionText());
+        EventBus.emit(EVENTS.MISSION_UPDATE, this.getMissionText());
     },
 
     update(dt) {
@@ -89,7 +90,7 @@ export const MissionSystem = {
 
         if (this.timer <= 0) {
             // Pressure: escalate wanted level
-            EventBus.emit('npc_hit'); // Trigger WantedSystem incident
+            EventBus.emit(EVENTS.NPC_HIT); // Trigger WantedSystem incident
             this.timer = 10; // Repeat pressure every 10s
             this._hurryActive = true;
             this.publishMissionText();
@@ -112,7 +113,7 @@ export const MissionSystem = {
                     this._hurryActive = false;
                     this.targetLocation = null;
                     this.publishMissionText();
-                    EventBus.emit('audio_play', 'success');
+                    EventBus.emit(EVENTS.AUDIO_PLAY, 'success');
                     GameState.setState(GAME_STATES.MISSION_PASSED);
                 }
             }

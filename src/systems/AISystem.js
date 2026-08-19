@@ -1,12 +1,13 @@
 import { World } from '../world/World.js';
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 import { GameConfig } from '../core/GameConfig.js';
 import { PedestrianPaths } from '../world/PedestrianPaths.js';
 
 export const AISystem = {
     init() {
-        if (this._onGunshot) EventBus.off('gunshot', this._onGunshot);
-        if (this._onExplosion) EventBus.off('explosion', this._onExplosion);
+        if (this._onGunshot) EventBus.off(EVENTS.GUNSHOT, this._onGunshot);
+        if (this._onExplosion) EventBus.off(EVENTS.EXPLOSION, this._onExplosion);
 
         this._onGunshot = (data) => {
             const npcs = World.getEntitiesByType('npc');
@@ -23,7 +24,7 @@ export const AISystem = {
                 }
             });
         };
-        EventBus.on('gunshot', this._onGunshot);
+        EventBus.on(EVENTS.GUNSHOT, this._onGunshot);
 
         this._onExplosion = (data) => {
             const npcs = World.getEntitiesByType('npc');
@@ -41,7 +42,7 @@ export const AISystem = {
                 }
             });
         };
-        EventBus.on('explosion', this._onExplosion);
+        EventBus.on(EVENTS.EXPLOSION, this._onExplosion);
     },
 
     moveToward(npc, tx, ty, speed, dt) {

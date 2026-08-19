@@ -2,6 +2,7 @@
  * I18n — UI localization (pl, en, de, es, fr).
  */
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 import { catalogs, SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES } from './locales.js';
 
 const DEFAULT_LOCALE = 'en';
@@ -55,7 +56,7 @@ export const I18n = {
         this.locale = next;
         this._applyDocumentLang();
         if (!opts.silent) {
-            EventBus.emit('locale_change', { locale: next });
+            EventBus.emit(EVENTS.LOCALE_CHANGE, { locale: next });
         }
         return true;
     },

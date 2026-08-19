@@ -2,6 +2,7 @@
  * MenuScreen — title and end-of-game screens.
  */
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 import { GameState, GAME_STATES } from '../core/GameState.js';
 import { I18n } from '../i18n/I18n.js';
 
@@ -14,11 +15,11 @@ export const MenuScreen = {
     init() {
         this.layer = document.getElementById('menuLayer');
 
-        EventBus.on('state_change', ({ to }) => {
+        EventBus.on(EVENTS.STATE_CHANGE, ({ to }) => {
             this.render(to);
         });
 
-        EventBus.on('locale_change', () => {
+        EventBus.on(EVENTS.LOCALE_CHANGE, () => {
             if (this._state) this.render(this._state);
         });
 
@@ -33,7 +34,7 @@ export const MenuScreen = {
         const state = GameState.getState();
         if (state === GAME_STATES.MENU || state === GAME_STATES.WASTED || state === GAME_STATES.MISSION_PASSED) {
             if (state === GAME_STATES.WASTED || state === GAME_STATES.MISSION_PASSED) {
-                EventBus.emit('game_restart');
+                EventBus.emit(EVENTS.GAME_RESTART);
             }
             GameState.setState(GAME_STATES.PLAY);
         }

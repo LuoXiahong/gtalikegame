@@ -4,8 +4,8 @@
  * car's actual footprint is tested, not its axis-aligned bounding box.
  */
 import { World } from './World.js';
-import { VehicleSystem } from '../systems/VehicleSystem.js';
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 
 export const CollisionSystem = {
     checkAABB(r1, r2) {
@@ -62,7 +62,7 @@ export const CollisionSystem = {
         if (players.length === 0) return;
         const p = players[0];
 
-        const controlled = VehicleSystem.getControlledEntity();
+        const controlled = World.getControlled();
 
         if (controlled) {
             const ent = controlled.transform;
@@ -211,7 +211,7 @@ export const CollisionSystem = {
                         
                         controlled.physics.speed *= 0.8;
                         
-                        EventBus.emit('npc_hit', { npc, car: controlled });
+                        EventBus.emit(EVENTS.NPC_HIT, { npc, car: controlled });
                     }
                 }
             }

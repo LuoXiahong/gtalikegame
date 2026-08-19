@@ -3,8 +3,8 @@
  */
 import { World } from '../world/World.js';
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 import { InputSystem } from '../input/InputManager.js';
-import { VehicleSystem } from './VehicleSystem.js';
 import { GameConfig } from '../core/GameConfig.js';
 import { I18n } from '../i18n/I18n.js';
 
@@ -25,7 +25,7 @@ export const InteractionSystem = {
     _ensureLocaleListener() {
         if (this._localeBound) return;
         this._localeBound = true;
-        EventBus.on('locale_change', () => {
+        EventBus.on(EVENTS.LOCALE_CHANGE, () => {
             this.lastDialogue = undefined;
             this.lastHint = undefined;
         });
@@ -40,27 +40,27 @@ export const InteractionSystem = {
         const isActionPressed = InputSystem.consumeAction();
         const isShootPressed = InputSystem.consumeShoot();
         const isExplodePressed = InputSystem.consumeExplode();
-        const controlled = VehicleSystem.getControlledEntity();
+        const controlled = World.getControlled();
 
         // Shoot / explode only while on foot (for now)
         if (controlled && controlled.type === 'player') {
             if (isShootPressed) {
-                EventBus.emit('gunshot', { x: p.transform.x, y: p.transform.y });
-                EventBus.emit('audio_play', 'gunshot');
+                EventBus.emit(EVENTS.GUNSHOT, { x: p.transform.x, y: p.transform.y });
+                EventBus.emit(EVENTS.AUDIO_PLAY, 'gunshot');
             }
             if (isExplodePressed) {
-                EventBus.emit('explosion', {
+                EventBus.emit(EVENTS.EXPLOSION, {
                     x: p.transform.x,
                     y: p.transform.y,
                     radius: GameConfig.AI.EXPLOSION_DEFAULT_RADIUS
                 });
-                EventBus.emit('audio_play', 'explosion');
+                EventBus.emit(EVENTS.AUDIO_PLAY, 'explosion');
             }
         }
 
         if (controlled && controlled.type === 'car') {
             if (isActionPressed) {
-                EventBus.emit('exit_vehicle', { player: p });
+                EventBus.emit(EVENTS.EXIT_VEHICLE, { player: p });
             }
             return;
         }
@@ -79,13 +79,13 @@ export const InteractionSystem = {
         });
 
         if (nearNPCId && nearNPCId !== this.lastNearNPC) {
-            EventBus.emit('player_near_npc', { npcId: nearNPCId });
+            EventBus.emit(EVENTS.PLAYER_NEAR_NPC, { npcId: nearNPCId });
         }
         this.lastNearNPC = nearNPCId;
 
         const dialogue = nearNPCId ? I18n.t('interact.npcHello') : null;
         if (dialogue !== this.lastDialogue) {
-            EventBus.emit('ui_show_dialogue', dialogue);
+            EventBus.emit(EVENTS.UI_SHOW_DIALOGUE, dialogue);
             this.lastDialogue = dialogue;
         }
 
@@ -106,21 +106,21 @@ export const InteractionSystem = {
 
         if (carInZone) {
             if (carInZone.id !== this.lastNearCar) {
-                EventBus.emit('player_near_car', { carId: carInZone.id });
+                EventBus.emit(EVENTS.PLAYER_NEAR_CAR, { carId: carInZone.id });
                 this.lastNearCar = carInZone.id;
             }
             const hint = I18n.t('interact.enterVehicle');
             if (hint !== this.lastHint) {
-                EventBus.emit('ui_show_action_hint', hint);
+                EventBus.emit(EVENTS.UI_SHOW_ACTION_HINT, hint);
                 this.lastHint = hint;
             }
             if (isActionPressed) {
-                EventBus.emit('enter_vehicle', { player: p, car: carInZone });
+                EventBus.emit(EVENTS.ENTER_VEHICLE, { player: p, car: carInZone });
             }
         } else {
             this.lastNearCar = null;
             if (this.lastHint !== null) {
-                EventBus.emit('ui_show_action_hint', null);
+                EventBus.emit(EVENTS.UI_SHOW_ACTION_HINT, null);
                 this.lastHint = null;
             }
         }

@@ -5,7 +5,8 @@ import { EventBus } from '../core/EventBus.js';
 
 vi.mock('../world/World.js', () => ({
     World: {
-        getEntitiesByType: vi.fn()
+        getEntitiesByType: vi.fn(),
+        getControlled: vi.fn(() => ({ type: 'player' }))
     }
 }));
 
@@ -17,14 +18,7 @@ vi.mock('../input/InputManager.js', () => ({
     }
 }));
 
-vi.mock('./VehicleSystem.js', () => ({
-    VehicleSystem: {
-        getControlledEntity: vi.fn(() => ({ type: 'player' }))
-    }
-}));
-
 import { InputSystem } from '../input/InputManager.js';
-import { VehicleSystem } from './VehicleSystem.js';
 
 describe('InteractionSystem', () => {
     let mockPlayer;

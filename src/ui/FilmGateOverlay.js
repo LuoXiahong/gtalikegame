@@ -3,6 +3,7 @@
  * Visible while the retro effect is active.
  */
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 import { RetroFilmSettings } from '../systems/RetroFilmSettings.js';
 import { I18n } from '../i18n/I18n.js';
 
@@ -86,8 +87,8 @@ export const FilmGateOverlay = {
         container.appendChild(root);
 
         this.sync();
-        EventBus.on('retro_settings_change', () => this.sync());
-        EventBus.on('locale_change', () => this._updateCounterText());
+        EventBus.on(EVENTS.RETRO_SETTINGS_CHANGE, () => this.sync());
+        EventBus.on(EVENTS.LOCALE_CHANGE, () => this._updateCounterText());
     },
 
     _updateCounterText() {

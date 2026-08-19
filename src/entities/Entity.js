@@ -13,5 +13,8 @@ export class Entity {
 
         this.visual = { color: '#ffffff', walkCycle: 0 };
         this.visible = true;
+
+        // True for the single entity currently receiving player input (set by VehicleSystem).
+        this.controlled = false;
     }
 }

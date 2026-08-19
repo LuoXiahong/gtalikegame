@@ -4,6 +4,7 @@
  */
 import * as THREE from 'three';
 import { World } from '../world/World.js';
+import { Time } from '../core/Time.js';
 import { MissionSystem } from './MissionSystem.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { createNPCModel } from './NPCModelFactory.js';
@@ -97,8 +98,8 @@ export const RenderSync3D = {
             }
             this.targetMesh.position.x = loc.x * SF;
             this.targetMesh.position.z = loc.y * SF;
-            this.targetMesh.position.y = 1.0 + Math.sin(Date.now() * 0.005) * 0.3;
-            this.targetMesh.rotation.z = Date.now() * 0.001;
+            this.targetMesh.position.y = 1.0 + Math.sin(Time.time * 5) * 0.3;
+            this.targetMesh.rotation.z = Time.time;
         } else if (this.targetMesh) {
             scene.remove(this.targetMesh);
             this.disposeHierarchy(this.targetMesh);

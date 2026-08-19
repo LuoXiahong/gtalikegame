@@ -3,6 +3,7 @@
  * Persisted in localStorage; changes emit EventBus 'time_of_day_change'.
  */
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 
 const STORAGE_KEY = 'lowge_time_of_day';
 const WEATHER_STORAGE_KEY = 'lowge_weather';
@@ -57,7 +58,7 @@ export const TimeOfDaySettings = {
         if (!TIME_PRESETS[name]) return false;
         this.current = name;
         this._persist();
-        EventBus.emit('time_of_day_change', this.current);
+        EventBus.emit(EVENTS.TIME_OF_DAY_CHANGE, this.current);
         return true;
     },
 
@@ -69,7 +70,7 @@ export const TimeOfDaySettings = {
         if (!WEATHER_MODES.includes(name)) return false;
         this.weather = name;
         this._persistWeather();
-        EventBus.emit('weather_change', this.weather);
+        EventBus.emit(EVENTS.WEATHER_CHANGE, this.weather);
         return true;
     },
 

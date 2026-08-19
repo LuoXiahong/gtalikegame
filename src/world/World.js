@@ -85,5 +85,15 @@ export const World = {
             return (this.entitiesByType['car'] || []).filter(e => e.isPolice);
         }
         return this.entitiesByType[type] || [];
+    },
+
+    /**
+     * The single entity currently receiving player input (player on foot, or
+     * the car they've entered) — VehicleSystem owns the handoff and flips
+     * `entity.controlled` on enter/exit. Null before spawn.
+     * @returns {object | null}
+     */
+    getControlled() {
+        return this.entities.find(e => e.controlled) || null;
     }
 };

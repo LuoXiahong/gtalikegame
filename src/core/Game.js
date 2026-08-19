@@ -3,6 +3,7 @@
  */
 import { Time } from './Time.js';
 import { EventBus } from './EventBus.js';
+import { EVENTS } from '../core/Events.js';
 import { GameConfig } from './GameConfig.js';
 import { AssetLoader } from './AssetLoader.js';
 import { World } from '../world/World.js';
@@ -126,9 +127,9 @@ export const Game = {
             });
         }
 
-        if (this._onRestart) EventBus.off('game_restart', this._onRestart);
+        if (this._onRestart) EventBus.off(EVENTS.GAME_RESTART, this._onRestart);
         this._onRestart = () => this.restart();
-        EventBus.on('game_restart', this._onRestart);
+        EventBus.on(EVENTS.GAME_RESTART, this._onRestart);
 
         // Prime WebGL shader compilation (city/prop materials + bloom/tiltshift/retro-film
         // passes) while the loader is still up. Without this, the first frame drawn by the
@@ -190,10 +191,10 @@ export const Game = {
         InteractionSystem.reset();
         InputSystem.resetAll();
         this.spawnEntities();
-        EventBus.emit('ui_show_dialogue', null);
-        EventBus.emit('ui_show_action_hint', null);
-        EventBus.emit('speed_update', 0);
-        EventBus.emit('vehicle_exited', { carId: null });
+        EventBus.emit(EVENTS.UI_SHOW_DIALOGUE, null);
+        EventBus.emit(EVENTS.UI_SHOW_ACTION_HINT, null);
+        EventBus.emit(EVENTS.SPEED_UPDATE, 0);
+        EventBus.emit(EVENTS.VEHICLE_EXITED, { carId: null });
     },
 
     isPausedByOverlay() {
@@ -211,14 +212,14 @@ export const Game = {
                 RenderSystem.debugAI = !RenderSystem.debugAI;
                 UISettings.setDebugAI(RenderSystem.debugAI);
             }
-            const controlled = VehicleSystem.getControlledEntity();
+            const controlled = World.getControlled();
 
             if (controlled) {
                 if (controlled.type === 'player') {
                     PlayerMovementSystem.update(dt, controlled);
                 } else if (controlled.type === 'car') {
                     VehiclePhysicsSystem.update(dt, controlled);
-                    EventBus.emit('speed_update', Math.abs(controlled.physics.speed));
+                    EventBus.emit(EVENTS.SPEED_UPDATE, Math.abs(controlled.physics.speed));
                 }
             }
 

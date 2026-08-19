@@ -5,25 +5,26 @@
  */
 import { World } from '../world/World.js';
 import { EventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/Events.js';
 import { GameConfig } from '../core/GameConfig.js';
 import { GameState, GAME_STATES } from '../core/GameState.js';
 
 export const HealthSystem = {
     init() {
-        if (this._onNpcHit) EventBus.off('npc_hit', this._onNpcHit);
-        if (this._onGunshot) EventBus.off('gunshot', this._onGunshot);
-        if (this._onExplosion) EventBus.off('explosion', this._onExplosion);
+        if (this._onNpcHit) EventBus.off(EVENTS.NPC_HIT, this._onNpcHit);
+        if (this._onGunshot) EventBus.off(EVENTS.GUNSHOT, this._onGunshot);
+        if (this._onExplosion) EventBus.off(EVENTS.EXPLOSION, this._onExplosion);
 
         this._onNpcHit = ({ npc }) => {
             this.applyDamage(npc, GameConfig.HEALTH.VEHICLE_HIT_DAMAGE);
         };
-        EventBus.on('npc_hit', this._onNpcHit);
+        EventBus.on(EVENTS.NPC_HIT, this._onNpcHit);
 
         this._onGunshot = ({ x, y }) => {
             const target = this.nearestNPC(x, y, GameConfig.HEALTH.GUNSHOT_HIT_RADIUS);
             if (target) this.applyDamage(target, GameConfig.HEALTH.GUNSHOT_DAMAGE);
         };
-        EventBus.on('gunshot', this._onGunshot);
+        EventBus.on(EVENTS.GUNSHOT, this._onGunshot);
 
         this._onExplosion = ({ x, y, radius }) => {
             const targets = [...World.getEntitiesByType('npc'), ...World.getEntitiesByType('player')];
@@ -37,7 +38,7 @@ export const HealthSystem = {
                 this.applyDamage(ent, GameConfig.HEALTH.EXPLOSION_MAX_DAMAGE * falloff);
             });
         };
-        EventBus.on('explosion', this._onExplosion);
+        EventBus.on(EVENTS.EXPLOSION, this._onExplosion);
     },
 
     // Nearest living NPC to (x, y) within maxDist, or null.
@@ -65,17 +66,17 @@ export const HealthSystem = {
         entity.health.current = Math.max(0, entity.health.current - amount);
 
         if (entity.type === 'player') {
-            EventBus.emit('health_change', { current: entity.health.current, max: entity.health.max });
+            EventBus.emit(EVENTS.HEALTH_CHANGE, { current: entity.health.current, max: entity.health.max });
         }
 
         if (entity.health.current <= 0) {
             entity.health.dead = true;
 
             if (entity.type === 'player') {
-                EventBus.emit('player_knockout', { entity });
+                EventBus.emit(EVENTS.PLAYER_KNOCKOUT, { entity });
                 GameState.setState(GAME_STATES.WASTED);
             } else if (entity.type === 'npc') {
-                EventBus.emit('npc_knockout', { entity });
+                EventBus.emit(EVENTS.NPC_KNOCKOUT, { entity });
                 World.removeEntity(entity.id);
             }
         }
