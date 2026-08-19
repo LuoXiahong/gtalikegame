@@ -181,10 +181,17 @@ export const CollisionSystem = {
 
         // Driving: knock NPCs when speed > 10
         if (controlled && controlled.type === 'car') {
-            const npcs = World.getEntitiesByType('npc');
+            // Snapshot before iterating. `getEntitiesByType` hands back the live
+            // internal array, and an `npc_hit` listener may despawn the NPC it
+            // just received (HealthSystem removes one whose HP hit zero), which
+            // splices this very array underneath the loop.
+            const npcs = World.getEntitiesByType('npc').slice();
             const len = npcs.length;
             for (let i = 0; i < len; i++) {
                 const npc = npcs[i];
+                // The snapshot can outlive its entries: an earlier hit in this
+                // same pass may have killed a later one via a blast radius.
+                if (!npc || npc.health?.dead) continue;
 
                 const npcBox = {
                     x: npc.transform.x - npc.transform.width / 2,

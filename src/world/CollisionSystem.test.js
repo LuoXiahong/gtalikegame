@@ -162,6 +162,45 @@ describe('CollisionSystem', () => {
         expect(drivenCar.physics.speed).toBe(0);
     });
 
+    it('survives an npc_hit listener despawning the NPC mid-iteration', async () => {
+        // getEntitiesByType hands back the live internal array, and HealthSystem
+        // removes an NPC from it the moment a hit drops HP to zero. Iterating
+        // that array with a cached length then walked off the shortened end and
+        // crashed on `undefined.transform`.
+        const { EventBus } = await import('../core/EventBus.js');
+        const car = {
+            id: 'car1', type: 'car',
+            transform: { x: 100, y: 100, width: 90, height: 45, angle: 0 },
+            physics: { velX: 0, velY: 0, speed: 100 }
+        };
+        const makeNpc = (id) => ({
+            id, type: 'npc',
+            transform: { x: 100, y: 100, width: 18, height: 18, angle: 0 },
+            health: { current: 100, max: 100, dead: false }
+        });
+        const live = [makeNpc('npc1'), makeNpc('npc2'), makeNpc('npc3')];
+
+        VehicleSystem.getControlledEntity.mockReturnValue(car);
+        World.getEntitiesByType.mockImplementation((type) => {
+            if (type === 'player') return [mockPlayer];
+            if (type === 'car') return [car];
+            if (type === 'npc') return live; // by reference, as the real World does
+            return [];
+        });
+
+        const onHit = ({ npc }) => {
+            const idx = live.indexOf(npc);
+            if (idx !== -1) live.splice(idx, 1);
+        };
+        EventBus.on('npc_hit', onHit);
+        try {
+            expect(() => CollisionSystem.update()).not.toThrow();
+            expect(live.length).toBe(0);
+        } finally {
+            EventBus.off('npc_hit', onHit);
+        }
+    });
+
     it('does not resolve collisions between two cars neither of which is controlled', () => {
         const carA = { id: 'car1', type: 'car', transform: { x: 100, y: 100, width: 90, height: 45, angle: 0 }, physics: { velX: 0, velY: 0, speed: 0 } };
         const carB = { id: 'car2', type: 'car', transform: { x: 150, y: 100, width: 90, height: 45, angle: 0 }, physics: { velX: 0, velY: 0, speed: 0 } };

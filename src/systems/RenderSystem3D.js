@@ -18,6 +18,7 @@ import { InputSystem } from '../input/InputManager.js';
 import { World } from '../world/World.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { getContactShadowTexture } from './ContactShadow.js';
+import { createPooledStreetLight } from './PropFactory.js';
 import { FacadeGenerator } from './FacadeGenerator.js';
 import { RenderSync3D } from './RenderSync3D.js';
 import { RoadTextureGenerator } from './RoadTextureGenerator.js';
@@ -40,6 +41,21 @@ import {
 
 /** Base PointLight intensity from PropFactory lamp posts. */
 export const STREET_LIGHT_BASE = 380;
+
+/**
+ * How many street lights actually exist as PointLights.
+ *
+ * The map holds 72 lamp posts. Giving each one a light meant every
+ * MeshStandardMaterial fragment evaluated 72 point lights, distance-culled by
+ * nothing — the single largest per-pixel cost in the scene. Instead a fixed pool
+ * of this size is reused, repositioned each frame onto the nearest posts. Fog
+ * hides the rest long before they would contribute.
+ *
+ * This number is deliberately constant for the lifetime of the renderer:
+ * three.js compiles NUM_POINT_LIGHTS into every affected shader, so growing or
+ * shrinking the set forces a recompile and a visible frame hitch.
+ */
+export const STREET_LIGHT_POOL_SIZE = 16;
 const TOD_TRANSITION_SEC = 1.5;
 /** Soft lamp/emissive glow — high threshold so white zebra paint does not bloom. */
 export const BLOOM_STRENGTH = 0.18;
@@ -93,7 +109,10 @@ export const RenderSystem3D = {
     trees: [],
     billboards: [],
     props: [],
+    /** Fixed pool of PointLights (see STREET_LIGHT_POOL_SIZE). */
     streetLights: [],
+    /** Candidate world positions collected from lamp posts by CityBuilder3D. */
+    lampLightSpots: [],
     laneMarkings: [],
     zebras: [],
     puddleReflectors: [],
@@ -224,6 +243,7 @@ export const RenderSystem3D = {
 
         CityBuilder3D.buildCity(this);
         RoadBuilder3D.buildRoads(this);
+        this.initStreetLightPool();
 
         if (this.screenshotMode) {
             // Screenshots are night + rain + noir only (see screenshotScenarios.js)
@@ -443,6 +463,68 @@ export const RenderSystem3D = {
         };
     },
 
+    /**
+     * Build the fixed street-light pool once and park it in the scene.
+     * Call after the city (and therefore `lampLightSpots`) exists.
+     */
+    initStreetLightPool() {
+        if (this.streetLights.length > 0) return this.streetLights;
+        for (let i = 0; i < STREET_LIGHT_POOL_SIZE; i++) {
+            const light = createPooledStreetLight();
+            // Park far below the map until the first assignment, so a pool larger
+            // than the lamp count never lights anything by accident.
+            light.position.set(0, -1000, 0);
+            this.scene.add(light);
+            this.streetLights.push(light);
+        }
+        return this.streetLights;
+    },
+
+    /**
+     * Move the pool onto the lamp posts nearest `(fx, fz)`.
+     *
+     * Uses partial selection rather than a full sort: only POOL_SIZE of ~72
+     * candidates are needed, so this stays O(n·k) with no allocation per frame.
+     * Lights are never added, removed or hidden — only moved — which keeps
+     * NUM_POINT_LIGHTS constant and avoids shader recompiles.
+     * @param {number} fx focus world X
+     * @param {number} fz focus world Z
+     */
+    updateStreetLightPool(fx, fz) {
+        const pool = this.streetLights;
+        const spots = this.lampLightSpots;
+        if (!pool.length || !spots.length) return;
+
+        const taken = this._lampTaken || (this._lampTaken = []);
+        taken.length = 0;
+
+        for (let i = 0; i < pool.length; i++) {
+            let bestIdx = -1;
+            let bestD = Infinity;
+            for (let s = 0; s < spots.length; s++) {
+                if (taken.includes(s)) continue;
+                const spot = spots[s];
+                const dx = spot.x - fx;
+                const dz = spot.z - fz;
+                const d = dx * dx + dz * dz;
+                if (d < bestD) {
+                    bestD = d;
+                    bestIdx = s;
+                }
+            }
+            const light = pool[i];
+            if (bestIdx === -1) {
+                // Fewer lamps than pool slots — park the surplus out of range
+                // instead of removing it, so the light count stays fixed.
+                light.position.set(0, -1000, 0);
+                continue;
+            }
+            taken.push(bestIdx);
+            const spot = spots[bestIdx];
+            light.position.set(spot.x, spot.y, spot.z);
+        }
+    },
+
     _applyStreetLightMultiplier(mult) {
         const lights = this.streetLights || [];
         for (const light of lights) {
@@ -653,6 +735,8 @@ export const RenderSystem3D = {
         }
 
         RenderSync3D.update(this.scene);
+
+        this.updateStreetLightPool(sFocusX, sFocusZ);
 
         this.updateTimeOfDay(Time.delta || 0.016);
 

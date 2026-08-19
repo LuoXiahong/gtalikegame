@@ -9,6 +9,7 @@ import { FacadeGenerator } from './FacadeGenerator.js';
 import { createPropAt } from './PropFactory.js';
 import { createTreeAt, plantHash } from './TreeFactory.js';
 import { addContactShadow } from './ContactShadow.js';
+import { bakeStaticInstances } from './StaticInstancer.js';
 
 /** Inset from block outer edge onto sidewalk (2D px). */
 export const LAMP_EDGE_INSET = 30;
@@ -28,6 +29,23 @@ const PROP_LAMP_CLEARANCE = 2.5;
  * exposure or breaking the noir mood.
  */
 export const BUILDING_RIM_EDGE = 0x6b727c;
+
+/**
+ * Roof clutter (HVAC, masts, vents, billboard frames) repeats on every building
+ * with identical parameters, but each call used to allocate its own material.
+ * Distinct material instances cannot share an instanced batch, so those hundreds
+ * of small meshes stayed hundreds of separate draw calls. Cache by key — the
+ * same trick PropFactory already uses for street furniture.
+ */
+const _buildingMatCache = new Map();
+function sharedBuildingMat(key, factory) {
+    let mat = _buildingMatCache.get(key);
+    if (!mat) {
+        mat = factory();
+        _buildingMatCache.set(key, mat);
+    }
+    return mat;
+}
 
 /**
  * Per-block plant slots (2D px offsets from block center).
@@ -148,6 +166,19 @@ export const CityBuilder3D = {
             this.addBillboard(renderSystem, shops[0].group, shops[0].w, shops[0].d, shops[0].h);
             this.addBillboard(renderSystem, shops[1].group, shops[1].w, shops[1].d, shops[1].h);
         }
+
+        // Trees and street furniture never move, and between them accounted for
+        // roughly half of all draw calls. Collapse them into one InstancedMesh
+        // per (geometry, material) pair. The arrays stay populated as data — only
+        // the scene graph is flattened.
+        // Buildings join in for their roof clutter, which now shares materials.
+        // Their bodies use per-face material arrays and are skipped by the baker,
+        // so those few dozen draws stay — the win here is the hundreds of small
+        // HVAC/mast/vent meshes riding on them.
+        renderSystem.staticInstances = bakeStaticInstances(
+            renderSystem.scene,
+            [...renderSystem.trees, ...renderSystem.props, ...renderSystem.buildings]
+        );
     },
 
     /**
@@ -156,7 +187,7 @@ export const CityBuilder3D = {
     placeSidewalkProps(renderSystem) {
         const SF = WorldMetrics.SCALE_FACTOR;
         renderSystem.props = [];
-        renderSystem.streetLights = [];
+        renderSystem.lampLightSpots = [];
 
         const lampSpots = this.collectLampSpots(SF);
         for (const spot of lampSpots) {
@@ -342,10 +373,15 @@ export const CityBuilder3D = {
         renderSystem.scene.add(prop);
         renderSystem.props.push(prop);
         if (type === 'lampPost') {
-            prop.traverse(obj => {
-                if (obj.isLight && obj.userData.isStreetLight) {
-                    renderSystem.streetLights.push(obj);
-                }
+            // Record where a light *would* go. The pool in RenderSystem3D picks the
+            // nearest of these each frame; the post owns no light of its own.
+            const off = prop.userData.lampLightOffset || { x: 0, y: 4.9, z: 0 };
+            const cos = Math.cos(rot || 0);
+            const sin = Math.sin(rot || 0);
+            renderSystem.lampLightSpots.push({
+                x: x + off.x * cos - off.z * sin,
+                y: off.y,
+                z: z + off.x * sin + off.z * cos
             });
         }
     },
@@ -507,8 +543,8 @@ export const CityBuilder3D = {
         ];
 
         const count = Math.floor(Math.random() * 3) + 1;
-        const hvacMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.5, metalness: 0.6 });
-        const hvacEdgeMat = new THREE.LineBasicMaterial({ color: 0x2c3e50 });
+        const hvacMat = sharedBuildingMat('hvac', () => new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.5, metalness: 0.6 }));
+        const hvacEdgeMat = sharedBuildingMat('hvac-edge', () => new THREE.LineBasicMaterial({ color: 0x2c3e50 }));
 
         for (let i = 0; i < count; i++) {
             const size = sizes[Math.floor(Math.random() * sizes.length)];
@@ -539,7 +575,7 @@ export const CityBuilder3D = {
             const isAntenna = Math.random() < 0.5;
             if (isAntenna) {
                 const mastGeom = new THREE.CylinderGeometry(0.1, 0.15, 4.0, 4);
-                const mastMat = new THREE.MeshStandardMaterial({ color: 0xdcdde1, metalness: 0.8, roughness: 0.2 });
+                const mastMat = sharedBuildingMat('mast', () => new THREE.MeshStandardMaterial({ color: 0xdcdde1, metalness: 0.8, roughness: 0.2 }));
                 const mast = new THREE.Mesh(mastGeom, mastMat);
                 mast.castShadow = true;
                 mast.receiveShadow = true;
@@ -550,13 +586,13 @@ export const CityBuilder3D = {
                 group.add(mast);
 
                 const beaconGeom = new THREE.BoxGeometry(0.25, 0.25, 0.25);
-                const beaconMat = new THREE.MeshBasicMaterial({ color: 0xff4757 });
+                const beaconMat = sharedBuildingMat('beacon', () => new THREE.MeshBasicMaterial({ color: 0xff4757 }));
                 const beacon = new THREE.Mesh(beaconGeom, beaconMat);
                 beacon.position.set(rx, roofY + 4.125, rz);
                 group.add(beacon);
             } else {
                 const shaftGeom = new THREE.BoxGeometry(2.5, 3.0, 2.5);
-                const shaftMat = new THREE.MeshStandardMaterial({ color: 0x718093, roughness: 0.9, metalness: 0.1 });
+                const shaftMat = sharedBuildingMat('shaft', () => new THREE.MeshStandardMaterial({ color: 0x718093, roughness: 0.9, metalness: 0.1 }));
                 const shaft = new THREE.Mesh(shaftGeom, shaftMat);
                 shaft.castShadow = true;
                 shaft.receiveShadow = true;
@@ -567,7 +603,7 @@ export const CityBuilder3D = {
                 group.add(shaft);
 
                 const ventGeom = new THREE.BoxGeometry(0.3, 1.2, 0.8);
-                const ventMat = new THREE.MeshStandardMaterial({ color: 0x2f3640, roughness: 0.5 });
+                const ventMat = sharedBuildingMat('vent', () => new THREE.MeshStandardMaterial({ color: 0x2f3640, roughness: 0.5 }));
                 const vent = new THREE.Mesh(ventGeom, ventMat);
                 vent.position.set(rx + 1.25, roofY + 1.0, rz);
                 group.add(vent);
@@ -584,8 +620,8 @@ export const CityBuilder3D = {
         const billboardGroup = new THREE.Group();
 
         const legGeom = new THREE.BoxGeometry(0.2, 2.0, 0.2);
-        const legMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.7, metalness: 0.5 });
-        const legEdgeMat = new THREE.LineBasicMaterial({ color: 0x111111 });
+        const legMat = sharedBuildingMat('leg', () => new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.7, metalness: 0.5 }));
+        const legEdgeMat = sharedBuildingMat('leg-edge', () => new THREE.LineBasicMaterial({ color: 0x111111 }));
 
         const leftLeg = new THREE.Mesh(legGeom, legMat);
         leftLeg.position.set(-1.5, 1.0, 0);
@@ -607,7 +643,7 @@ export const CityBuilder3D = {
         });
 
         const boardGeom = new THREE.BoxGeometry(5.0, 2.5, 0.3);
-        const boardMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.8, metalness: 0.1 });
+        const boardMat = sharedBuildingMat('board', () => new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.8, metalness: 0.1 }));
         const board = new THREE.Mesh(boardGeom, boardMat);
         board.position.set(0, 2.5, 0);
         board.castShadow = true;

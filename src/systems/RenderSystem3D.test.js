@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
-import { RenderSystem3D, BLOOM_STRENGTH, BLOOM_RADIUS, BLOOM_THRESHOLD, ZOOM_LEVELS, DEFAULT_ZOOM_INDEX } from './RenderSystem3D.js';
+import { RenderSystem3D, BLOOM_STRENGTH, BLOOM_RADIUS, BLOOM_THRESHOLD, ZOOM_LEVELS, DEFAULT_ZOOM_INDEX, STREET_LIGHT_POOL_SIZE } from './RenderSystem3D.js';
 import { InputSystem } from '../input/InputManager.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { RetroFilmSettings } from './RetroFilmSettings.js';
@@ -203,10 +203,53 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.trees.length).toBeLessThanOrEqual(144);
         expect(RenderSystem3D.billboards.length).toBe(2);
         expect(RenderSystem3D.props.length).toBeGreaterThanOrEqual(70);
-        expect(RenderSystem3D.streetLights.length).toBeGreaterThan(0);
         // Deterministic lamps: 9 blocks × 8 edge samples (corners + mids)
-        expect(RenderSystem3D.streetLights.length).toBe(72);
+        expect(RenderSystem3D.lampLightSpots.length).toBe(72);
+        // ...but only a small fixed pool of them is ever a real PointLight.
+        expect(RenderSystem3D.streetLights.length).toBe(STREET_LIGHT_POOL_SIZE);
         expect(RenderSystem3D.box5u.visible).toBe(false);
+    });
+
+    it('street light pool keeps a constant light count while following the player', () => {
+        RenderSystem3D.init();
+        const pool = RenderSystem3D.streetLights;
+        const countLights = () => {
+            let n = 0;
+            RenderSystem3D.scene.traverse(o => { if (o.isPointLight) n++; });
+            return n;
+        };
+
+        const before = countLights();
+        RenderSystem3D.updateStreetLightPool(110, 110);
+        const nearby = pool.map(l => l.position.clone());
+        RenderSystem3D.updateStreetLightPool(260, 260);
+        const after = countLights();
+
+        // The pool moves; it never grows, shrinks or hides. three.js bakes
+        // NUM_POINT_LIGHTS into the shader, so a changing count would recompile
+        // every affected material mid-play — a visible hitch.
+        expect(after).toBe(before);
+        expect(pool.length).toBe(STREET_LIGHT_POOL_SIZE);
+        expect(pool.every(l => l.visible)).toBe(true);
+        // ...and it actually tracked the focus point rather than staying put.
+        expect(pool.some((l, i) => !l.position.equals(nearby[i]))).toBe(true);
+    });
+
+    it('street light pool picks the nearest lamp spots without duplicates', () => {
+        RenderSystem3D.init();
+        RenderSystem3D.updateStreetLightPool(110, 110);
+        const pool = RenderSystem3D.streetLights;
+
+        const keys = pool.map(l => `${l.position.x.toFixed(3)},${l.position.z.toFixed(3)}`);
+        expect(new Set(keys).size).toBe(keys.length);
+
+        // Every chosen spot must be at least as close as any unchosen one.
+        const chosen = new Set(keys);
+        const dist = (p) => Math.hypot(p.x - 110, p.z - 110);
+        const worstChosen = Math.max(...pool.map(l => dist(l.position)));
+        const unchosen = RenderSystem3D.lampLightSpots
+            .filter(s => !chosen.has(`${s.x.toFixed(3)},${s.z.toFixed(3)}`));
+        expect(Math.min(...unchosen.map(dist))).toBeGreaterThanOrEqual(worstChosen - 1e-6);
     });
 
     it('should assign emissive maps to facade materials', () => {

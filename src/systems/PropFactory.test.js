@@ -4,7 +4,8 @@ import {
     createProp,
     createPropAt,
     PROP_TYPES,
-    STREET_LIGHT_DISTANCE
+    STREET_LIGHT_DISTANCE,
+    createPooledStreetLight
 } from './PropFactory.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { STREET_LIGHT_BASE } from './RenderSystem3D.js';
@@ -26,7 +27,10 @@ describe('PropFactory', () => {
         expect(prop.userData.propType).toBe('hydrant');
     });
 
-    it('attaches a PointLight on lampPost (no overlay pool disc)', () => {
+    it('carries no light of its own — lamp posts only advertise a light position', () => {
+        // 72 posts each owning a PointLight meant MeshStandardMaterial evaluated
+        // 72 lights per fragment with no distance culling. Posts now publish a
+        // spot and RenderSystem3D's fixed pool moves onto the nearest ones.
         const lamp = createProp('lampPost');
         const lights = [];
         let poolCount = 0;
@@ -34,14 +38,19 @@ describe('PropFactory', () => {
             if (obj.isLight) lights.push(obj);
             if (obj.userData?.isStreetLightPool) poolCount++;
         });
-        expect(lights.length).toBe(1);
-        expect(lights[0]).toBeInstanceOf(THREE.PointLight);
-        expect(lights[0].userData.isStreetLight).toBe(true);
-        expect(lights[0].distance).toBe(STREET_LIGHT_DISTANCE);
-        expect(lights[0].intensity).toBeCloseTo(STREET_LIGHT_BASE);
-        expect(lights[0].castShadow).toBe(false);
+        expect(lights.length).toBe(0);
         expect(poolCount).toBe(0);
-        expect(lights[0].userData.groundPool).toBeUndefined();
+        expect(lamp.userData.lampLightOffset).toEqual({ x: 0.75, y: 4.9, z: 0 });
+    });
+
+    it('createPooledStreetLight yields a reusable street light', () => {
+        const light = createPooledStreetLight();
+        expect(light).toBeInstanceOf(THREE.PointLight);
+        expect(light.userData.isStreetLight).toBe(true);
+        expect(light.distance).toBe(STREET_LIGHT_DISTANCE);
+        expect(light.intensity).toBeCloseTo(STREET_LIGHT_BASE);
+        expect(light.castShadow).toBe(false);
+        expect(light.userData.baseIntensity).toBeCloseTo(STREET_LIGHT_BASE);
     });
 
     it('uses an unlit pole material so nearby PointLights cannot specular-flicker', () => {

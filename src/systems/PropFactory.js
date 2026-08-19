@@ -119,18 +119,34 @@ function addLampPost(group) {
     globe.position.set(0.75, 4.9, 0);
     group.add(globe);
 
-    // Local curb light — cool mercury/silver pools (noir); wet asphalt carries the pool
+    // Where a pooled PointLight should sit if this lamp is one of the nearest.
+    // The post itself no longer owns a light: 72 posts meant 72 PointLights, and
+    // MeshStandardMaterial evaluates every one of them per fragment regardless of
+    // distance. RenderSystem3D keeps a small fixed pool and moves it here instead.
+    group.userData.lampLightOffset = { x: 0.75, y: 4.9, z: 0 };
+
+}
+
+/**
+ * One pooled street light. RenderSystem3D creates a small fixed number of these
+ * once and repositions them onto the nearest lamp posts every frame.
+ *
+ * The count must never change at runtime: three.js bakes NUM_POINT_LIGHTS into
+ * the shader, so adding or hiding lights recompiles every material using them,
+ * which shows up as a frame hitch.
+ * @returns {THREE.PointLight}
+ */
+export function createPooledStreetLight() {
     const light = new THREE.PointLight(
         0xd0dae8,
         STREET_LIGHT_BASE,
         STREET_LIGHT_DISTANCE,
         STREET_LIGHT_DECAY
     );
-    light.position.copy(globe.position);
     light.castShadow = false;
     light.userData.isStreetLight = true;
     light.userData.baseIntensity = STREET_LIGHT_BASE;
-    group.add(light);
+    return light;
 }
 
 function addHydrant(group) {

@@ -14,7 +14,7 @@ function mockRenderSystem() {
         trees: [],
         billboards: [],
         props: [],
-        streetLights: [],
+        lampLightSpots: [],
         contactShadowTexture: {}
     };
 }
@@ -54,7 +54,7 @@ describe('CityBuilder3D', () => {
         expect(mock.buildings.length).toBeGreaterThan(0);
         expect(mock.trees.length).toBeGreaterThan(0);
         expect(mock.props.length).toBeGreaterThan(0);
-        expect(mock.streetLights.length).toBeGreaterThan(0);
+        expect(mock.lampLightSpots.length).toBeGreaterThan(0);
     });
 
     it('should create face materials with emissive maps', () => {
@@ -95,7 +95,8 @@ describe('CityBuilder3D', () => {
         const lampsA = a.props.filter(p => p.userData.propType === 'lampPost');
         const lampsB = b.props.filter(p => p.userData.propType === 'lampPost');
         expect(lampsA.length).toBe(lampsB.length);
-        expect(lampsA.length).toBe(a.streetLights.length);
+        // Every lamp post contributes exactly one candidate light position
+        expect(lampsA.length).toBe(a.lampLightSpots.length);
         expect(lampFingerprint(a)).toBe(lampFingerprint(b));
     });
 

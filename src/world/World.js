@@ -69,6 +69,17 @@ export const World = {
         }
     },
 
+    /**
+     * Entities of a type.
+     *
+     * Returns the LIVE internal array by reference (except 'police', which is a
+     * filtered copy) — deliberately, so per-frame callers allocate nothing. The
+     * cost is that `removeEntity` splices the array a caller may be iterating.
+     * Snapshot with `.slice()` before any loop that can trigger a despawn, e.g.
+     * one emitting an event a listener turns into a kill.
+     * @param {string} type
+     * @returns {object[]}
+     */
     getEntitiesByType(type) {
         if (type === 'police') {
             return (this.entitiesByType['car'] || []).filter(e => e.isPolice);
