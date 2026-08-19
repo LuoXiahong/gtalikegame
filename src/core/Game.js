@@ -24,6 +24,7 @@ import { AudioSystem } from '../systems/AudioSystem.js';
 import { MissionSystem } from '../systems/MissionSystem.js';
 import { WantedSystem } from '../systems/WantedSystem.js';
 import { PoliceSystem } from '../systems/PoliceSystem.js';
+import { HealthSystem } from '../systems/HealthSystem.js';
 import { UISystem } from '../ui/HUD.js';
 import { Player } from '../entities/Player.js';
 import { NPC } from '../entities/NPC.js';
@@ -93,6 +94,7 @@ export const Game = {
         MissionSystem.init();
         WantedSystem.init();
         PoliceSystem.init();
+        HealthSystem.init();
         AISystem.init();
         KeyboardHelpOverlay.init();
         OptionsOverlay.init();

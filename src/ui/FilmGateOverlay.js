@@ -25,9 +25,10 @@ const CSS = `
     width: 13px;
     height: 13px;
     border-radius: 50%;
-    background: #e2703f;
-    box-shadow: 0 0 12px 3px #e2703f;
-    opacity: 0.85;
+    /* Muted ember — still reads as a tally lamp without out-saturating the scene */
+    background: #8c5340;
+    box-shadow: 0 0 7px 1px rgba(140, 83, 64, 0.55);
+    opacity: 0.7;
 }
 #filmFrameCounter {
     position: absolute;

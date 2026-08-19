@@ -8,6 +8,7 @@ export class NPC extends Entity {
         this.transform.height = 18;
         this.physics = { velX: 0, velY: 0, speed: 80, friction: 1 };
         this.visual.color = color;
+        this.health = { current: 100, max: 100, dead: false };
 
         // Default: loop nearest block sidewalk (no shortcuts across the road)
         let pts = waypoints;

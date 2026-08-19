@@ -15,6 +15,7 @@ describe('NPC', () => {
         expect(npc.ai.state).toBe('idle');
         expect(npc.ai.waypoints.length).toBe(4);
         expect(PedestrianPaths.isOnSidewalk(npc.transform.x, npc.transform.y)).toBe(true);
+        expect(npc.health).toEqual({ current: 100, max: 100, dead: false });
     });
 
     it('should use provided waypoints when passed', () => {
@@ -23,5 +24,6 @@ describe('NPC', () => {
         expect(npc.ai.waypoints).toEqual(pts);
         expect(npc.transform.x).toBe(10);
         expect(npc.transform.y).toBe(10);
+        expect(npc.health).toEqual({ current: 100, max: 100, dead: false });
     });
 });

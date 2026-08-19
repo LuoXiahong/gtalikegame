@@ -17,5 +17,7 @@ describe('Player', () => {
         expect(p.visual.color).toBe('#e74c3c');
         
         expect(p.interactionRadius).toBe(120);
+
+        expect(p.health).toEqual({ current: 100, max: 100, dead: false });
     });
 });

@@ -52,14 +52,18 @@ export const CityBuilder3D = {
         renderSystem.buildings = [];
         const shops = [];
 
+        // Three ground planes need three separated values, or the night grading
+        // (desat 0.84 + tint) collapses them into one grey and the curb line dies.
+        // Asphalt sits near 0x22; sidewalk goes lighter and the building pad darker
+        // so street → kerb → building base reads as distinct steps, not a gradient.
         const sidewalkMat = new THREE.MeshStandardMaterial({
-            color: 0x8a8478,
+            color: 0xa39d92,
             roughness: 0.95,
             metalness: 0.0,
             envMapIntensity: 0.15
         });
         const buildingZoneMat = new THREE.MeshStandardMaterial({
-            color: 0x6b6558,
+            color: 0x55504a,
             roughness: 0.95,
             metalness: 0.0,
             envMapIntensity: 0.15

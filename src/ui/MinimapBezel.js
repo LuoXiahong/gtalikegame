@@ -1,5 +1,7 @@
 /**
- * Metallic minimap bezel + convex glass lens overlay (ref look), not a 3D mesh.
+ * Matte dark minimap bezel + recessed glass overlay, not a 3D mesh.
+ * Palette is deliberately neutral/desaturated: the HUD must never be the most
+ * saturated thing on screen next to the monochrome noir scene.
  */
 
 /** Ring thickness in canvas px (130×130 minimap). */
@@ -30,8 +32,8 @@ export function clipMinimapContent(ctx, cx, cy, width, height) {
 }
 
 /**
- * Convex glass lens over the map disc: cool tint, vignette, specular crescent.
- * Call after map content, before the metal bezel.
+ * Recessed glass over the map disc: neutral wash, vignette, faint light catch.
+ * Call after map content, before the bezel.
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} width
  * @param {number} height
@@ -47,8 +49,8 @@ export function drawMinimapGlass(ctx, width, height) {
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.clip();
 
-    // Cool glass wash (mutes the map like looking through a lens)
-    ctx.fillStyle = 'rgba(155, 180, 205, 0.14)';
+    // Neutral glass wash (mutes the map like looking through a lens)
+    ctx.fillStyle = 'rgba(150, 152, 156, 0.10)';
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
@@ -66,21 +68,20 @@ export function drawMinimapGlass(ctx, width, height) {
         ctx.fill();
     }
 
-    // Convex specular crescent (top-left light catch)
+    // Faint top-left light catch — a hint of curvature, not a glossy crescent
     if (typeof ctx.createRadialGradient === 'function') {
         const gx = cx - r * 0.38;
         const gy = cy - r * 0.48;
         const gloss = ctx.createRadialGradient(gx, gy, 0, gx, gy, r * 0.95);
-        gloss.addColorStop(0, 'rgba(255, 255, 255, 0.42)');
-        gloss.addColorStop(0.28, 'rgba(255, 255, 255, 0.14)');
-        gloss.addColorStop(0.55, 'rgba(255, 255, 255, 0.03)');
+        gloss.addColorStop(0, 'rgba(255, 255, 255, 0.10)');
+        gloss.addColorStop(0.35, 'rgba(255, 255, 255, 0.04)');
         gloss.addColorStop(1, 'rgba(255, 255, 255, 0)');
         ctx.fillStyle = gloss;
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.fill();
     } else {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
         ctx.beginPath();
         ctx.arc(cx, cy, r, Math.PI * 1.05, Math.PI * 1.85, false);
         ctx.lineTo(cx, cy);
@@ -88,10 +89,10 @@ export function drawMinimapGlass(ctx, width, height) {
         ctx.fill();
     }
 
-    // Thin inner rim highlight (glass edge under the metal)
+    // Thin inner rim highlight (glass edge under the bezel)
     ctx.beginPath();
     ctx.arc(cx, cy, r - 1.25, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(220, 230, 240, 0.28)';
+    ctx.strokeStyle = 'rgba(198, 198, 200, 0.16)';
     ctx.lineWidth = 1.25;
     ctx.stroke();
 
@@ -105,7 +106,7 @@ export function drawMinimapGlass(ctx, width, height) {
 }
 
 /**
- * Draw a brushed-metal annular ring with specular glints.
+ * Draw a matte dark annular ring with restrained neutral glints.
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} width
  * @param {number} height
@@ -119,25 +120,26 @@ export function drawMinimapBezel(ctx, width, height) {
 
     ctx.save();
 
-    // Metal band (conic = rotating highlight like chrome)
+    // Matte band — conic keeps the turned-metal read, but neutral and dark
+    // enough that the ring never out-values the scene inside it.
     ctx.beginPath();
     ctx.arc(cx, cy, rOuter, 0, Math.PI * 2);
     ctx.arc(cx, cy, rInner, 0, Math.PI * 2, true);
 
     if (typeof ctx.createConicGradient === 'function') {
         const metal = ctx.createConicGradient(-Math.PI * 0.65, cx, cy);
-        metal.addColorStop(0, '#4a4e56');
-        metal.addColorStop(0.1, '#d8dde6');
-        metal.addColorStop(0.22, '#7a808a');
-        metal.addColorStop(0.38, '#f2f4f8');
-        metal.addColorStop(0.5, '#5c616a');
-        metal.addColorStop(0.62, '#c4c9d2');
-        metal.addColorStop(0.78, '#3e424a');
-        metal.addColorStop(0.9, '#e0e4ec');
-        metal.addColorStop(1, '#4a4e56');
+        metal.addColorStop(0, '#26272a');
+        metal.addColorStop(0.1, '#63656a');
+        metal.addColorStop(0.22, '#3a3c40');
+        metal.addColorStop(0.38, '#75777d');
+        metal.addColorStop(0.5, '#2e2f33');
+        metal.addColorStop(0.62, '#5a5c61');
+        metal.addColorStop(0.78, '#222326');
+        metal.addColorStop(0.9, '#6b6d72');
+        metal.addColorStop(1, '#26272a');
         ctx.fillStyle = metal;
     } else {
-        ctx.fillStyle = '#9aa0aa';
+        ctx.fillStyle = '#45474b';
     }
     ctx.fill();
 
@@ -151,7 +153,7 @@ export function drawMinimapBezel(ctx, width, height) {
     // Outer specular lip
     ctx.beginPath();
     ctx.arc(cx, cy, rOuter - 1.25, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
@@ -162,23 +164,23 @@ export function drawMinimapBezel(ctx, width, height) {
     ctx.lineWidth = 1.75;
     ctx.stroke();
 
-    // Inner cool highlight
+    // Inner neutral highlight
     ctx.beginPath();
     ctx.arc(cx, cy, rInner + 1.75, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(200, 210, 225, 0.35)';
+    ctx.strokeStyle = 'rgba(205, 205, 208, 0.14)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Bright chrome glints
+    // Restrained glints — enough to read as metal, not as chrome
     const midR = (rOuter + rInner) / 2;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.24)';
     ctx.lineWidth = 2.25;
     ctx.beginPath();
     ctx.arc(cx, cy, midR, -2.35, -1.55);
     ctx.stroke();
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.arc(cx, cy, midR, 0.45, 1.05);

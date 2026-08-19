@@ -6,7 +6,10 @@ import { UISettings } from './UISettings.js';
 
 vi.mock('../world/World.js', () => ({
     World: {
-        getEntitiesByType: vi.fn(() => [{ transform: { x: 1000, y: 1000, angle: 0 } }]),
+        getEntitiesByType: vi.fn(() => [{
+            transform: { x: 1000, y: 1000, angle: 0 },
+            health: { current: 100, max: 100, dead: false }
+        }]),
         buildings: []
     }
 }));
@@ -17,7 +20,7 @@ vi.mock('../world/Tilemap.js', () => ({
         rows: 30,
         data: Array(30).fill(0).map(() => Array(30).fill(0))
     },
-    TILE_COLORS: { 0: '#27ae60' }
+    TILE_TYPES: { GRASS: 0, ROAD: 1, SIDEWALK: 2, BUILDING_ZONE: 3 }
 }));
 
 vi.mock('../systems/VehicleSystem.js', () => ({
@@ -37,6 +40,7 @@ describe('UISystem Speedometer & Minimap Logic', () => {
         UISystem.speedValue = 0;
         UISystem.showSpeed = false;
         UISystem.wantedStars = 0;
+        UISystem.healthValue = null;
         UISystem.missionText = '';
         UISystem.currentDialogue = null;
         UISystem.playActive = false;
@@ -133,11 +137,41 @@ describe('UISystem Speedometer & Minimap Logic', () => {
         expect(mockMobileHUD.style.display).toBe('grid');
     });
 
+    it('renders a health bar reflecting the player HP', async () => {
+        UISystem.init();
+        GameState.setState(GAME_STATES.PLAY);
+
+        UISystem.update();
+        expect(mockUiLayer.innerHTML).toContain('id="healthBar"');
+        expect(mockUiLayer.innerHTML).toContain('width:100%');
+
+        const { World } = await import('../world/World.js');
+        World.getEntitiesByType.mockReturnValueOnce([{
+            transform: { x: 1000, y: 1000, angle: 0 },
+            health: { current: 20, max: 100, dead: false }
+        }]);
+        UISystem.update();
+        expect(mockUiLayer.innerHTML).toContain('width:20%');
+        // Critical step keeps chroma, but stays inside the noir palette
+        expect(mockUiLayer.innerHTML).toContain('#a8524e');
+    });
+
+    it('groups the health bar under the minimap, not against the right edge', () => {
+        UISystem.init();
+        GameState.setState(GAME_STATES.PLAY);
+        UISystem.update();
+
+        expect(mockUiLayer.innerHTML).toContain('id="healthBar"');
+        expect(mockUiLayer.innerHTML).toContain('top:162px; left:20px');
+        expect(mockUiLayer.innerHTML).not.toContain('right:25px; width:120px');
+    });
+
     it('renders mission progress under the minimap', () => {
         UISystem.init();
         EventBus.emit('mission_update', 'Misja: Znajdź NPC');
         expect(mockUiLayer.innerHTML).toContain('id="missionProgress"');
-        expect(mockUiLayer.innerHTML).toContain('top:162px');
+        // Clears the HP bar, which now occupies the slot right under the minimap
+        expect(mockUiLayer.innerHTML).toContain('top:186px');
         expect(mockUiLayer.innerHTML).toContain('Misja: Znajdź NPC');
         expect(mockUiLayer.innerHTML).not.toContain('top:25px');
     });

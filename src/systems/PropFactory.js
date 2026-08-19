@@ -7,8 +7,17 @@ import { STREET_LIGHT_BASE } from './RenderSystem3D.js';
 
 export const PROP_TYPES = ['lampPost', 'hydrant', 'bench', 'kiosk', 'trashCan'];
 
-/** PointLight reach — local curb pool via lighting, not a fake disc overlay. */
-export const STREET_LIGHT_DISTANCE = 20;
+/**
+ * PointLight reach — local curb pool via lighting, not a fake disc overlay (T6).
+ *
+ * Three.js windows a distance-limited light to exactly zero at `distance`, so a
+ * tight radius terminates the pool on a visible hard rim. The reach is set well
+ * past the point where inverse-square decay has already taken the contribution
+ * to black, which puts the cutoff where nothing is left to cut — the pool ends
+ * in a gradient instead of an edge. Decay stays physical; raising the radius
+ * does not brighten the scene, it only moves the seam out of sight.
+ */
+export const STREET_LIGHT_DISTANCE = 38;
 export const STREET_LIGHT_DECAY = 2;
 
 /**

@@ -14,8 +14,17 @@ import { CityBuilder3D } from './CityBuilder3D.js';
 /** Intersection focus used by screenshots (2D px). */
 export const HERO_INTERSECTION_2D = { x: 1100, z: 1100 };
 
-/** How far from the lamp toward the street to place the puddle (world m). */
-export const PUDDLE_LAMP_OFFSET = 3.0;
+/**
+ * How far from the lamp toward the street to place the puddle (world m).
+ *
+ * Must clear the kerb by more than PUDDLE_RADIUS. Lamps stand
+ * `LAMP_EDGE_INSET` (30px = 3.0m) inside the block edge, so an offset of 3.0
+ * put the disc centre exactly on the kerb line and buried half of it under the
+ * sidewalk slab (raised SIDEWALK_HEIGHT above the disc) — that read on screen
+ * as a wedge bitten out of the puddle plus a dithered z-fighting patch along
+ * the kerb. 3.0 (to the kerb) + 4.0 (radius) + 0.5 margin keeps it on asphalt.
+ */
+export const PUDDLE_LAMP_OFFSET = 7.5;
 
 export const PUDDLE_RADIUS = 4.0;
 export const PUDDLE_Y = 0.014;
@@ -23,6 +32,38 @@ export const PUDDLE_Y = 0.014;
 export const GHOST_Y_SCALE = -0.35;
 
 const RT_SIZE = 256;
+
+let _discAlphaTexture = null;
+
+/**
+ * Radial alpha ramp for the water disc.
+ *
+ * The disc used a flat `MeshBasicMaterial`, so it terminated on a hard circular
+ * rim while the Reflector layered over it faded out via smoothstep — the disc
+ * was what read as a cut-out dark ellipse. Luminance (not alpha) carries the
+ * ramp because `alphaMap` samples the green channel.
+ */
+function getDiscAlphaTexture() {
+    if (_discAlphaTexture) return _discAlphaTexture;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        _discAlphaTexture = new THREE.Texture();
+        return _discAlphaTexture;
+    }
+    const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.55, '#e0e0e0');
+    grad.addColorStop(0.85, '#4a4a4a');
+    grad.addColorStop(1, '#000000');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 64, 64);
+    _discAlphaTexture = new THREE.CanvasTexture(canvas);
+    return _discAlphaTexture;
+}
 
 /**
  * Puddles re-render their reflection every Nth frame instead of every frame.
@@ -186,9 +227,10 @@ export function createPuddleReflectors(scene, opts = {}) {
         const disc = new THREE.Mesh(
             discGeom,
             new THREE.MeshBasicMaterial({
-                color: 0x152030,
+                color: 0x1b1e22,
                 transparent: true,
                 opacity: 0.85,
+                alphaMap: getDiscAlphaTexture(),
                 depthWrite: false,
                 fog: false
             })

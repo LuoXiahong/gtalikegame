@@ -6,14 +6,58 @@ import { EventBus } from '../core/EventBus.js';
 import { GameState, GAME_STATES } from '../core/GameState.js';
 
 import { World } from '../world/World.js';
-import { Tilemap, TILE_COLORS } from '../world/Tilemap.js';
+import { Tilemap, TILE_TYPES } from '../world/Tilemap.js';
 import { VehicleSystem } from '../systems/VehicleSystem.js';
 import { UISettings } from './UISettings.js';
 import { I18n } from '../i18n/I18n.js';
 import { clipMinimapContent, drawMinimapBezel, drawMinimapGlass } from './MinimapBezel.js';
 
-/** Minimap: top 20 + 130 + border ≈ 156 → mission text sits below map */
-const MISSION_TOP_PX = 162;
+/** Minimap: top 20 + 130 + border ≈ 156 → HP bar sits directly below the map */
+const HEALTH_TOP_PX = 162;
+/** Mission text clears the HP bar (162 + 14 + gap) */
+const MISSION_TOP_PX = 186;
+
+/**
+ * HP fill stays in the noir palette — bone while healthy, muted amber/red as it
+ * drops. The threshold still has to read at a glance, so the critical step keeps
+ * enough chroma to be unmistakable without becoming the loudest pixel on screen.
+ */
+const HEALTH_FILL_OK = '#c6c6c1';
+const HEALTH_FILL_WARN = '#9a8452';
+const HEALTH_FILL_CRIT = '#a8524e';
+
+/** Same palette rule as the HP bar: the alert step keeps chroma, not neon. */
+const WANTED_STAR_IDLE = '#c9b47a';
+const WANTED_STAR_ALERT = '#b5564f';
+
+/**
+ * Minimap blips read by value and shape, not hue — a saturated dot on a
+ * monochrome noir scene reads as the brightest thing on screen. Police keep
+ * colour on purpose: an active pursuit has to be unmissable.
+ */
+const BLIP_PLAYER = '#e8e8ea';
+const BLIP_NPC = '#8f9094';
+const BLIP_CAR = '#5c5e63';
+const BLIP_OUTLINE = 'rgba(12, 12, 14, 0.85)';
+const BLIP_POLICE_A = '#9fb2c4';
+const BLIP_POLICE_B = '#b4646a';
+
+/**
+ * The minimap keeps its own ground palette rather than reusing `TILE_COLORS`.
+ * Those values (navy road, green grass) belong to the 2D gameplay renderer,
+ * which is a separate presentation — restyling them there would be a silent
+ * change to a view nobody asked about. Here the tiles read as a monochrome
+ * street plan so the disc sits in the same palette as the noir scene.
+ */
+const MINIMAP_TILE_COLORS = {
+    [TILE_TYPES.GRASS]: '#3a3d39',
+    [TILE_TYPES.ROAD]: '#2b2c2f',
+    [TILE_TYPES.SIDEWALK]: '#6e7073',
+    [TILE_TYPES.BUILDING_ZONE]: '#4a4c4f'
+};
+const MINIMAP_TILE_FALLBACK = '#3a3d39';
+const MINIMAP_BUILDING_FILL = '#191a1c';
+const MINIMAP_BUILDING_EDGE = '#303235';
 
 const escapeHTML = (str) => {
     if (!str) return '';
@@ -37,6 +81,7 @@ export const UISystem = {
     isBlinking: false,
     speedValue: 0,
     showSpeed: false,
+    healthValue: null,
 
     init() {
         this.lastStateHash = null;
@@ -137,7 +182,8 @@ export const UISystem = {
         const kmh = Math.round(this.speedValue * 0.3);
         const onScreenPad = UISettings.showOnScreenControls;
         const kmhLabel = I18n.t('hud.kmh');
-        const stateHash = `${this.missionText}|${this.currentDialogue}|${this.actionHint}|${this.wantedStars}|${this.isBlinking}|${this.showSpeed}|${kmh}|${onScreenPad}|${I18n.getLocale()}`;
+        const healthKey = this.healthValue ? `${this.healthValue.current}/${this.healthValue.max}` : '';
+        const stateHash = `${this.missionText}|${this.currentDialogue}|${this.actionHint}|${this.wantedStars}|${this.isBlinking}|${this.showSpeed}|${kmh}|${onScreenPad}|${I18n.getLocale()}|${healthKey}`;
         if (this.lastStateHash === stateHash) return;
         this.lastStateHash = stateHash;
 
@@ -166,8 +212,13 @@ export const UISystem = {
             for (let i = 0; i < 5; i++) {
                 starsHtml += i < this.wantedStars ? '★' : '☆';
             }
-            const color = this.isBlinking ? '#e74c3c' : '#f1c40f';
+            const color = this.isBlinking ? WANTED_STAR_ALERT : WANTED_STAR_IDLE;
             html += `<div style="position:absolute; top:20px; right:25px; font-size:30px; letter-spacing:3px; color:${color}; font-family: 'Yomogi', cursive; ${shadowStyle} transition: color 0.15s;">${starsHtml}</div>`;
+        }
+        if (this.healthValue) {
+            const pct = Math.max(0, Math.min(1, this.healthValue.current / (this.healthValue.max || 1)));
+            const barColor = pct > 0.5 ? HEALTH_FILL_OK : pct > 0.25 ? HEALTH_FILL_WARN : HEALTH_FILL_CRIT;
+            html += `<div id="healthBar" style="position:absolute; top:${HEALTH_TOP_PX}px; left:20px; width:130px; height:14px; ${glassStyle} border-radius:7px; overflow:hidden;"><div style="width:${Math.round(pct * 100)}%; height:100%; background:${barColor}; transition: width 0.15s, background-color 0.15s;"></div></div>`;
         }
         if (this.showSpeed) {
             // Keep speedometer clear of the on-screen pad when that pad is visible
@@ -181,6 +232,16 @@ export const UISystem = {
 
     update() {
         if (GameState.getState() !== GAME_STATES.PLAY) return;
+
+        const player = World.getEntitiesByType('player')[0];
+        if (player && player.health) {
+            const h = player.health;
+            if (!this.healthValue || h.current !== this.healthValue.current || h.max !== this.healthValue.max) {
+                this.healthValue = { current: h.current, max: h.max };
+                this.updateDOM();
+            }
+        }
+
         if (this.minimapCtx) {
             this.drawMinimap();
         }
@@ -220,15 +281,15 @@ export const UISystem = {
         for (let r = startRow; r <= endRow; r++) {
             for (let c = startCol; c <= endCol; c++) {
                 const tileType = Tilemap.data[r][c];
-                ctx.fillStyle = TILE_COLORS[tileType] || '#27ae60';
+                ctx.fillStyle = MINIMAP_TILE_COLORS[tileType] || MINIMAP_TILE_FALLBACK;
                 ctx.fillRect(c * 100, r * 100, 100, 100);
             }
         }
 
         World.buildings.forEach(b => {
-            ctx.fillStyle = '#1e272e';
+            ctx.fillStyle = MINIMAP_BUILDING_FILL;
             ctx.fillRect(b.x, b.y, b.w, b.h);
-            ctx.strokeStyle = '#2f3640';
+            ctx.strokeStyle = MINIMAP_BUILDING_EDGE;
             ctx.lineWidth = 12;
             ctx.strokeRect(b.x, b.y, b.w, b.h);
         });
@@ -238,21 +299,22 @@ export const UISystem = {
             ctx.save();
             ctx.translate(carEntity.transform.x, carEntity.transform.y);
             ctx.rotate(carEntity.transform.angle);
-            ctx.fillStyle = '#e67e22';
-            ctx.strokeStyle = '#ffffff';
+            ctx.fillStyle = BLIP_CAR;
+            ctx.strokeStyle = BLIP_OUTLINE;
             ctx.lineWidth = 4;
             ctx.fillRect(-22, -10, 44, 20);
             ctx.strokeRect(-22, -10, 44, 20);
             ctx.restore();
         });
 
+        // Police stay the one chromatic exception — a pursuit must read instantly.
         World.getEntitiesByType('police').forEach(p => {
             ctx.save();
             ctx.translate(p.transform.x, p.transform.y);
             ctx.rotate(p.transform.angle);
             const blink = Math.floor(Date.now() / 150) % 2 === 0;
-            ctx.fillStyle = blink ? '#2980b9' : '#e74c3c';
-            ctx.strokeStyle = '#ffffff';
+            ctx.fillStyle = blink ? BLIP_POLICE_A : BLIP_POLICE_B;
+            ctx.strokeStyle = BLIP_OUTLINE;
             ctx.lineWidth = 4;
             ctx.fillRect(-22, -10, 44, 20);
             ctx.strokeRect(-22, -10, 44, 20);
@@ -260,7 +322,7 @@ export const UISystem = {
         });
 
         World.getEntitiesByType('npc').forEach(npc => {
-            ctx.fillStyle = '#fed330';
+            ctx.fillStyle = BLIP_NPC;
             ctx.beginPath();
             ctx.arc(npc.transform.x, npc.transform.y, 14, 0, Math.PI * 2);
             ctx.fill();
@@ -268,8 +330,8 @@ export const UISystem = {
 
         ctx.restore();
 
-        ctx.fillStyle = '#00d2d3';
-        ctx.strokeStyle = '#ffffff';
+        ctx.fillStyle = BLIP_PLAYER;
+        ctx.strokeStyle = BLIP_OUTLINE;
         ctx.lineWidth = 2.5;
         ctx.beginPath();
         ctx.moveTo(cx, cy - 12);

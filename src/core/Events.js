@@ -18,6 +18,11 @@ export const EVENTS = {
     PLAYER_NEAR_NPC: 'player_near_npc',
     PLAYER_NEAR_CAR: 'player_near_car',
 
+    // Health / damage
+    HEALTH_CHANGE: 'health_change',
+    PLAYER_KNOCKOUT: 'player_knockout',
+    NPC_KNOCKOUT: 'npc_knockout',
+
     // UI / missions
     UI_SHOW_DIALOGUE: 'ui_show_dialogue',
     UI_SHOW_ACTION_HINT: 'ui_show_action_hint',

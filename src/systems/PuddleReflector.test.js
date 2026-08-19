@@ -7,10 +7,11 @@ import {
     disposePuddleReflectors,
     HERO_INTERSECTION_2D,
     PUDDLE_RADIUS,
+    PUDDLE_LAMP_OFFSET,
     PuddleReflectorShader
 } from './PuddleReflector.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
-import { CityBuilder3D } from './CityBuilder3D.js';
+import { CityBuilder3D, LAMP_EDGE_INSET } from './CityBuilder3D.js';
 
 describe('PuddleReflector', () => {
     it('exposes a soft-alpha puddle shader', () => {
@@ -32,10 +33,20 @@ describe('PuddleReflector', () => {
         for (const spot of a) {
             expect(spot.radius).toBe(PUDDLE_RADIUS);
             expect(spot.lampX).toBeDefined();
-            const nearLamp = lamps.some(l => Math.hypot(l.x - spot.x, l.z - spot.z) < 6);
+            const nearLamp = lamps.some(
+                l => Math.abs(Math.hypot(l.x - spot.x, l.z - spot.z) - PUDDLE_LAMP_OFFSET) < 0.01
+            );
             expect(nearLamp).toBe(true);
             expect(Math.hypot(spot.x - ix, spot.z - iz)).toBeLessThan(25);
         }
+    });
+
+    it('places hero puddles clear of the kerb so the sidewalk cannot clip the disc', () => {
+        // Lamps stand LAMP_EDGE_INSET inside the block edge; the disc must be
+        // pushed past the kerb by more than its own radius or the raised
+        // sidewalk slab occludes part of it (wedge + z-fight dither at the kerb).
+        const kerbToLamp = LAMP_EDGE_INSET * WorldMetrics.SCALE_FACTOR;
+        expect(PUDDLE_LAMP_OFFSET).toBeGreaterThan(kerbToLamp + PUDDLE_RADIUS);
     });
 
     it('builds an inverted lamp ghost with Y flip in the puddle', () => {

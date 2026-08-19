@@ -30,5 +30,12 @@ export const GameConfig = {
         CATCH_RADIUS: 90,
         STEER_RATE: 2.4,
         VEL_INERTIA: 3.2
+    },
+    HEALTH: {
+        MAX: 100,
+        VEHICLE_HIT_DAMAGE: 25,
+        GUNSHOT_DAMAGE: 34,
+        GUNSHOT_HIT_RADIUS: 150,
+        EXPLOSION_MAX_DAMAGE: 100
     }
 };

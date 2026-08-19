@@ -3,6 +3,14 @@
  */
 import * as THREE from 'three';
 
+/**
+ * Road paint values. Crosswalks were near-white (`rgba(240,242,245,0.9)`) and
+ * became the brightest element in frame, pulling focus off the character under
+ * the lamp — the lane dashes were toned to match so paint reads as one material.
+ */
+const CROSSWALK_PAINT = 'rgba(176, 178, 182, 0.72)';
+const LANE_PAINT = 'rgba(168, 170, 174, 0.7)';
+
 export const RoadTextureGenerator = {
     textures: new Map(),
     roughnessTextures: new Map(),
@@ -687,7 +695,7 @@ export const RoadTextureGenerator = {
         }
         ctx.stroke();
 
-        ctx.strokeStyle = 'rgba(240, 242, 245, 0.9)';
+        ctx.strokeStyle = LANE_PAINT;
         ctx.lineWidth = 6;
         ctx.setLineDash([40, 40]);
         ctx.lineDashOffset = 20;
@@ -773,7 +781,9 @@ export const RoadTextureGenerator = {
             const x = gap + i * (stripeW + gap);
             ctx.fillStyle = 'rgba(10, 10, 12, 0.4)';
             ctx.fillRect(x + 1, y + 1, stripeW, stripeH);
-            ctx.fillStyle = 'rgba(240, 242, 245, 0.9)';
+            // Worn, rain-dulled paint — bright enough to read as a crossing, dim
+            // enough that the figure under a lamp stays the brightest thing in frame.
+            ctx.fillStyle = CROSSWALK_PAINT;
             ctx.fillRect(x, y, stripeW, stripeH);
             // Paint wear: punch holes so the road below shows through
             for (let c = 0; c < 4; c++) {

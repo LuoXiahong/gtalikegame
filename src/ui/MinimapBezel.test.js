@@ -58,7 +58,7 @@ describe('MinimapBezel', () => {
         const ctx = mockCtx();
         delete ctx.createConicGradient;
         drawMinimapBezel(ctx, 130, 130);
-        expect(ctx.fillStyle).toBe('#9aa0aa');
+        expect(ctx.fillStyle).toBe('#45474b');
         expect(ctx.fill).toHaveBeenCalled();
     });
 
