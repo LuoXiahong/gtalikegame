@@ -18,6 +18,18 @@ export const LAMP_EDGE_SPACING = 220;
 const PROP_LAMP_CLEARANCE = 2.5;
 
 /**
+ * Rim light on building edges.
+ *
+ * Each archetype already outlined itself, but in a dark warm brown keyed to its
+ * own brick/stone — which at night is indistinguishable from the black behind
+ * it, so unlit facades collapsed into flat silhouettes with no depth. A single
+ * cool, dim value instead reads as the sky/street ambient catching the corner:
+ * it separates the mass from the background without lifting the overall
+ * exposure or breaking the noir mood.
+ */
+export const BUILDING_RIM_EDGE = 0x6b727c;
+
+/**
  * Per-block plant slots (2D px offsets from block center).
  * Corners → taller trees; mid-edges → shrubs/hedges; quarters → mixed.
  * Type picked deterministically from `kinds` via plantHash(r,c,slot).
@@ -56,8 +68,11 @@ export const CityBuilder3D = {
         // (desat 0.84 + tint) collapses them into one grey and the curb line dies.
         // Asphalt sits near 0x22; sidewalk goes lighter and the building pad darker
         // so street → kerb → building base reads as distinct steps, not a gradient.
+        // The sidewalk is the plane lamps stand on, so it is the one that blows out
+        // first — 0xa39d92 pushed the kerb into bloom under every lamp. Most of the
+        // separation is carried by dropping the building pad instead.
         const sidewalkMat = new THREE.MeshStandardMaterial({
-            color: 0xa39d92,
+            color: 0x969084,
             roughness: 0.95,
             metalness: 0.0,
             envMapIntensity: 0.15
@@ -376,7 +391,7 @@ export const CityBuilder3D = {
                 group.add(mesh);
 
                 const edges = new THREE.EdgesGeometry(geom);
-                const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x3d2e1f }));
+                const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: BUILDING_RIM_EDGE }));
                 line.position.y = mesh.position.y;
                 group.add(line);
 
@@ -396,7 +411,7 @@ export const CityBuilder3D = {
             group.add(body);
 
             const edges = new THREE.EdgesGeometry(bodyGeom);
-            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x3d2218 }));
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: BUILDING_RIM_EDGE }));
             line.position.y = height / 2;
             group.add(line);
 
@@ -410,7 +425,7 @@ export const CityBuilder3D = {
             group.add(body);
 
             const edges = new THREE.EdgesGeometry(bodyGeom);
-            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x5c4a32 }));
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: BUILDING_RIM_EDGE }));
             line.position.y = height / 2;
             group.add(line);
         }

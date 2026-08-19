@@ -8,6 +8,8 @@ import {
     HERO_INTERSECTION_2D,
     PUDDLE_RADIUS,
     PUDDLE_LAMP_OFFSET,
+    GHOST_STRUCTURE_OPACITY,
+    GHOST_GLOBE_OPACITY,
     PuddleReflectorShader
 } from './PuddleReflector.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
@@ -63,6 +65,22 @@ describe('PuddleReflector', () => {
         expect(ghost.position.x).toBe(11);
         expect(ghost.position.z).toBe(21);
         expect(ghost.position.y).toBeGreaterThan(0);
+    });
+
+    it('keeps the mirrored lamp reading as wet asphalt, not a second lamp', () => {
+        // Rough wet asphalt scatters: the bright globe smears into a highlight
+        // while the pole/arm holding it up all but vanish. If the structure ever
+        // creeps back toward the globe's strength the puddle reads as a legible
+        // upside-down lamp pasted on the road (the artifact this replaced).
+        const ghost = createInvertedLampGhost({ x: 11, z: 21, lampX: 10, lampZ: 20, lampRot: 0 });
+        const opacities = ghost.children.map(c => c.material.opacity);
+        const structure = Math.min(...opacities);
+        const highlight = Math.max(...opacities);
+
+        expect(structure).toBe(GHOST_STRUCTURE_OPACITY);
+        expect(highlight).toBe(GHOST_GLOBE_OPACITY);
+        expect(structure).toBeLessThan(highlight * 0.5);
+        expect(highlight).toBeLessThan(0.6);
     });
 
     it('creates Reflector + stencil disc + lamp ghost per hero puddle', () => {

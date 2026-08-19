@@ -174,6 +174,38 @@ describe('RoadTextureGenerator', () => {
         expect(RoadTextureGenerator._wetPatchCount('straight')).toBeLessThanOrEqual(1);
     });
 
+    it('paints each puddle with a single gradient, not one per lobe', () => {
+        // Three lobes each filled with their own radial ramp stacked three
+        // gradients on top of one another, and every lobe boundary showed as a
+        // step — the concentric "donut" rings. The lobes must describe one
+        // silhouette that a single gradient fills.
+        const gradients = [];
+        const ctx = {
+            save: () => {}, restore: () => {}, translate: () => {}, rotate: () => {},
+            beginPath: () => {}, ellipse: () => {}, fill: () => {},
+            createRadialGradient: () => {
+                const g = { addColorStop: () => {} };
+                gradients.push(g);
+                return g;
+            }
+        };
+        const puddle = {
+            x: 100, y: 100, rot: 0, intensity: 1,
+            lobes: [
+                { ox: 0, oy: 0, rx: 40, ry: 38, rot: 0 },
+                { ox: 5, oy: -4, rx: 32, ry: 30, rot: 0 },
+                { ox: -8, oy: 6, rx: 16, ry: 15, rot: 0 }
+            ]
+        };
+
+        RoadTextureGenerator.addPuddlesAlbedo(ctx, [puddle]);
+        expect(gradients.length).toBe(1);
+
+        gradients.length = 0;
+        RoadTextureGenerator.addPuddlesRoughness(ctx, [puddle]);
+        expect(gradients.length).toBe(1);
+    });
+
     it('_puddleCount is rain-only and zero on crosswalk', () => {
         RoadTextureGenerator._wetness = 'clear';
         expect(RoadTextureGenerator._puddleCount('straight')).toBe(0);

@@ -31,6 +31,23 @@ export const PUDDLE_Y = 0.014;
 /** Squash factor for the mirrored lamp (negative = inverted). */
 export const GHOST_Y_SCALE = -0.35;
 
+/**
+ * Wet asphalt, not a mirror.
+ *
+ * The first pass reproduced the lamp almost at full strength — a legible
+ * inverted pole, arm and globe sitting in a dark disc, which read as a second
+ * lamp pasted onto the road rather than as water. Rough wet asphalt scatters:
+ * the bright source smears into a soft bloom and the structure holding it up
+ * essentially disappears. So the globe keeps most of its presence (a strong
+ * highlight is the believable part) while the pole and arm drop to a faint
+ * suggestion, and the mirrored scene bounce is pulled well down.
+ */
+export const GHOST_STRUCTURE_OPACITY = 0.16;
+export const GHOST_GLOBE_OPACITY = 0.45;
+export const REFLECTOR_OPACITY = 0.2;
+/** Disc tint strength — it should darken the asphalt, not stamp a patch on it. */
+export const DISC_OPACITY = 0.55;
+
 const RT_SIZE = 256;
 
 let _discAlphaTexture = null;
@@ -175,7 +192,7 @@ export function createInvertedLampGhost(spot) {
     const poleMat = new THREE.MeshBasicMaterial({
         color: 0x121218,
         transparent: true,
-        opacity: 0.9,
+        opacity: GHOST_STRUCTURE_OPACITY,
         depthWrite: false,
         fog: false
     });
@@ -196,9 +213,9 @@ export function createInvertedLampGhost(spot) {
     const globe = new THREE.Mesh(
         new THREE.SphereGeometry(0.5, 8, 8),
         new THREE.MeshBasicMaterial({
-            color: 0xd8e2f0,
+            color: 0xb9c2ce,
             transparent: true,
-            opacity: 0.92,
+            opacity: GHOST_GLOBE_OPACITY,
             depthWrite: false,
             fog: false
         })
@@ -229,7 +246,7 @@ export function createPuddleReflectors(scene, opts = {}) {
             new THREE.MeshBasicMaterial({
                 color: 0x1b1e22,
                 transparent: true,
-                opacity: 0.85,
+                opacity: DISC_OPACITY,
                 alphaMap: getDiscAlphaTexture(),
                 depthWrite: false,
                 fog: false
@@ -259,7 +276,7 @@ export function createPuddleReflectors(scene, opts = {}) {
         reflector.material.transparent = true;
         reflector.material.depthWrite = false;
         if (reflector.material.uniforms.opacity) {
-            reflector.material.uniforms.opacity.value = 0.5;
+            reflector.material.uniforms.opacity.value = REFLECTOR_OPACITY;
         }
         reflector.rotation.x = -Math.PI / 2;
         reflector.position.set(spot.x, PUDDLE_Y + 0.003, spot.z);

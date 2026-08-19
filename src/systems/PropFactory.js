@@ -11,13 +11,14 @@ export const PROP_TYPES = ['lampPost', 'hydrant', 'bench', 'kiosk', 'trashCan'];
  * PointLight reach — local curb pool via lighting, not a fake disc overlay (T6).
  *
  * Three.js windows a distance-limited light to exactly zero at `distance`, so a
- * tight radius terminates the pool on a visible hard rim. The reach is set well
- * past the point where inverse-square decay has already taken the contribution
- * to black, which puts the cutoff where nothing is left to cut — the pool ends
- * in a gradient instead of an edge. Decay stays physical; raising the radius
- * does not brighten the scene, it only moves the seam out of sight.
+ * tight radius terminates the pool on a visible hard rim. Widening the radius
+ * softens that seam — but it is NOT free: the window term scales the whole
+ * pool, so an over-wide reach also brightens the mid field (38 doubled the
+ * light at 15m vs 20 and blew the kerb out into bloom). 24 is the compromise:
+ * the cut lands where the inverse-square falloff is nearly spent, without
+ * noticeably lifting the pool. Decay stays physical.
  */
-export const STREET_LIGHT_DISTANCE = 38;
+export const STREET_LIGHT_DISTANCE = 24;
 export const STREET_LIGHT_DECAY = 2;
 
 /**

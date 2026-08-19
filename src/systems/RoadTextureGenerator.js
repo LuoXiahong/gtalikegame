@@ -11,6 +11,39 @@ import * as THREE from 'three';
 const CROSSWALK_PAINT = 'rgba(176, 178, 182, 0.72)';
 const LANE_PAINT = 'rgba(168, 170, 174, 0.7)';
 
+/**
+ * Radius covering every lobe of a puddle, measured from the puddle origin.
+ * @param {{ lobes?: { ox: number, oy: number, rx: number, ry: number }[] }} p
+ */
+function puddleExtent(p) {
+    let max = 0;
+    for (const lobe of (p.lobes || [])) {
+        const reach = Math.hypot(lobe.ox, lobe.oy) + Math.max(lobe.rx, lobe.ry);
+        if (reach > max) max = reach;
+    }
+    return max || 1;
+}
+
+/**
+ * Fill the union of a puddle's lobes as ONE shape.
+ *
+ * The lobes exist to wobble the outline off a perfect circle. Filling each of
+ * them with its own radial gradient instead stacked three ramps on top of each
+ * other, and every lobe boundary showed up as a step — which is what made the
+ * puddles read as concentric dark rings ("donuts") rather than water. The lobes
+ * overlap heavily, so adding them to a single path and filling once with the
+ * nonzero rule yields their union, painted by exactly one gradient.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {{ lobes?: { ox: number, oy: number, rx: number, ry: number, rot?: number }[] }} p
+ */
+function fillPuddleShape(ctx, p) {
+    ctx.beginPath();
+    for (const lobe of (p.lobes || [])) {
+        ctx.ellipse(lobe.ox, lobe.oy, lobe.rx, lobe.ry, lobe.rot || 0, 0, Math.PI * 2);
+    }
+    ctx.fill();
+}
+
 export const RoadTextureGenerator = {
     textures: new Map(),
     roughnessTextures: new Map(),
@@ -360,7 +393,10 @@ export const RoadTextureGenerator = {
                 x,
                 y,
                 rot: Math.random() * Math.PI,
-                intensity: 0.8 + Math.random() * 0.2,
+                // Wide spread on purpose: a street where every puddle is equally
+                // deep and glossy reads as a pattern. Most are shallow films, a
+                // few hold real water.
+                intensity: 0.5 + Math.random() * 0.5,
                 lobes,
             };
         };
@@ -521,24 +557,18 @@ export const RoadTextureGenerator = {
             ctx.translate(p.x, p.y);
             ctx.rotate(p.rot || 0);
             const a = p.intensity ?? 1;
+            const r = puddleExtent(p);
 
-            for (const lobe of (p.lobes || [])) {
-                ctx.save();
-                ctx.translate(lobe.ox, lobe.oy);
-                ctx.rotate(lobe.rot || 0);
-                const r = Math.max(lobe.rx, lobe.ry);
-                const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
-                // Cool dark water + faint rim catch-light
-                grad.addColorStop(0, `rgba(12, 16, 24, ${0.72 * a})`);
-                grad.addColorStop(0.45, `rgba(22, 28, 38, ${0.48 * a})`);
-                grad.addColorStop(0.78, `rgba(48, 56, 68, ${0.18 * a})`);
-                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.ellipse(0, 0, lobe.rx, lobe.ry, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-            }
+            // What makes a puddle read as water is the specular kick from the
+            // roughness map, not a dark stain in the albedo. The old ramp also put
+            // a *lighter* stop (48,56,68) outside a near-black core, so keep the
+            // darkening subtle and strictly monotonic.
+            const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+            grad.addColorStop(0, `rgba(14, 18, 26, ${0.34 * a})`);
+            grad.addColorStop(0.55, `rgba(18, 23, 31, ${0.2 * a})`);
+            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = grad;
+            fillPuddleShape(ctx, p);
 
             ctx.restore();
         }
@@ -583,22 +613,25 @@ export const RoadTextureGenerator = {
             ctx.save();
             ctx.translate(p.x, p.y);
             ctx.rotate(p.rot || 0);
-            for (const lobe of (p.lobes || [])) {
-                ctx.save();
-                ctx.translate(lobe.ox, lobe.oy);
-                ctx.rotate(lobe.rot || 0);
-                const r = Math.max(lobe.rx, lobe.ry);
-                const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
-                grad.addColorStop(0, 'rgb(8, 8, 8)');
-                grad.addColorStop(0.45, 'rgb(28, 28, 28)');
-                grad.addColorStop(0.8, 'rgb(110, 110, 110)');
-                grad.addColorStop(1, 'rgba(230, 230, 230, 0)');
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.ellipse(0, 0, lobe.rx, lobe.ry, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-            }
+
+            const r = puddleExtent(p);
+            // `intensity` used to drive the albedo only, so every puddle came out
+            // equally mirror-like and the strongest ones read as a hot white flare.
+            // Drive gloss from it too: shallow puddles get a broad soft sheen,
+            // deep ones stay reflective, and a near-black core (roughness ~0.03)
+            // is avoided entirely — that is what produced the blown specular.
+            const a = p.intensity ?? 1;
+            const dull = 1 - a;
+            const core = Math.round(26 + dull * 70);
+            const mid = Math.round(58 + dull * 70);
+            const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+            grad.addColorStop(0, `rgb(${core}, ${core}, ${core})`);
+            grad.addColorStop(0.55, `rgb(${mid}, ${mid}, ${mid})`);
+            grad.addColorStop(0.85, 'rgb(140, 140, 140)');
+            grad.addColorStop(1, 'rgba(230, 230, 230, 0)');
+            ctx.fillStyle = grad;
+            fillPuddleShape(ctx, p);
+
             ctx.restore();
         }
         ctx.restore();
