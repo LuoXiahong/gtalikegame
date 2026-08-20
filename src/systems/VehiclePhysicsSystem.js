@@ -3,12 +3,13 @@
  * Implements arcade driving feel, focusing on responsive handling and zesty steering.
  */
 import { InputSystem } from '../input/InputManager.js';
+import { decayFactor, frameBlend } from '../core/MathUtils.js';
 
 // Handbrake drift tuning (T22). Held handbrake breaks rear-axle traction: the velocity
 // vector lags further behind the car's heading (visible slide) and steering tightens.
 export const HANDBRAKE_DRIFT_INERTIA = 0.05; // vs. normal driftInertia = 0.2 (lower = more slide)
 export const HANDBRAKE_STEER_BOOST = 1.5;    // multiplies steeringPower while drifting
-export const HANDBRAKE_SPEED_DECAY = 0.985;  // per-frame speed scrub from locked rear wheels
+export const HANDBRAKE_SPEED_DECAY = 0.985;  // per-frame (60fps-tuned) speed scrub from locked rear wheels
 
 export const VehiclePhysicsSystem = {
     update(dt, entity) {
@@ -40,7 +41,7 @@ export const VehiclePhysicsSystem = {
             p.speed += driveIntent * p.acceleration * accelCurve * dt;
         } else {
             // Natural coasting deceleration
-            p.speed *= p.rollingResistance;
+            p.speed *= decayFactor(p.rollingResistance, dt);
         }
 
         // Speed limits (slower reverse speed)
@@ -51,7 +52,7 @@ export const VehiclePhysicsSystem = {
         if (Math.abs(p.speed) < 1) p.speed = 0;
 
         const isHandbraking = InputSystem.keys.handbrake && Math.abs(p.speed) > 5;
-        if (isHandbraking) p.speed *= HANDBRAKE_SPEED_DECAY;
+        if (isHandbraking) p.speed *= decayFactor(HANDBRAKE_SPEED_DECAY, dt);
 
         // 2. Arcade Steering
         if (Math.abs(p.speed) > 5) {
@@ -77,7 +78,8 @@ export const VehiclePhysicsSystem = {
         // Drift inertia: velocity vector catches up to car angle with latency.
         // Handbrake drops traction so the rear axle slides instead of gripping (drift).
         const driftInertia = isHandbraking ? HANDBRAKE_DRIFT_INERTIA : 0.2;
-        p.velX += (targetVelX - p.velX) * driftInertia;
-        p.velY += (targetVelY - p.velY) * driftInertia;
+        const blend = frameBlend(driftInertia, dt);
+        p.velX += (targetVelX - p.velX) * blend;
+        p.velY += (targetVelY - p.velY) * blend;
     }
 };

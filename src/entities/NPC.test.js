@@ -11,7 +11,7 @@ describe('NPC', () => {
         expect(npc.id).toBe('npc1');
         expect(npc.type).toBe('npc');
         expect(npc.transform.width).toBe(18);
-        expect(npc.physics.speed).toBe(80);
+        expect(npc.physics.walkSpeed).toBe(80);
         expect(npc.ai.state).toBe('idle');
         expect(npc.ai.waypoints.length).toBe(4);
         expect(PedestrianPaths.isOnSidewalk(npc.transform.x, npc.transform.y)).toBe(true);

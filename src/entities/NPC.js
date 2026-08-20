@@ -6,7 +6,9 @@ export class NPC extends Entity {
         super(id, 'npc', x, y);
         this.transform.width = 18;
         this.transform.height = 18;
-        this.physics = { velX: 0, velY: 0, speed: 80, friction: 1 };
+        // walkSpeed is a constant config value (px/s), never mutated per-frame —
+        // unlike Car.physics.speed, which is a live scalar VehiclePhysicsSystem updates.
+        this.physics = { velX: 0, velY: 0, walkSpeed: 80, friction: 1 };
         this.visual.color = color;
         this.health = { current: 100, max: 100, dead: false };
 

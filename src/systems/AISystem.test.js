@@ -26,7 +26,7 @@ describe('AISystem', () => {
         mockNPC = {
             id: 'npc1',
             transform: { x: 0, y: 0, angle: 0 },
-            physics: { velX: 0, velY: 0, speed: 50 },
+            physics: { velX: 0, velY: 0, walkSpeed: 50 },
             visual: { walkCycle: 0 },
             ai: { 
                 state: 'idle', 
@@ -108,7 +108,7 @@ describe('AISystem', () => {
         
         // Test movement in flee state
         AISystem.update(0.1);
-        const expectedFleeSpeed = mockNPC.physics.speed * 2.5;
+        const expectedFleeSpeed = mockNPC.physics.walkSpeed * 2.5;
         const totalVel = Math.sqrt(mockNPC.physics.velX ** 2 + mockNPC.physics.velY ** 2);
         expect(totalVel).toBeCloseTo(expectedFleeSpeed * 0.1);
     });

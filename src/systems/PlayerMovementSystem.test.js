@@ -16,7 +16,7 @@ describe('PlayerMovementSystem', () => {
             id: 'p1',
             type: 'player',
             transform: { x: 100, y: 100, angle: 0 },
-            physics: { velX: 0, velY: 0, speed: 100, friction: 0.5 }
+            physics: { velX: 0, velY: 0, walkSpeed: 100, friction: 0.5 }
         };
         
         // Reset inputs
@@ -78,7 +78,8 @@ describe('PlayerMovementSystem', () => {
     it('should apply extra deceleration when no keys are pressed', () => {
         mockPlayer.physics.velX = 20;
         mockPlayer.physics.velY = 20;
-        PlayerMovementSystem.update(0.1, mockPlayer);
+        // dt = 1/60 is the frame rate the 0.3 hard-stop decay is tuned for.
+        PlayerMovementSystem.update(1 / 60, mockPlayer);
         expect(mockPlayer.physics.velX).toBe(6); // 20 * 0.3
         expect(mockPlayer.physics.velY).toBe(6);
     });

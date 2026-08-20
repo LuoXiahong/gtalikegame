@@ -3,6 +3,7 @@
  * Does not handle input — dedicated systems own that.
  */
 import { World } from '../world/World.js';
+import { decayFactor } from '../core/MathUtils.js';
 
 // 50px inset from world edges so entities already outside get pulled back in.
 const WORLD_MARGIN = 50;
@@ -11,8 +12,9 @@ export const MovementSystem = {
     update(dt) {
         World.entities.forEach(entity => {
             if (entity.physics) {
-                entity.physics.velX *= entity.physics.friction;
-                entity.physics.velY *= entity.physics.friction;
+                const friction = decayFactor(entity.physics.friction, dt);
+                entity.physics.velX *= friction;
+                entity.physics.velY *= friction;
 
                 // Kill micro-velocities to avoid endless tiny drift.
                 if (Math.abs(entity.physics.velX) < 0.1) entity.physics.velX = 0;
@@ -29,22 +31,22 @@ export const MovementSystem = {
                 if (entity.transform.x < hw) {
                     entity.transform.x = hw;
                     if (entity.physics.velX < 0) entity.physics.velX = 0;
-                    if (entity.type === 'car' && entity.physics.speed !== undefined) entity.physics.speed = 0;
+                    if (entity.physics.speed !== undefined) entity.physics.speed = 0;
                 }
                 if (entity.transform.x > World.width - hw) {
                     entity.transform.x = World.width - hw;
                     if (entity.physics.velX > 0) entity.physics.velX = 0;
-                    if (entity.type === 'car' && entity.physics.speed !== undefined) entity.physics.speed = 0;
+                    if (entity.physics.speed !== undefined) entity.physics.speed = 0;
                 }
                 if (entity.transform.y < hh) {
                     entity.transform.y = hh;
                     if (entity.physics.velY < 0) entity.physics.velY = 0;
-                    if (entity.type === 'car' && entity.physics.speed !== undefined) entity.physics.speed = 0;
+                    if (entity.physics.speed !== undefined) entity.physics.speed = 0;
                 }
                 if (entity.transform.y > World.height - hh) {
                     entity.transform.y = World.height - hh;
                     if (entity.physics.velY > 0) entity.physics.velY = 0;
-                    if (entity.type === 'car' && entity.physics.speed !== undefined) entity.physics.speed = 0;
+                    if (entity.physics.speed !== undefined) entity.physics.speed = 0;
                 }
             }
         });

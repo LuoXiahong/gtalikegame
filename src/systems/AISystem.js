@@ -52,7 +52,7 @@ export const AISystem = {
         npc.transform.angle = Math.atan2(dy, dx);
         npc.physics.velX = (dx / dist) * speed * dt;
         npc.physics.velY = (dy / dist) * speed * dt;
-        npc.visual.walkCycle += (speed > npc.physics.speed ? 20 : 10) * dt;
+        npc.visual.walkCycle += (speed > npc.physics.walkSpeed ? 20 : 10) * dt;
         return dist;
     },
 
@@ -95,7 +95,7 @@ export const AISystem = {
         }
 
         // Slightly faster on road/crosswalk — no stopping there.
-        const speed = npc.physics.speed * (PedestrianPaths.isOnCrosswalk(x, y) ? 1.2 : 1.15);
+        const speed = npc.physics.walkSpeed * (PedestrianPaths.isOnCrosswalk(x, y) ? 1.2 : 1.15);
         const dist = this.moveToward(npc, tx, ty, speed, dt);
 
         if (dist < 10 && npc.ai.waypoints && npc.ai.waypoints.length > 0) {
@@ -148,7 +148,7 @@ export const AISystem = {
             if (npc.ai.state === 'walk') {
                 if (npc.ai.waypoints && npc.ai.waypoints.length > 0) {
                     const target = npc.ai.waypoints[npc.ai.currentWaypointIndex];
-                    const dist = this.moveToward(npc, target.x, target.y, npc.physics.speed, dt);
+                    const dist = this.moveToward(npc, target.x, target.y, npc.physics.walkSpeed, dt);
 
                     if (dist < 10) {
                         npc.ai.currentWaypointIndex = (npc.ai.currentWaypointIndex + 1) % npc.ai.waypoints.length;
@@ -159,12 +159,12 @@ export const AISystem = {
                         npc.transform.angle = Math.random() * Math.PI * 2;
                         npc.ai.timer = 2 + Math.random() * 3;
                     }
-                    npc.physics.velX = Math.cos(npc.transform.angle) * npc.physics.speed * dt;
-                    npc.physics.velY = Math.sin(npc.transform.angle) * npc.physics.speed * dt;
+                    npc.physics.velX = Math.cos(npc.transform.angle) * npc.physics.walkSpeed * dt;
+                    npc.physics.velY = Math.sin(npc.transform.angle) * npc.physics.walkSpeed * dt;
                     npc.visual.walkCycle += 10 * dt;
                 }
             } else if (npc.ai.state === 'flee') {
-                const fleeSpeed = npc.physics.speed * 2.5;
+                const fleeSpeed = npc.physics.walkSpeed * 2.5;
                 if (PedestrianPaths.isOnRoad(npc.transform.x, npc.transform.y)
                     && !PedestrianPaths.isOnCrosswalk(npc.transform.x, npc.transform.y)) {
                     const curb = PedestrianPaths.nearestSidewalkPoint(npc.transform.x, npc.transform.y);

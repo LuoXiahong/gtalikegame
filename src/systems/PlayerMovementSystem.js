@@ -2,10 +2,14 @@
  * On-foot player movement from keyboard input.
  */
 import { InputSystem } from '../input/InputManager.js';
+import { decayFactor } from '../core/MathUtils.js';
 
 // Base speed is 100 px/s, so this lands sprinting exactly on RUN_SPEED (220)
 // from CharacterAnimationSystem — sprinting reads as a full run, not a fast walk.
 export const SPRINT_MULT = 2.2;
+
+// Per-frame (60fps-tuned) hard-stop decay applied when movement keys release.
+const STOP_DECAY = 0.3;
 
 export const PlayerMovementSystem = {
     update(dt, entity) {
@@ -31,13 +35,14 @@ export const PlayerMovementSystem = {
 
         if (entity.physics) {
             if (isMoving) {
-                const speed = entity.physics.speed * (InputSystem.keys.sprint ? SPRINT_MULT : 1);
+                const speed = entity.physics.walkSpeed * (InputSystem.keys.sprint ? SPRINT_MULT : 1);
                 entity.physics.velX += intentX * speed * dt;
                 entity.physics.velY += intentY * speed * dt;
             } else {
                 // Extra hard stop when keys are released (game-like snap).
-                entity.physics.velX *= 0.3;
-                entity.physics.velY *= 0.3;
+                const stop = decayFactor(STOP_DECAY, dt);
+                entity.physics.velX *= stop;
+                entity.physics.velY *= stop;
             }
         }
     }

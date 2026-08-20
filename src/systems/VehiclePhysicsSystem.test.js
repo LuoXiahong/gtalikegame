@@ -43,9 +43,22 @@ describe('VehiclePhysicsSystem', () => {
 
     it('should slow down due to rolling resistance when no input', () => {
         mockCar.physics.speed = 100;
-        VehiclePhysicsSystem.update(0.1, mockCar);
+        // dt = 1/60 is the frame rate rollingResistance is tuned for.
+        VehiclePhysicsSystem.update(1 / 60, mockCar);
         // rollingResistance is 0.98, so 100 * 0.98 = 98
         expect(mockCar.physics.speed).toBeCloseTo(98);
+    });
+
+    it('[REGRESSION] rolling resistance decays the same fraction over six short frames as one long frame', () => {
+        // Before this fix, `p.speed *= rollingResistance` applied the same
+        // multiplier once per update() call regardless of dt.
+        const stepped = { ...mockCar, transform: { ...mockCar.transform }, physics: { ...mockCar.physics, speed: 100 } };
+        const jumped = { ...mockCar, transform: { ...mockCar.transform }, physics: { ...mockCar.physics, speed: 100 } };
+
+        for (let i = 0; i < 6; i++) VehiclePhysicsSystem.update(1 / 60, stepped);
+        VehiclePhysicsSystem.update(6 / 60, jumped);
+
+        expect(jumped.physics.speed).toBeCloseTo(stepped.physics.speed, 9);
     });
 
     it('should steer when moving', () => {
@@ -141,7 +154,8 @@ describe('VehiclePhysicsSystem', () => {
     it('should scrub off speed while handbraking', () => {
         mockCar.physics.speed = 200;
         InputSystem.keys.handbrake = true;
-        VehiclePhysicsSystem.update(0.1, mockCar);
+        // dt = 1/60 is the frame rate both decay constants are tuned for.
+        VehiclePhysicsSystem.update(1 / 60, mockCar);
         // no throttle input → rolling resistance (0.98) AND handbrake decay (0.985) both apply
         expect(mockCar.physics.speed).toBeCloseTo(200 * 0.98 * 0.985);
     });

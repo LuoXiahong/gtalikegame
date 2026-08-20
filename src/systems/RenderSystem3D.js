@@ -26,6 +26,7 @@ import { RoadTextureGenerator } from './RoadTextureGenerator.js';
 import { EventBus } from '../core/EventBus.js';
 import { EVENTS } from '../core/Events.js';
 import { Time } from '../core/Time.js';
+import { frameBlend } from '../core/MathUtils.js';
 import { CityBuilder3D } from './CityBuilder3D.js';
 import { RetroFilmSettings } from './RetroFilmSettings.js';
 import { RetroFilmShader } from './RetroFilmShader.js';
@@ -663,7 +664,7 @@ export const RenderSystem3D = {
         const speedRatio = Math.min(speed / SPEED_ZOOM_REF, 1.0);
         if (!this.screenshotMode) {
             const targetZoom = baseZoom * (1.0 - ZOOM_OUT_MAX * speedRatio);
-            this.currentZoom += (targetZoom - this.currentZoom) * SPEED_ZOOM_SMOOTHING;
+            this.currentZoom += (targetZoom - this.currentZoom) * frameBlend(SPEED_ZOOM_SMOOTHING, Time.delta || 0.016);
             this.camera.zoom = this.currentZoom;
             this.camera.updateProjectionMatrix();
         }
@@ -694,8 +695,9 @@ export const RenderSystem3D = {
             targetLookAheadZ = Math.sin(controlled.transform.angle) * LOOK_AHEAD_MAX * lookAheadRatio * dir;
         }
         if (!this.screenshotMode) {
-            this.lookAheadX += (targetLookAheadX - this.lookAheadX) * LOOK_AHEAD_SMOOTHING;
-            this.lookAheadZ += (targetLookAheadZ - this.lookAheadZ) * LOOK_AHEAD_SMOOTHING;
+            const lookAheadBlend = frameBlend(LOOK_AHEAD_SMOOTHING, Time.delta || 0.016);
+            this.lookAheadX += (targetLookAheadX - this.lookAheadX) * lookAheadBlend;
+            this.lookAheadZ += (targetLookAheadZ - this.lookAheadZ) * lookAheadBlend;
             focusX += this.lookAheadX;
             focusZ += this.lookAheadZ;
         }
