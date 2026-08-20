@@ -18,12 +18,12 @@ In ~15 seconds, this README should answer:
 ## What this project demonstrates
 
 - ECS-lite architecture design
-- Game loop design
+- Game loop design, decoupled from rendering (`core/Simulation.js`'s `step(dt)` is DOM/rAF-free, so the full gameplay loop is testable headlessly)
 - Event-driven systems
 - 2D and 3D rendering pipelines sharing one world
 - Three.js post-processing
 - Procedural content generation
-- Automated testing (including UI security regression)
+- Automated testing: unit, headless gameplay integration, UI security regression, and custom architecture-fitness tests
 - Internationalization (custom catalog, 5 locales)
 - CI/CD deployment (GitHub Pages)
 - Performance-oriented, separation-of-concerns design
@@ -54,13 +54,14 @@ In ~15 seconds, this README should answer:
 ```
 /game
 ├── src/                    # Source code of the engine & demo sandbox
-│   ├── core/               # Engine core (Game Loop, Time, EventBus, GameState)
+│   ├── core/               # Engine core: Game (DOM/rAF bootstrap), Simulation (headless gameplay step), Time, EventBus, GameState
 │   ├── entities/           # Data-only entities (Entity, Player, NPC, Car)
 │   ├── systems/            # Logic systems (Movement, AI, Render, Mission, Audio, Vehicle Models, Retro Film, etc.)
 │   ├── world/              # Environment (World, Camera, Tilemap, Waypoints, Grid)
 │   ├── input/              # Input management (InputManager)
 │   ├── i18n/               # Translation catalogs & I18n helper (pl/en/de/es/fr)
 │   ├── ui/                 # UI layers (HUD, MenuScreen, Options, UISettings)
+│   ├── architecture.test.js # Fitness-function tests enforcing the module-boundary rules below
 │   └── main.js             # Application entry point / bootstrap
 └── .github/
     └── workflows/          # CI/CD workflows (GitHub Pages deployment)
@@ -76,7 +77,7 @@ The core design strictly separates data from logic, allowing flexibility and tar
 
 - **Entities** are purely containers of data components (such as `transform`, `physics`, `visual`, `ai`). They **do not contain** gameplay logic.
 - **Systems** are stateless, single-purpose logic processors. They query and manipulate components from entities stored in the `World` but do not store state themselves.
-- **EventBus** acts as the central decoupled communication layer. Systems communicate exclusively using events (`EventBus.publish` / `subscribe`), preventing hard coupling.
+- **EventBus** acts as the central decoupled communication layer. Systems communicate exclusively using events (`EventBus.emit` / `on` / `off`), preventing hard coupling.
 
 ### Strict Architectural Rules
 
@@ -175,8 +176,10 @@ npm run test:watch
 | **Core** (`EventBus`, `Time`, `GameState`) | 100% public API functionality                       | Unit testing, argument validation                                                |
 | **Entities**                               | Default components upon instantiation               | Constructor verification (e.g., does `Car` have `physics`?)                      |
 | **Systems**                                | Logic behavior inside `update(dt)`                  | Mock entities with components, assert state changes after update                 |
+| **Simulation** (`core/Simulation.js`)      | Real gameplay invariants over many ticks (bounds, AI state, traffic spawn caps) | Headless integration: real `World`/systems, zero mocks, zero DOM — hundreds of fixed-`dt` steps in-process |
 | **Renderers**                              | Sorting logic, layers, and viewport culling         | Logical checks via unit tests; visual correctness verified manually              |
 | **UI Security**                            | Injection safety in dynamically rendered text (HUD) | Regression tests with malicious payloads (`<img onerror>`, `<svg onload>`, etc.) |
+| **Architecture** (`architecture.test.js`)  | The module-boundary rules above actually hold        | Static import-graph checks — fails the suite if a system reaches into another system directly, a renderer touches input/game-state, or an entity gains logic |
 
 ---
 

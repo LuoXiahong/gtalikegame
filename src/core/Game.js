@@ -4,20 +4,10 @@
 import { Time } from './Time.js';
 import { EventBus } from './EventBus.js';
 import { EVENTS } from '../core/Events.js';
-import { GameConfig } from './GameConfig.js';
 import { AssetLoader } from './AssetLoader.js';
 import { World } from '../world/World.js';
 import { Camera } from '../world/Camera.js';
 import { InputSystem } from '../input/InputManager.js';
-import { MovementSystem } from '../systems/MovementSystem.js';
-import { PlayerMovementSystem } from '../systems/PlayerMovementSystem.js';
-import { CharacterAnimationSystem } from '../systems/CharacterAnimationSystem.js';
-import { VehiclePhysicsSystem } from '../systems/VehiclePhysicsSystem.js';
-import { AISystem } from '../systems/AISystem.js';
-import { InteractionSystem } from '../systems/InteractionSystem.js';
-import { VehicleSystem } from '../systems/VehicleSystem.js';
-import { TrafficSystem } from '../systems/TrafficSystem.js';
-import { CollisionSystem } from '../world/CollisionSystem.js';
 import { RenderSystem } from '../systems/RenderSystem.js';
 import { RenderSystem3D } from '../systems/RenderSystem3D.js';
 import { RenderSync3D } from '../systems/RenderSync3D.js';
@@ -26,11 +16,9 @@ import { MissionSystem } from '../systems/MissionSystem.js';
 import { WantedSystem } from '../systems/WantedSystem.js';
 import { PoliceSystem } from '../systems/PoliceSystem.js';
 import { HealthSystem } from '../systems/HealthSystem.js';
+import { AISystem } from '../systems/AISystem.js';
 import { UISystem } from '../ui/HUD.js';
-import { Player } from '../entities/Player.js';
-import { NPC } from '../entities/NPC.js';
-import { Car } from '../entities/Car.js';
-import { PedestrianPaths } from '../world/PedestrianPaths.js';
+import { Simulation } from './Simulation.js';
 
 import { GameState, GAME_STATES } from './GameState.js';
 import { MenuScreen } from '../ui/MenuScreen.js';
@@ -103,10 +91,10 @@ export const Game = {
         FpsOverlay.init();
 
         if (!this.screenshotMode) {
-            this.spawnEntities();
+            Simulation.spawnEntities();
         } else {
             // Still spawn entities for screenshots so cars/NPCs appear in the world
-            this.spawnEntities();
+            Simulation.spawnEntities();
             window.__SCREENSHOT_READY__ = false;
             this._screenshotFrames = 0;
             // Auto-download only for a human browsing with ?screenshot= directly (fast
@@ -153,48 +141,10 @@ export const Game = {
         requestAnimationFrame((ts) => this.loop(ts));
     },
 
-    spawnEntities() {
-        const p1 = new Player(GameConfig.SPAWN.PLAYER_X, GameConfig.SPAWN.PLAYER_Y);
-        World.addEntity(p1);
-
-        VehicleSystem.init(p1);
-
-        // Sidewalk NPCs; some paths cross the street to a neighboring block
-        const npcConfigs = [
-            { id: 'npc1', row: 0, col: 0, corner: 0, color: '#3d3d3d', cross: false },
-            { id: 'npc2', row: 0, col: 0, corner: 2, color: '#5c4033', cross: true },
-            { id: 'npc3', row: 0, col: 1, corner: 0, color: '#1a2744', cross: true },
-            { id: 'npc4', row: 0, col: 1, corner: 1, color: '#5a5a5a', cross: false },
-            { id: 'npc5', row: 0, col: 2, corner: 0, color: '#6b4423', cross: true },
-            { id: 'npc6', row: 1, col: 0, corner: 1, color: '#2c3e50', cross: false },
-            { id: 'npc7', row: 1, col: 1, corner: 0, color: '#4a3728', cross: true },
-            { id: 'npc8', row: 1, col: 2, corner: 3, color: '#4a5560', cross: false },
-            { id: 'npc9', row: 2, col: 0, corner: 2, color: '#3e2723', cross: true },
-            { id: 'npc10', row: 2, col: 2, corner: 1, color: '#5a5a5a', cross: false }
-        ];
-
-        npcConfigs.forEach(cfg => {
-            const patrol = PedestrianPaths.buildPatrol(cfg.row, cfg.col, cfg.cross);
-            const start = patrol[cfg.corner % Math.min(4, patrol.length)];
-            World.addEntity(new NPC(cfg.id, start.x, start.y, cfg.color, patrol));
-        });
-
-        World.addEntity(new Car('car1', GameConfig.SPAWN.CAR_X, GameConfig.SPAWN.CAR_Y, '#c0392b'));
-    },
-
+    /** Renderer-side mesh cleanup (DOM/WebGL) — the rest of restart is Simulation's job. */
     restart() {
         RenderSync3D.reset(RenderSystem3D.scene);
-        World.init();
-        PoliceSystem.reset();
-        WantedSystem.reset();
-        MissionSystem.init();
-        InteractionSystem.reset();
-        InputSystem.resetAll();
-        this.spawnEntities();
-        EventBus.emit(EVENTS.UI_SHOW_DIALOGUE, null);
-        EventBus.emit(EVENTS.UI_SHOW_ACTION_HINT, null);
-        EventBus.emit(EVENTS.SPEED_UPDATE, 0);
-        EventBus.emit(EVENTS.VEHICLE_EXITED, { carId: null });
+        Simulation.reset();
     },
 
     isPausedByOverlay() {
@@ -212,29 +162,8 @@ export const Game = {
                 RenderSystem.debugAI = !RenderSystem.debugAI;
                 UISettings.setDebugAI(RenderSystem.debugAI);
             }
-            const controlled = World.getControlled();
 
-            if (controlled) {
-                if (controlled.type === 'player') {
-                    PlayerMovementSystem.update(dt, controlled);
-                } else if (controlled.type === 'car') {
-                    VehiclePhysicsSystem.update(dt, controlled);
-                    EventBus.emit(EVENTS.SPEED_UPDATE, Math.abs(controlled.physics.speed));
-                }
-            }
-
-            WantedSystem.update(dt);
-            PoliceSystem.update(dt);
-            TrafficSystem.update(dt);
-            MovementSystem.update(dt);
-            AISystem.update(dt);
-            MissionSystem.update(dt);
-            InteractionSystem.update();
-
-            CollisionSystem.update();
-
-            // After collisions so the gait reflects the velocity actually applied.
-            CharacterAnimationSystem.update(dt);
+            Simulation.step(dt);
 
             Camera.update(dt, { freezeZoomAndLookAhead: !!this.screenshotMode });
         }
