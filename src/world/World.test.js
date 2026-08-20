@@ -90,9 +90,11 @@ describe('World', () => {
         World.entities = [{}];
         World.entitiesByType = { npc: [{}] };
         World.buildings = [{}];
+        World.missionMarker = { x: 1, y: 2, radius: 3 };
         World.reset();
         expect(World.entities.length).toBe(0);
         expect(Object.keys(World.entitiesByType).length).toBe(0);
         expect(World.buildings.length).toBe(0);
+        expect(World.missionMarker).toBeNull();
     });
 });

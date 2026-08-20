@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
 import { RenderSync3D } from './RenderSync3D.js';
 import { World } from '../world/World.js';
-import { MissionSystem } from './MissionSystem.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { Time } from '../core/Time.js';
 
@@ -10,16 +9,10 @@ import { Time } from '../core/Time.js';
 vi.mock('../world/World.js', () => ({
     World: {
         entities: [],
+        missionMarker: null,
         tilemap: {
             getTileAt: vi.fn().mockReturnValue(0)
         }
-    }
-}));
-
-// Mock MissionSystem
-vi.mock('./MissionSystem.js', () => ({
-    MissionSystem: {
-        targetLocation: null
     }
 }));
 
@@ -39,7 +32,7 @@ describe('RenderSync3D', () => {
 
         World.entities = [];
         World.tilemap.getTileAt.mockReturnValue(0);
-        MissionSystem.targetLocation = null;
+        World.missionMarker = null;
     });
 
     it('should create dynamic meshes for player, npc, and car', () => {
@@ -216,7 +209,7 @@ describe('RenderSync3D', () => {
     });
 
     it('should create and update mission target indicator', () => {
-        MissionSystem.targetLocation = { x: 1500, y: 1500, radius: 40 };
+        World.missionMarker = { x: 1500, y: 1500, radius: 40 };
 
         RenderSync3D.update(mockScene);
 
@@ -225,7 +218,7 @@ describe('RenderSync3D', () => {
         expect(RenderSync3D.targetMesh.position.x).toBeCloseTo(1500 * SF);
         expect(RenderSync3D.targetMesh.position.z).toBeCloseTo(1500 * SF);
 
-        MissionSystem.targetLocation = null;
+        World.missionMarker = null;
         RenderSync3D.update(mockScene);
 
         expect(mockScene.remove).toHaveBeenCalled();

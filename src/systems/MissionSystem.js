@@ -39,6 +39,7 @@ export const MissionSystem = {
                 this.timerActive = true;
                 this._hurryActive = false;
                 this.targetLocation = { x: 3000, y: 3000, radius: 150 };
+                this.publishMarker();
                 this.publishMissionText();
                 EventBus.emit(EVENTS.AUDIO_PLAY, 'beep');
             }
@@ -57,6 +58,21 @@ export const MissionSystem = {
         this.timerActive = false;
         this.targetLocation = null;
         this._hurryActive = false;
+        this.clearMarker();
+    },
+
+    /**
+     * Publishes targetLocation to World.missionMarker so renderers can draw
+     * it without importing MissionSystem (CLAUDE.md rule #5). Not a sync-loop
+     * entity — it has no pose/ground-snap/heading, so it lives alongside
+     * World.buildings rather than World.entities.
+     */
+    publishMarker() {
+        World.missionMarker = { ...this.targetLocation };
+    },
+
+    clearMarker() {
+        World.missionMarker = null;
     },
 
     /** Mission text for current stage / timer / locale. */
@@ -112,6 +128,7 @@ export const MissionSystem = {
                     this.timerActive = false;
                     this._hurryActive = false;
                     this.targetLocation = null;
+                    this.clearMarker();
                     this.publishMissionText();
                     EventBus.emit(EVENTS.AUDIO_PLAY, 'success');
                     GameState.setState(GAME_STATES.MISSION_PASSED);

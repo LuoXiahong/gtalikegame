@@ -37,6 +37,12 @@ describe('MissionSystem', () => {
         expect(MissionSystem.targetLocation).not.toBeNull();
     });
 
+    it('should publish the target as World.missionMarker for renderers to read', () => {
+        EventBus.emit('player_near_npc');
+        EventBus.emit('player_near_car');
+        expect(World.missionMarker).toEqual(MissionSystem.targetLocation);
+    });
+
     it('should decrement timer in update', () => {
         EventBus.emit('player_near_npc');
         const initialTimer = MissionSystem.timer;
@@ -68,6 +74,7 @@ describe('MissionSystem', () => {
         expect(MissionSystem.timerActive).toBe(false);
         expect(spy).toHaveBeenCalledWith('audio_play', 'success');
         expect(GameState.getState()).toBe(GAME_STATES.MISSION_PASSED);
+        expect(World.missionMarker).toBeNull();
     });
 
     it('should reset state correctly', () => {
@@ -75,10 +82,12 @@ describe('MissionSystem', () => {
         MissionSystem.timer = 10;
         MissionSystem.timerActive = true;
         MissionSystem.targetLocation = {};
+        World.missionMarker = {};
         MissionSystem.reset();
         expect(MissionSystem.stage).toBe(0);
         expect(MissionSystem.timerActive).toBe(false);
         expect(MissionSystem.targetLocation).toBeNull();
+        expect(World.missionMarker).toBeNull();
     });
 
     it('should localize mission text and refresh on locale_change', () => {

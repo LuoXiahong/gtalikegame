@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
-import { RenderSystem3D, BLOOM_STRENGTH, BLOOM_RADIUS, BLOOM_THRESHOLD, ZOOM_LEVELS, DEFAULT_ZOOM_INDEX, STREET_LIGHT_POOL_SIZE } from './RenderSystem3D.js';
-import { InputSystem } from '../input/InputManager.js';
+import { RenderSystem3D, BLOOM_STRENGTH, BLOOM_RADIUS, BLOOM_THRESHOLD, STREET_LIGHT_POOL_SIZE } from './RenderSystem3D.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { RetroFilmSettings } from './RetroFilmSettings.js';
 import { TimeOfDaySettings } from './TimeOfDaySettings.js';
 import { EventBus } from '../core/EventBus.js';
 import { World } from '../world/World.js';
+import { Camera, ZOOM_LEVELS, DEFAULT_ZOOM_INDEX } from '../world/Camera.js';
 
 // JSDOM has no WebGL — mock Three.js WebGLRenderer + PMREM
 vi.mock('three', async () => {
@@ -135,8 +135,14 @@ describe('RenderSystem3D', () => {
         RetroFilmSettings.reset();
         TimeOfDaySettings.reset();
         World.getControlled.mockReturnValue(null);
-        RenderSystem3D.lookAheadX = 0;
-        RenderSystem3D.lookAheadZ = 0;
+        // Camera is a real singleton RenderSystem3D reads from directly (not
+        // mocked) — reset it so state doesn't leak between tests.
+        Camera.focusX = 1100;
+        Camera.focusY = 1100;
+        Camera.zoomIndex = DEFAULT_ZOOM_INDEX;
+        Camera.zoom = ZOOM_LEVELS[DEFAULT_ZOOM_INDEX];
+        Camera.lookAheadX = 0;
+        Camera.lookAheadY = 0;
 
         mockParent = {
             clientWidth: 800,
@@ -428,79 +434,34 @@ describe('RenderSystem3D', () => {
         expect(leafMesh.receiveShadow).toBe(true);
     });
 
-    it('should push camera focus ahead of a fast-moving controlled car (look-ahead)', () => {
+    // Zoom and look-ahead dynamics themselves (speed ramping, smoothing, input
+    // consumption) live in Camera now (see world/Camera.test.js) — this renderer's
+    // only remaining job is projecting whatever Camera currently holds into the scene.
+
+    it('projects Camera.focusX/focusY into the camera position using the fixed isometric offset', () => {
         RenderSystem3D.init();
 
-        World.getControlled.mockReturnValue({
-            type: 'car',
-            transform: { x: 1000, y: 1000, angle: 0 },
-            physics: { speed: 300 }
-        });
+        Camera.focusX = 1000;
+        Camera.focusY = 1000;
+        RenderSystem3D.update();
 
-        // Look-ahead lerps in gradually over many frames — subtle, not a snap.
-        for (let i = 0; i < 200; i++) {
-            RenderSystem3D.update();
-        }
+        const sFocusX = 1000 * SF;
+        const sFocusZ = 1000 * SF;
+        const tiltAngle = 35.264 * Math.PI / 180;
+        const yawAngle = 45 * Math.PI / 180;
+        const distance = 1200 * SF;
 
-        expect(RenderSystem3D.lookAheadX).toBeGreaterThan(80);
-        expect(RenderSystem3D.lookAheadX).toBeLessThan(95);
-        expect(RenderSystem3D.lookAheadZ).toBeCloseTo(0, 1);
-
-        const camPos = RenderSystem3D.camera.position;
-        const carSceneX = 1000 * WorldMetrics.SCALE_FACTOR;
-        // Camera keeps the fixed iso offset from the (look-ahead-shifted) focus point,
-        // so with angle=0 the focus — and camera — moves further along +X than the car itself.
-        expect(camPos.x).toBeGreaterThan(carSceneX + 1200 * WorldMetrics.SCALE_FACTOR * Math.cos(45 * Math.PI / 180) * Math.cos(35.264 * Math.PI / 180));
+        expect(RenderSystem3D.camera.position.x).toBeCloseTo(sFocusX + Math.cos(yawAngle) * Math.cos(tiltAngle) * distance);
+        expect(RenderSystem3D.camera.position.z).toBeCloseTo(sFocusZ + Math.sin(yawAngle) * Math.cos(tiltAngle) * distance);
     });
 
-    it('should not look ahead when the controlled car is stationary', () => {
+    it('applies Camera.zoom to the THREE.js camera every frame', () => {
         RenderSystem3D.init();
 
-        World.getControlled.mockReturnValue({
-            type: 'car',
-            transform: { x: 1000, y: 1000, angle: 0.7 },
-            physics: { speed: 0 }
-        });
+        Camera.zoom = 2.6;
+        RenderSystem3D.update();
 
-        for (let i = 0; i < 30; i++) {
-            RenderSystem3D.update();
-        }
-
-        expect(RenderSystem3D.lookAheadX).toBeCloseTo(0);
-        expect(RenderSystem3D.lookAheadZ).toBeCloseTo(0);
-    });
-
-    it('should start at the default zoom step and cycle through Z', () => {
-        RenderSystem3D.init();
-        World.getControlled.mockReturnValue(null);
-
-        expect(RenderSystem3D.zoomIndex).toBe(DEFAULT_ZOOM_INDEX);
-        expect(RenderSystem3D.currentZoom).toBeCloseTo(ZOOM_LEVELS[DEFAULT_ZOOM_INDEX]);
-        // Default sits between a wider and a tighter step, not at either end.
-        expect(DEFAULT_ZOOM_INDEX).toBeGreaterThan(0);
-        expect(DEFAULT_ZOOM_INDEX).toBeLessThan(ZOOM_LEVELS.length - 1);
-
-        const seen = [];
-        for (let press = 0; press < ZOOM_LEVELS.length; press++) {
-            InputSystem.zoomToggleJustPressed = true;
-            RenderSystem3D.update();
-            seen.push(ZOOM_LEVELS[RenderSystem3D.zoomIndex]);
-        }
-
-        // Steps forward through the list, then wraps back to the default.
-        expect(seen).toEqual([
-            ZOOM_LEVELS[2], ZOOM_LEVELS[0], ZOOM_LEVELS[1]
-        ]);
-    });
-
-    it('should ease the camera toward a newly selected zoom step', () => {
-        RenderSystem3D.init();
-        World.getControlled.mockReturnValue(null);
-
-        InputSystem.zoomToggleJustPressed = true;
-        for (let i = 0; i < 400; i++) RenderSystem3D.update();
-
-        expect(RenderSystem3D.camera.zoom).toBeCloseTo(ZOOM_LEVELS[2], 1);
+        expect(RenderSystem3D.camera.zoom).toBeCloseTo(2.6);
     });
 
     it('should keep shadowMap enabled in screenshot mode (T26 regression)', () => {
@@ -517,19 +478,4 @@ describe('RenderSystem3D', () => {
         }
     });
 
-    it('should freeze look-ahead smoothing in screenshot mode', () => {
-        RenderSystem3D.init();
-        RenderSystem3D.screenshotMode = 'street-intersection';
-
-        World.getControlled.mockReturnValue({
-            type: 'car',
-            transform: { x: 1000, y: 1000, angle: 0 },
-            physics: { speed: 300 }
-        });
-
-        RenderSystem3D.update();
-
-        expect(RenderSystem3D.lookAheadX).toBe(0);
-        expect(RenderSystem3D.lookAheadZ).toBe(0);
-    });
 });

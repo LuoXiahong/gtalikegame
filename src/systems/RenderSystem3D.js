@@ -14,8 +14,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { InputSystem } from '../input/InputManager.js';
-import { World } from '../world/World.js';
+import { Camera } from '../world/Camera.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { getContactShadowTexture } from './ContactShadow.js';
 import { createPooledStreetLight } from './PropFactory.js';
@@ -26,7 +25,6 @@ import { RoadTextureGenerator } from './RoadTextureGenerator.js';
 import { EventBus } from '../core/EventBus.js';
 import { EVENTS } from '../core/Events.js';
 import { Time } from '../core/Time.js';
-import { frameBlend } from '../core/MathUtils.js';
 import { CityBuilder3D } from './CityBuilder3D.js';
 import { RetroFilmSettings } from './RetroFilmSettings.js';
 import { RetroFilmShader } from './RetroFilmShader.js';
@@ -63,23 +61,6 @@ export const BLOOM_STRENGTH = 0.18;
 export const BLOOM_RADIUS = 0.38;
 export const BLOOM_THRESHOLD = 0.92;
 
-// Speed-based camera dynamics (T21 — Speed Zoom / Look-ahead). Tune these to adjust intensity.
-export const SPEED_ZOOM_REF = 300;      // physics.speed (px/s) at which the effects are fully ramped up
-export const SPEED_ZOOM_SMOOTHING = 0.05; // lerp factor/frame for zoom-out (higher = snappier)
-export const ZOOM_OUT_MAX = 0.2;        // max fractional zoom-out at SPEED_ZOOM_REF (0.2 = 20%)
-
-const LOOK_AHEAD_MAX = 90;              // world px (pre-SF) the focus shifts ahead at SPEED_ZOOM_REF
-const LOOK_AHEAD_SMOOTHING = 0.04;      // lerp factor/frame for look-ahead (higher = snappier)
-
-/**
- * Camera zoom steps cycled by Z, ordered wide → tight. The old two-state
- * toggle (1.0 / 2.0) made the wide shot the default and left no way to get
- * closer; 2.0 is now the starting point, with a wider and a tighter step
- * around it. Pressing Z walks the list and wraps around.
- */
-export const ZOOM_LEVELS = [1.0, 2.0, 3.0];
-export const DEFAULT_ZOOM_INDEX = 1;
-
 export const RenderSystem3D = {
     renderer: null,
     scene: null,
@@ -88,10 +69,6 @@ export const RenderSystem3D = {
     bloomPass: null,
     tiltShiftPass: null,
     retroFilmPass: null,
-    zoomIndex: DEFAULT_ZOOM_INDEX,
-    currentZoom: ZOOM_LEVELS[DEFAULT_ZOOM_INDEX],
-    lookAheadX: 0,
-    lookAheadZ: 0,
     _todFrom: null,
     _todTo: null,
     _todT: 1,
@@ -186,11 +163,10 @@ export const RenderSystem3D = {
             1000
         );
 
-        // Start on the default step so the first frame is already framed right
-        // (screenshot scenarios override this below).
-        this.zoomIndex = DEFAULT_ZOOM_INDEX;
-        this.currentZoom = ZOOM_LEVELS[DEFAULT_ZOOM_INDEX];
-        this.camera.zoom = this.currentZoom;
+        // Camera owns zoom state; this just applies whatever it currently
+        // holds to the freshly-created THREE.js camera (screenshot scenarios
+        // override the focus, not zoom, below).
+        this.camera.zoom = Camera.zoom;
         this.camera.updateProjectionMatrix();
 
         this.composer = new EffectComposer(this.renderer);
@@ -423,7 +399,7 @@ export const RenderSystem3D = {
      */
     _applyFogForCurrentZoom() {
         if (!this.scene?.fog) return;
-        const zoom = this.camera?.zoom ?? this.currentZoom ?? 1;
+        const zoom = this.camera?.zoom ?? Camera.zoom ?? 1;
         const scaled = TimeOfDaySettings.fogAtZoom(
             { color: 0, near: this._baseFogNear, far: this._baseFogFar },
             zoom,
@@ -650,60 +626,19 @@ export const RenderSystem3D = {
 
         const SF = WorldMetrics.SCALE_FACTOR;
 
-        if (InputSystem.consumeZoomToggle()) {
-            this.zoomIndex = (this.zoomIndex + 1) % ZOOM_LEVELS.length;
-        }
-
-        const controlled = World.getControlled() || World.getEntitiesByType('player')[0];
-
-        const baseZoom = ZOOM_LEVELS[this.zoomIndex] ?? ZOOM_LEVELS[DEFAULT_ZOOM_INDEX];
-        let speed = 0;
-        if (controlled && controlled.physics && controlled.type === 'car') {
-            speed = Math.abs(controlled.physics.speed || 0);
-        }
-        const speedRatio = Math.min(speed / SPEED_ZOOM_REF, 1.0);
-        if (!this.screenshotMode) {
-            const targetZoom = baseZoom * (1.0 - ZOOM_OUT_MAX * speedRatio);
-            this.currentZoom += (targetZoom - this.currentZoom) * frameBlend(SPEED_ZOOM_SMOOTHING, Time.delta || 0.016);
-            this.camera.zoom = this.currentZoom;
-            this.camera.updateProjectionMatrix();
-        }
+        // Zoom and focus (including speed look-ahead) are computed once per
+        // frame by Camera.update() (called from Game.loop, before either
+        // renderer runs) — this renderer only projects them into the scene.
+        this.camera.zoom = Camera.zoom;
+        this.camera.updateProjectionMatrix();
         this._applyFogForCurrentZoom();
 
         const time = Time.time;
         this.box5u.position.x = (1500 + Math.sin(time) * 1000) * SF;
         this.box5u.position.z = 1100 * SF;
 
-        let focusX = this.originX;
-        let focusZ = this.originZ;
-
-        if (controlled && controlled.transform) {
-            focusX = controlled.transform.x;
-            focusZ = controlled.transform.y;
-        }
-
-        // Look-ahead: nudge the focus point toward the direction of travel so fast
-        // turns/obstacles are visible sooner, proportional to controlled.physics.speed.
-        // Squared ratio keeps it subtle at low/mid speed and only pronounced near top speed.
-        let targetLookAheadX = 0;
-        let targetLookAheadZ = 0;
-        if (controlled && controlled.transform && controlled.physics && controlled.type === 'car') {
-            const signedSpeed = controlled.physics.speed || 0;
-            const lookAheadRatio = Math.min(Math.abs(signedSpeed) / SPEED_ZOOM_REF, 1.0) ** 2;
-            const dir = Math.sign(signedSpeed);
-            targetLookAheadX = Math.cos(controlled.transform.angle) * LOOK_AHEAD_MAX * lookAheadRatio * dir;
-            targetLookAheadZ = Math.sin(controlled.transform.angle) * LOOK_AHEAD_MAX * lookAheadRatio * dir;
-        }
-        if (!this.screenshotMode) {
-            const lookAheadBlend = frameBlend(LOOK_AHEAD_SMOOTHING, Time.delta || 0.016);
-            this.lookAheadX += (targetLookAheadX - this.lookAheadX) * lookAheadBlend;
-            this.lookAheadZ += (targetLookAheadZ - this.lookAheadZ) * lookAheadBlend;
-            focusX += this.lookAheadX;
-            focusZ += this.lookAheadZ;
-        }
-
-        let sFocusX = focusX * SF;
-        let sFocusZ = focusZ * SF;
+        let sFocusX = Camera.focusX * SF;
+        let sFocusZ = Camera.focusY * SF;
 
         if (this.screenshotMode && this.screenshotScenario?.camera) {
             sFocusX = this.screenshotScenario.camera.targetX * SF;
@@ -742,7 +677,7 @@ export const RenderSystem3D = {
 
         this.updateTimeOfDay(Time.delta || 0.016);
 
-        const rainZoom = this.camera?.zoom ?? this.currentZoom ?? 1;
+        const rainZoom = this.camera?.zoom ?? Camera.zoom ?? 1;
         const rainAspect = (this.camera.right - this.camera.left)
             / Math.max(this.camera.top - this.camera.bottom, 0.001);
         RainSystem.update(Time.delta || 0.016, sFocusX, sFocusZ, rainZoom, rainAspect);

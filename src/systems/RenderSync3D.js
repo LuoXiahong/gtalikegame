@@ -5,7 +5,6 @@
 import * as THREE from 'three';
 import { World } from '../world/World.js';
 import { Time } from '../core/Time.js';
-import { MissionSystem } from './MissionSystem.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { createNPCModel } from './NPCModelFactory.js';
 import { createVehicleModel, pickArchetypeKey } from './VehicleModelFactory.js';
@@ -87,8 +86,8 @@ export const RenderSync3D = {
             }
         }
 
-        if (MissionSystem && MissionSystem.targetLocation) {
-            const loc = MissionSystem.targetLocation;
+        if (World.missionMarker) {
+            const loc = World.missionMarker;
             if (!this.targetMesh) {
                 const geom = new THREE.TorusGeometry((loc.radius || 40) * SF, 0.4, 8, 24);
                 const mat = new THREE.MeshBasicMaterial({ color: 0xf1c40f, side: THREE.DoubleSide });

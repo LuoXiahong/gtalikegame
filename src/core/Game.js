@@ -236,7 +236,7 @@ export const Game = {
             // After collisions so the gait reflects the velocity actually applied.
             CharacterAnimationSystem.update(dt);
 
-            if (controlled) Camera.follow(controlled, dt);
+            Camera.update(dt, { freezeZoomAndLookAhead: !!this.screenshotMode });
         }
 
         // Toggle 2D vs 3D camera modes

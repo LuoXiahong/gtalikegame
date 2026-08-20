@@ -5,7 +5,6 @@
 import { World } from '../world/World.js';
 import { Camera } from '../world/Camera.js';
 import { Time } from '../core/Time.js';
-import { MissionSystem } from './MissionSystem.js';
 import { TILE_COLORS } from '../world/Tilemap.js';
 import { ScreenshotCapture } from './ScreenshotCapture.js';
 
@@ -287,9 +286,9 @@ export const RenderSystem = {
     },
 
     drawMissionObjective() {
-        if (!MissionSystem.targetLocation) return;
-        
-        const loc = MissionSystem.targetLocation;
+        if (!World.missionMarker) return;
+
+        const loc = World.missionMarker;
         this.ctx.save();
         
         const pulse = Math.sin(Time.time * 5) * 10;

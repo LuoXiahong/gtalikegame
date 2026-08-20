@@ -64,18 +64,11 @@ const ALLOWED_HELPER_TARGETS = new Set([
 ]);
 
 const FROZEN_SYSTEM_IMPORTS = new Set([
-    // Renderers draw the mission target directly instead of the mission system
-    // publishing a world-entity marker. See raport-architektura-ecs.md § C2.
-    'RenderSync3D.js=>MissionSystem.js',
-    'RenderSystem.js=>MissionSystem.js',
     // Reads PoliceSystem.isActive directly instead of going through EventBus/World.
     'WantedSystem.js=>PoliceSystem.js',
     // STREET_LIGHT_BASE is defined in the renderer and imported back into the
     // factory that seeds it — the constant belongs in a shared module instead.
     'PropFactory.js=>RenderSystem3D.js',
-    // Zoom-toggle input is read directly in the render loop instead of a
-    // CameraSystem owning it. See raport-architektura-ecs.md § C1.
-    'RenderSystem3D.js=>InputManager.js',
 ]);
 
 describe('systems/ never import each other except visual/generation helpers', () => {

@@ -14,11 +14,14 @@ export const World = {
     entitiesByType: {},
     tilemap: null,
     decals: null,
+    /** Mission target ({ x, y, radius }) or null. Set by MissionSystem, read by renderers. */
+    missionMarker: null,
 
     reset() {
         this.entities = [];
         this.entitiesByType = {};
         this.buildings = [];
+        this.missionMarker = null;
     },
 
     init() {
