@@ -16,6 +16,7 @@ export const WantedSystem = {
     init() {
         this.reset();
         if (this._onNpcHit) EventBus.off(EVENTS.NPC_HIT, this._onNpcHit);
+        if (this._onWantedIncident) EventBus.off(EVENTS.WANTED_INCIDENT, this._onWantedIncident);
         if (this._onGunshot) EventBus.off(EVENTS.GUNSHOT, this._onGunshot);
         if (this._onExplosion) EventBus.off(EVENTS.EXPLOSION, this._onExplosion);
 
@@ -23,6 +24,11 @@ export const WantedSystem = {
             this.handleIncident();
         };
         EventBus.on(EVENTS.NPC_HIT, this._onNpcHit);
+
+        this._onWantedIncident = () => {
+            this.handleIncident();
+        };
+        EventBus.on(EVENTS.WANTED_INCIDENT, this._onWantedIncident);
 
         this._onGunshot = () => {
             this.handleIncident();

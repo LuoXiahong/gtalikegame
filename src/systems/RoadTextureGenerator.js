@@ -48,6 +48,7 @@ export const RoadTextureGenerator = {
     textures: new Map(),
     roughnessTextures: new Map(),
     _wetness: 'clear',
+    _rebakeGeneration: 0,
 
     init() {
         if (this.textures.size > 0) return;
@@ -59,18 +60,54 @@ export const RoadTextureGenerator = {
         this.roughnessTextures.set('crosswalk', this.createRoughnessTexture('crosswalk'));
     },
 
-    setWetness(weather, meshes) {
+    /**
+     * `defer: true` spreads the 6 canvas repaints (3 types × albedo/roughness)
+     * one per animation frame instead of all in the current frame — a live
+     * weather change was baking all 6 synchronously and producing a visible
+     * hitch. Patch/puddle layout and material props still land immediately
+     * (cheap, and other code reads them right after this call returns);
+     * only the expensive ctx painting is spread out. Init keeps the default
+     * synchronous path since it runs once before anything is visible.
+     */
+    setWetness(weather, meshes, { defer = false } = {}) {
         const wetness = weather === 'rain' ? 'rain' : 'clear';
         this._wetness = wetness;
-        if (this.textures.size > 0) {
-            for (const type of ['straight', 'intersection', 'crosswalk']) {
-                this._rebakeAlbedo(type);
-                this._rebakeRoughness(type);
-            }
-        }
         if (meshes) {
             this.applyWetnessToMeshes(meshes);
         }
+
+        const gen = ++this._rebakeGeneration;
+        if (this.textures.size === 0) return;
+
+        const jobs = [];
+        for (const type of ['straight', 'intersection', 'crosswalk']) {
+            const patches = this.generateWetPatches(this._wetPatchCount(type), type);
+            const puddles = this.generatePuddles(this._puddleCount(type), type);
+            const albedo = this.textures.get(type);
+            if (albedo) {
+                albedo.userData = albedo.userData || {};
+                albedo.userData.wetPatches = patches;
+                albedo.userData.puddles = puddles;
+            }
+            jobs.push(() => this._rebakeAlbedo(type, patches, puddles));
+            jobs.push(() => this._rebakeRoughness(type, patches, puddles));
+        }
+
+        if (defer && typeof requestAnimationFrame === 'function') {
+            this._runRebakeJobs(jobs, gen);
+        } else {
+            jobs.forEach((job) => job());
+        }
+    },
+
+    _runRebakeJobs(jobs, gen) {
+        const step = () => {
+            if (gen !== this._rebakeGeneration) return; // superseded by a newer setWetness
+            const job = jobs.shift();
+            if (job) job();
+            if (jobs.length > 0) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
     },
 
     _wetPatchCount(type) {
@@ -124,14 +161,9 @@ export const RoadTextureGenerator = {
         }
     },
 
-    _rebakeAlbedo(type) {
+    _rebakeAlbedo(type, patches, puddles) {
         const texture = this.textures.get(type);
         if (!texture?.image) return;
-        const patches = this.generateWetPatches(this._wetPatchCount(type), type);
-        const puddles = this.generatePuddles(this._puddleCount(type), type);
-        texture.userData = texture.userData || {};
-        texture.userData.wetPatches = patches;
-        texture.userData.puddles = puddles;
 
         const canvas = texture.image;
         const ctx = canvas.getContext ? canvas.getContext('2d') : null;
@@ -163,14 +195,9 @@ export const RoadTextureGenerator = {
         texture.needsUpdate = true;
     },
 
-    _rebakeRoughness(type) {
-        const albedo = this.textures.get(type);
+    _rebakeRoughness(type, patches, puddles) {
         const texture = this.roughnessTextures.get(type);
-        if (!texture?.image || !albedo) return;
-        const patches = (albedo.userData && albedo.userData.wetPatches)
-            || this.generateWetPatches(this._wetPatchCount(type), type);
-        const puddles = (albedo.userData && albedo.userData.puddles)
-            || this.generatePuddles(this._puddleCount(type), type);
+        if (!texture?.image) return;
 
         const canvas = texture.image;
         const ctx = canvas.getContext ? canvas.getContext('2d') : null;

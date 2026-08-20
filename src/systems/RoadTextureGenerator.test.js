@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RoadTextureGenerator } from './RoadTextureGenerator.js';
 import * as THREE from 'three';
 
@@ -213,5 +213,64 @@ describe('RoadTextureGenerator', () => {
         expect(RoadTextureGenerator._puddleCount('straight')).toBe(3);
         expect(RoadTextureGenerator._puddleCount('intersection')).toBe(2);
         expect(RoadTextureGenerator._puddleCount('crosswalk')).toBe(0);
+    });
+
+    it('setWetness stays fully synchronous by default (no deferral)', () => {
+        RoadTextureGenerator.init();
+        const rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame');
+        RoadTextureGenerator.setWetness('rain');
+        expect(rafSpy).not.toHaveBeenCalled();
+        rafSpy.mockRestore();
+    });
+
+    it('{ defer: true } lands layout/materials immediately but paints one texture per animation frame', () => {
+        RoadTextureGenerator.init();
+        // needsUpdate is write-only on THREE.Texture (no getter) — `version` is
+        // the readable counter it bumps, so that's what we assert on here.
+        const straightAlbedo = RoadTextureGenerator.getTexture('straight');
+        const versionBefore = straightAlbedo.version;
+
+        let pending = null;
+        const rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+            pending = cb;
+            return 1;
+        });
+
+        RoadTextureGenerator.setWetness('rain', null, { defer: true });
+
+        // Patch/puddle layout is ready immediately — nothing has been painted yet
+        expect(straightAlbedo.userData.puddles.length).toBeGreaterThan(0);
+        expect(straightAlbedo.version).toBe(versionBefore);
+        expect(rafSpy).toHaveBeenCalledTimes(1);
+
+        pending(); // run one animation frame → paints exactly the first of 6 jobs
+        expect(straightAlbedo.version).toBe(versionBefore + 1);
+        expect(rafSpy).toHaveBeenCalledTimes(2); // 5 jobs remain, next frame scheduled
+
+        rafSpy.mockRestore();
+    });
+
+    it('a stale deferred rebake is dropped if setWetness runs again before its frame fires', () => {
+        RoadTextureGenerator.init();
+        const straightAlbedo = RoadTextureGenerator.getTexture('straight');
+
+        let pending = null;
+        const rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+            pending = cb;
+            return 1;
+        });
+
+        RoadTextureGenerator.setWetness('rain', null, { defer: true });
+
+        // A newer, synchronous call supersedes the deferred one before it fires
+        RoadTextureGenerator.setWetness('clear');
+        expect(straightAlbedo.userData.puddles).toEqual([]);
+        const versionAfterSync = straightAlbedo.version; // bumped by the sync 'clear' bake
+
+        // The stale frame callback must not repaint over the newer 'clear' state
+        pending();
+        expect(straightAlbedo.version).toBe(versionAfterSync);
+
+        rafSpy.mockRestore();
     });
 });

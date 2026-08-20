@@ -15,6 +15,7 @@ export const EVENTS = {
     GUNSHOT: 'gunshot',
     EXPLOSION: 'explosion',
     NPC_HIT: 'npc_hit',
+    WANTED_INCIDENT: 'wanted_incident',
     PLAYER_NEAR_NPC: 'player_near_npc',
     PLAYER_NEAR_CAR: 'player_near_car',
 

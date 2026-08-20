@@ -344,7 +344,7 @@ export const RenderSystem3D = {
     _onWeatherChange(weather) {
         RainSystem.setActive(weather === 'rain');
         const roadMeshes = [...(this.laneMarkings || []), ...(this.zebras || [])];
-        RoadTextureGenerator.setWetness(weather, roadMeshes);
+        RoadTextureGenerator.setWetness(weather, roadMeshes, { defer: true });
         setPuddleReflectorsActive(this.puddleReflectors, weather === 'rain');
     },
 

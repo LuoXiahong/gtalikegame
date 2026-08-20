@@ -106,7 +106,7 @@ export const MissionSystem = {
 
         if (this.timer <= 0) {
             // Pressure: escalate wanted level
-            EventBus.emit(EVENTS.NPC_HIT); // Trigger WantedSystem incident
+            EventBus.emit(EVENTS.WANTED_INCIDENT); // Trigger WantedSystem incident
             this.timer = 10; // Repeat pressure every 10s
             this._hurryActive = true;
             this.publishMissionText();

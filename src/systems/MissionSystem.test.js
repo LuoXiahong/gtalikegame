@@ -56,7 +56,7 @@ describe('MissionSystem', () => {
         MissionSystem.timer = 0.05;
         MissionSystem.update(0.1);
 
-        expect(spy).toHaveBeenCalledWith('npc_hit');
+        expect(spy).toHaveBeenCalledWith('wanted_incident');
         expect(MissionSystem.timer).toBe(10); // Reset for repeat pressure
     });
 

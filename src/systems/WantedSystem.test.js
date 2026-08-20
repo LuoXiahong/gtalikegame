@@ -26,6 +26,12 @@ describe('WantedSystem', () => {
         expect(WantedSystem.timer).toBe(WantedSystem.resetTime);
     });
 
+    it('should increase stars on wanted_incident (mission timer pressure)', () => {
+        EventBus.emit('wanted_incident');
+
+        expect(WantedSystem.stars).toBe(1);
+    });
+
     it('should debounce incidents', () => {
         EventBus.emit('npc_hit', {});
         Time.time = 0.5; // less than 1.0 sec
