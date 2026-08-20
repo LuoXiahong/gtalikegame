@@ -3,6 +3,7 @@ import { UISystem } from './HUD.js';
 import { EventBus } from '../core/EventBus.js';
 import { GameState, GAME_STATES } from '../core/GameState.js';
 import { UISettings } from './UISettings.js';
+import { GameConfig } from '../core/GameConfig.js';
 
 vi.mock('../world/World.js', () => ({
     World: {
@@ -97,14 +98,26 @@ describe('UISystem Speedometer & Minimap Logic', () => {
         // 2. Speed update -> should update speedValue
         EventBus.emit('speed_update', 500);
         expect(UISystem.speedValue).toBe(500);
-        // kmh = Math.round(500 * 0.3) = 150
-        expect(mockUiLayer.innerHTML).toContain('150 KM/H');
+        // kmh = Math.round(500 * PXS_TO_KMH) = Math.round(500 * 0.36) = 180
+        // (WorldMetrics.SCALE_FACTOR-derived: 1 px/s = 0.36 km/h — must match
+        // the conversion GameConfig.js uses for the 80 km/h vehicle cap)
+        expect(mockUiLayer.innerHTML).toContain('180 KM/H');
 
         // 3. Exit vehicle -> should hide speed and reset speedValue
         EventBus.emit('vehicle_exited', { carId: 'car1' });
         expect(UISystem.showSpeed).toBe(false);
         expect(UISystem.speedValue).toBe(0);
         expect(mockUiLayer.innerHTML).not.toContain('KM/H');
+    });
+
+    it('[REGRESSION] speedometer reads the actual 80 km/h cap at the car\'s maxSpeed', () => {
+        // Was stuck at a stale display-only 0.3 multiplier while the physics
+        // cap (GameConfig.VEHICLE.MAX_SPEED) used the real WorldMetrics-derived
+        // conversion — the two disagreed and the HUD topped out at ~67 km/h.
+        UISystem.init();
+        EventBus.emit('vehicle_entered', { carId: 'car1' });
+        EventBus.emit('speed_update', GameConfig.VEHICLE.MAX_SPEED);
+        expect(mockUiLayer.innerHTML).toContain(`${GameConfig.VEHICLE.MAX_SPEED_KMH} KM/H`);
     });
 
     it('should draw minimap when updated in PLAY state', () => {

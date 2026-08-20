@@ -8,9 +8,15 @@ import { GameState, GAME_STATES } from '../core/GameState.js';
 
 import { World } from '../world/World.js';
 import { Tilemap, TILE_TYPES } from '../world/Tilemap.js';
+import { WorldMetrics } from '../world/WorldMetrics.js';
 import { UISettings } from './UISettings.js';
 import { I18n } from '../i18n/I18n.js';
 import { clipMinimapContent, drawMinimapBezel, drawMinimapGlass } from './MinimapBezel.js';
+
+// WorldMetrics.SCALE_FACTOR: 1 px = 0.1 m → 1 px/s = 0.36 km/h. This must match
+// the conversion GameConfig.js uses to derive the 80 km/h vehicle cap, or the
+// speedometer reads a different top speed than the physics actually enforces.
+const PXS_TO_KMH = WorldMetrics.SCALE_FACTOR * 3.6;
 
 /** Minimap: top 20 + 130 + border ≈ 156 → HP bar sits directly below the map */
 const HEALTH_TOP_PX = 162;
@@ -179,7 +185,7 @@ export const UISystem = {
     },
 
     updateDOM() {
-        const kmh = Math.round(this.speedValue * 0.3);
+        const kmh = Math.round(this.speedValue * PXS_TO_KMH);
         const onScreenPad = UISettings.showOnScreenControls;
         const kmhLabel = I18n.t('hud.kmh');
         const healthKey = this.healthValue ? `${this.healthValue.current}/${this.healthValue.max}` : '';

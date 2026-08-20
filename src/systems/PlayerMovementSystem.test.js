@@ -25,7 +25,7 @@ describe('PlayerMovementSystem', () => {
 
     it('should apply velocity when UP is pressed', () => {
         InputSystem.keys.up = true;
-        // angle = 0, cos(0)=1. velX += 1 * 100 * 0.1 = 10
+        // angle = 0, cos(0)=1. velX = 1 * 100 * 0.1 = 10
         PlayerMovementSystem.update(0.1, mockPlayer);
         expect(mockPlayer.physics.velX).toBe(10);
     });
@@ -53,18 +53,28 @@ describe('PlayerMovementSystem', () => {
         expect(mockPlayer.physics.velX).toBeCloseTo(10 * SPRINT_MULT);
     });
 
-    it('should reach the animation run threshold at sprint speed', () => {
-        // Friction 0.5 settles velocity at speed*dt per frame → speed px/s.
+    it('true sprint speed is exactly walkSpeed*SPRINT_MULT, any frame rate', () => {
+        // velX is assigned fresh each frame as walkSpeed*SPRINT_MULT*dt, so
+        // true speed (velX/dt) lands there immediately — and stays there
+        // regardless of frame rate, unlike an accumulate-then-decay loop.
         InputSystem.keys.up = true;
         InputSystem.keys.sprint = true;
         const dt = 1 / 60;
 
-        for (let i = 0; i < 60; i++) {
-            PlayerMovementSystem.update(dt, mockPlayer);
-            mockPlayer.physics.velX *= mockPlayer.physics.friction;
-        }
+        PlayerMovementSystem.update(dt, mockPlayer);
 
-        expect(mockPlayer.physics.velX / dt).toBeCloseTo(220, 0);
+        expect(mockPlayer.physics.velX / dt).toBeCloseTo(mockPlayer.physics.walkSpeed * SPRINT_MULT, 5);
+    });
+
+    it('true speed stays walkSpeed regardless of frame rate (no accumulation feedback)', () => {
+        InputSystem.keys.up = true;
+
+        for (const dt of [1 / 30, 1 / 60, 1 / 144, 1 / 240]) {
+            mockPlayer.physics.velX = 0;
+            mockPlayer.physics.velY = 0;
+            PlayerMovementSystem.update(dt, mockPlayer);
+            expect(mockPlayer.physics.velX / dt).toBeCloseTo(100, 5);
+        }
     });
 
     it('should not sprint without the sprint key', () => {

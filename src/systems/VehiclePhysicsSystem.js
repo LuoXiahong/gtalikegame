@@ -11,6 +11,12 @@ export const HANDBRAKE_DRIFT_INERTIA = 0.05; // vs. normal driftInertia = 0.2 (l
 export const HANDBRAKE_STEER_BOOST = 1.5;    // multiplies steeringPower while drifting
 export const HANDBRAKE_SPEED_DECAY = 0.985;  // per-frame (60fps-tuned) speed scrub from locked rear wheels
 
+// Fractions of maxSpeed rather than flat px/s — keeps handling feel identical
+// (same % of top speed to steer/handbrake, same % for full steering authority)
+// no matter what maxSpeed is tuned to.
+const MIN_STEERABLE_SPEED_FRACTION = 0.01; // was a flat 5 px/s at the old maxSpeed=500
+const FULL_STEER_SPEED_FRACTION = 0.30;    // was a flat 150 px/s at the old maxSpeed=500
+
 export const VehiclePhysicsSystem = {
     update(dt, entity) {
         if (!entity || entity.type !== 'car') return;
@@ -51,15 +57,16 @@ export const VehiclePhysicsSystem = {
         // Micro-movement deadzone
         if (Math.abs(p.speed) < 1) p.speed = 0;
 
-        const isHandbraking = InputSystem.keys.handbrake && Math.abs(p.speed) > 5;
+        const minSteerableSpeed = p.maxSpeed * MIN_STEERABLE_SPEED_FRACTION;
+        const isHandbraking = InputSystem.keys.handbrake && Math.abs(p.speed) > minSteerableSpeed;
         if (isHandbraking) p.speed *= decayFactor(HANDBRAKE_SPEED_DECAY, dt);
 
         // 2. Arcade Steering
-        if (Math.abs(p.speed) > 5) {
+        if (Math.abs(p.speed) > minSteerableSpeed) {
             const steerDir = (InputSystem.keys.left ? -1 : 0) + (InputSystem.keys.right ? 1 : 0);
 
             // Turn rate scales with speed (vehicles cannot rotate in place)
-            const speedFactor = Math.min(Math.abs(p.speed) / 150, 1.0);
+            const speedFactor = Math.min(Math.abs(p.speed) / (p.maxSpeed * FULL_STEER_SPEED_FRACTION), 1.0);
 
             // Invert steering when reversing
             const reverseFactor = p.speed < 0 ? -1 : 1;
