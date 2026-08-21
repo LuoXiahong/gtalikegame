@@ -28,9 +28,15 @@ export const GameConfig = {
         SPEED_SCALE: VEHICLE_SPEED_SCALE
     },
     TRAFFIC: {
-        MAX_CARS: 8,
-        SPAWN_DISTANCE: 500,
-        DESPAWN_DISTANCE: 2000,
+        // SPAWN_DISTANCE used to be 500px — bigger than the visible camera radius at any
+        // zoom level, so traffic could only ever be spotted after it had already driven
+        // into view, never present in a screenshot/first glance. Pulled inside the visible
+        // radius; MAX_CARS raised so the same pool covers more of the (now closer) ring
+        // without emptying out, DESPAWN_DISTANCE tightened to match so cars recycle nearer
+        // the player instead of idling far away doing nothing.
+        MAX_CARS: 14,
+        SPAWN_DISTANCE: 280,
+        DESPAWN_DISTANCE: 1300,
         BASE_SPEED: 150 * VEHICLE_SPEED_SCALE,
         SPEED_VARIANCE: 100 * VEHICLE_SPEED_SCALE
     },

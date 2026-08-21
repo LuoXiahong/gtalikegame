@@ -95,11 +95,17 @@ export const RetroFilmShader = {
             float l2 = dot(col, vec3(0.299, 0.587, 0.114));
             col = mix(vec3(l2), col, satAmt);
 
-            // Soft contrast + shadow lift so blacks aren't crushed
+            // Soft contrast + shadow lift so blacks aren't crushed. Lift used to add up to
+            // ~0.058 across the whole 0-0.45 range in scene-linear space (this pass runs
+            // before OutputPass's tone mapping), which floored every dark surface in the
+            // frame to the same washed grey — there was no real directional shadow yet for
+            // it to protect, so it was floor-raising the entire scene instead of rescuing
+            // just the character. Now that fog/key-light/IBL-budget fixes give the scene
+            // actual blacks to lift from, narrowed to a smaller push over a smaller range.
             float cAmt = 1.0 + contrast * i * 0.45;
             col = (col - 0.5) * cAmt + 0.5;
-            float lift = 0.10 * i * (0.55 + contrast * 0.25);
-            col = col + lift * (1.0 - smoothstep(0.0, 0.45, col));
+            float lift = 0.07 * i * (0.55 + contrast * 0.25);
+            col = col + lift * (1.0 - smoothstep(0.0, 0.30, col));
             col = clamp(col, 0.0, 1.0);
 
             // Shallow flicker; floor brightness so characters don't vanish
@@ -169,14 +175,16 @@ export const RetroFilmShader = {
             float edgeY = smoothstep(0.0, 0.008, vUv.y) * smoothstep(0.0, 0.008, 1.0 - vUv.y);
             col *= mix(1.0, edgeX * edgeY, 0.45 * i);
 
-            // Film-stock edge strip — wide dark margins with rounded sprocket perforations
-            float strip = 0.065;
+            // Film-stock edge strip — narrow dark margins with rounded sprocket perforations.
+            // This pass runs before OutputPass, so it writes scene-linear values; OutputPass's
+            // ACES + linear-to-sRGB encode brightens them a lot (linear 0.004 -> sRGB ~0.05).
+            float strip = 0.022;
             if (vUv.x < strip || vUv.x > 1.0 - strip) {
                 // sx: 0 at the outer screen edge .. 1 at the boundary with the visible frame
                 float sx = (vUv.x < 0.5 ? vUv.x : 1.0 - vUv.x) / strip;
 
                 // Dark, slightly warm film-base tone (not flat black — reads as physical stock)
-                vec3 stockCol = vec3(0.050, 0.042, 0.035);
+                vec3 stockCol = vec3(0.004, 0.0035, 0.003);
                 col = mix(col, stockCol, 0.92);
 
                 // Rounded-rect perforations, evenly spaced down the strip (35mm-style, tall > wide)
@@ -201,7 +209,11 @@ export const RetroFilmShader = {
             // High todDesaturation (night/noir) drives near-mono; tint stays cool silver-blue.
             float lumaTod = dot(col, vec3(0.299, 0.587, 0.114));
             col = mix(col, vec3(lumaTod), clamp(todDesaturation, 0.0, 1.0));
-            vec3 tinted = col * todTint;
+            // Normalize the tint to unit luminance so it shifts hue without also
+            // multiplying the whole frame's brightness (todTint was being used as
+            // a straight per-channel multiplier, quietly darkening everything ~29%).
+            vec3 tintN = todTint / max(dot(todTint, vec3(0.299, 0.587, 0.114)), 1e-4);
+            vec3 tinted = col * tintN;
             float tintAmt = mix(0.12, 0.72, clamp(todDesaturation, 0.0, 1.0));
             col = mix(col, tinted, tintAmt);
 

@@ -21,8 +21,8 @@ const CSS = `
 #filmTally {
     position: absolute;
     top: 14px;
-    /* Clear of the sprocket strip (RetroFilmShader "strip" = 0.065 of width) — sits on the visible frame */
-    right: calc(6.5% + 14px);
+    /* Clear of the sprocket strip (RetroFilmShader "strip" = 0.022 of width) — sits on the visible frame */
+    right: calc(2.2% + 14px);
     width: 13px;
     height: 13px;
     border-radius: 50%;

@@ -4,6 +4,28 @@
  */
 import * as THREE from 'three';
 
+/**
+ * The main albedo texture is multiplied by the building's own material.color
+ * (CityBuilder3D.getBuildingMaterials) — these used to be saturated hues in
+ * their own right (brick/sandstone/cream), so a building's wall color was two
+ * saturated colors multiplied together, which compounds rather than cancels
+ * (measured: residential walls came out more saturated than either input).
+ * Desaturated to the same luminance as before (differentiate archetypes by
+ * value, not hue) so multiplying by a neutral material.color stays neutral.
+ */
+const FACADE_BG = {
+    brick: '#616161',     // was #9c4a3a
+    sandstone: '#acacac', // was #c4a882
+    cream: '#c6c6c6',     // was #d4c5a9
+};
+/** Lit/glass window colors — were warm amber, now neutral so windows don't reintroduce hue that the wall fix just removed. */
+const WINDOW_PALETTE = {
+    litAmber: '#b0b4b8',  // was #e8c070
+    litCream: '#d8dadc',  // was #f5e6c8
+    frameLight: '#7a7c7e', // was #c4a882
+    frameDark: '#5a5c5e',  // was #8b7355
+};
+
 export const FacadeGenerator = {
     textures: new Map(),
     emissiveTextures: new Map(),
@@ -81,7 +103,7 @@ export const FacadeGenerator = {
         const W = 256;
         const H = 256;
 
-        ctx.fillStyle = '#9c4a3a';
+        ctx.fillStyle = FACADE_BG.brick;
         ctx.fillRect(0, 0, W, H);
         this.addFacadeNoise(ctx, W, H, 0.08, 0.05);
 
@@ -101,14 +123,14 @@ export const FacadeGenerator = {
                 if (rand < 0.12) {
                     glassColor = '#0d0d0c';
                 } else if (rand < 0.32) {
-                    lightColor = '#e8c070';
+                    lightColor = WINDOW_PALETTE.litAmber;
                 } else if (rand < 0.42) {
-                    lightColor = '#f5e6c8';
+                    lightColor = WINDOW_PALETTE.litCream;
                 }
 
                 ctx.fillStyle = glassColor;
                 ctx.fillRect(x, y, windowW, windowH);
-                ctx.strokeStyle = '#c4a882';
+                ctx.strokeStyle = WINDOW_PALETTE.frameLight;
                 ctx.lineWidth = 1;
                 ctx.strokeRect(x, y, windowW, windowH);
 
@@ -125,7 +147,7 @@ export const FacadeGenerator = {
         const W = 256;
         const H = 256;
 
-        ctx.fillStyle = '#c4a882';
+        ctx.fillStyle = FACADE_BG.sandstone;
         ctx.fillRect(0, 0, W, H);
         this.addFacadeNoise(ctx, W, H, 0.06, 0.04);
 
@@ -140,10 +162,10 @@ export const FacadeGenerator = {
                 let glassColor = '#1a1f28';
                 let lightColor = null;
                 if (rand < 0.14) {
-                    lightColor = '#e8c070';
+                    lightColor = WINDOW_PALETTE.litAmber;
                     glassColor = lightColor;
                 } else if (rand < 0.22) {
-                    lightColor = '#f5e6c8';
+                    lightColor = WINDOW_PALETTE.litCream;
                     glassColor = lightColor;
                 } else if (rand < 0.26) {
                     glassColor = '#0a0a0a';
@@ -151,7 +173,7 @@ export const FacadeGenerator = {
 
                 ctx.fillStyle = glassColor;
                 ctx.fillRect(x, y, windowW, windowH);
-                ctx.strokeStyle = '#8b7355';
+                ctx.strokeStyle = WINDOW_PALETTE.frameDark;
                 ctx.lineWidth = 1;
                 ctx.strokeRect(x, y, windowW, windowH);
 
@@ -161,7 +183,7 @@ export const FacadeGenerator = {
             }
         }
 
-        ctx.fillStyle = 'rgba(90, 70, 45, 0.25)';
+        ctx.fillStyle = 'rgba(70, 71, 72, 0.25)';
         for (let y = stepY - 4; y < H; y += stepY) {
             ctx.fillRect(0, y, W, 2);
         }
@@ -171,7 +193,7 @@ export const FacadeGenerator = {
         const W = 256;
         const H = 256;
 
-        ctx.fillStyle = '#d4c5a9';
+        ctx.fillStyle = FACADE_BG.cream;
         ctx.fillRect(0, 0, W, H);
         this.addFacadeNoise(ctx, W, H, 0.08, 0.05);
 
@@ -186,14 +208,14 @@ export const FacadeGenerator = {
                 if (rand < 0.15) {
                     glassColor = '#0d0d0c';
                 } else if (rand < 0.35) {
-                    lightColor = '#e8c070';
+                    lightColor = WINDOW_PALETTE.litAmber;
                 } else if (rand < 0.45) {
-                    lightColor = '#f5e6c8';
+                    lightColor = WINDOW_PALETTE.litCream;
                 }
 
                 ctx.fillStyle = glassColor;
                 ctx.fillRect(x, y, windowW, windowH);
-                ctx.strokeStyle = '#8b7355';
+                ctx.strokeStyle = WINDOW_PALETTE.frameDark;
                 ctx.lineWidth = 1;
                 ctx.strokeRect(x, y, windowW, windowH);
 
@@ -239,7 +261,7 @@ export const FacadeGenerator = {
         const W = 256;
         const H = 256;
 
-        ctx.fillStyle = '#d4c5a9';
+        ctx.fillStyle = FACADE_BG.cream;
         ctx.fillRect(0, 0, W, H);
         this.addFacadeNoise(ctx, W, H, 0.08, 0.05);
 
@@ -254,14 +276,14 @@ export const FacadeGenerator = {
                 if (rand < 0.15) {
                     glassColor = '#0d0d0c';
                 } else if (rand < 0.35) {
-                    lightColor = '#e8c070';
+                    lightColor = WINDOW_PALETTE.litAmber;
                 } else if (rand < 0.45) {
-                    lightColor = '#f5e6c8';
+                    lightColor = WINDOW_PALETTE.litCream;
                 }
 
                 ctx.fillStyle = glassColor;
                 ctx.fillRect(x, y, windowW, windowH);
-                ctx.strokeStyle = '#8b7355';
+                ctx.strokeStyle = WINDOW_PALETTE.frameDark;
                 ctx.lineWidth = 1;
                 ctx.strokeRect(x, y, windowW, windowH);
 

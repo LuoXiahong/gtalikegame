@@ -14,6 +14,13 @@ const CAMERA_YAW = Math.PI / 4;
 const CAMERA_TILT = 35.264 * Math.PI / 180;
 const PARTICLE_COUNT = 700;
 const FALL_SPEED = 400;
+/**
+ * WIND_BASE is a constant world-X drift shared by every drop (was 0 — velocities
+ * only had a zero-mean per-drop jitter, so streaks fell essentially straight down
+ * on screen: atan(7.5/280) ≈ 1.5° instead of a visible windswept angle). WIND_DRIFT
+ * is the remaining per-drop jitter around that base.
+ */
+const WIND_BASE = 110;
 const WIND_DRIFT = 15;
 /**
  * World-unit streak size. Ortho frustum height ≈ VIEW_SIZE/zoom (~60),
@@ -30,8 +37,8 @@ function createDropTexture() {
     if (ctx) {
         const grad = ctx.createLinearGradient(4, 0, 4, 48);
         grad.addColorStop(0, 'rgba(200, 210, 225, 0)');
-        grad.addColorStop(0.25, 'rgba(230, 238, 250, 0.85)');
-        grad.addColorStop(0.55, 'rgba(200, 214, 235, 0.45)');
+        grad.addColorStop(0.25, 'rgba(240, 246, 255, 1.0)');
+        grad.addColorStop(0.55, 'rgba(210, 224, 245, 0.7)');
         grad.addColorStop(1, 'rgba(165, 178, 195, 0)');
         ctx.fillStyle = grad;
         ctx.fillRect(2, 0, 4, 48);
@@ -134,7 +141,7 @@ export const RainSystem = {
             positions[i3] = (Math.random() * 2 - 1) * cover.halfW;
             positions[i3 + 1] = Math.random() * cover.height;
             positions[i3 + 2] = (Math.random() * 2 - 1) * cover.halfD;
-            velocities[i * 2] = (Math.random() - 0.5) * WIND_DRIFT * SF;
+            velocities[i * 2] = (WIND_BASE + (Math.random() - 0.5) * WIND_DRIFT) * SF;
             velocities[i * 2 + 1] = (0.7 + Math.random() * 0.6) * FALL_SPEED * SF;
             lengthScales[i] = 0.7 + Math.random() * 0.6;
         }
@@ -142,14 +149,18 @@ export const RainSystem = {
         const geometry = new THREE.PlaneGeometry(STREAK_WIDTH, STREAK_LENGTH);
         const material = new THREE.MeshBasicMaterial({
             map: createDropTexture(),
-            color: 0xd8e4f4,
+            color: 0xf2f7ff,
             transparent: true,
-            opacity: 0.72,
+            opacity: 0.55,
             depthWrite: false,
             depthTest: false,
             fog: false,
             side: THREE.DoubleSide,
-            blending: THREE.NormalBlending,
+            // Additive + untonemapped so streaks can actually reach screen-white; with
+            // NormalBlending + ACES + toneMappingExposure 0.72 they capped out at ~44%
+            // gray even on bright surfaces (RenderSystem3D.js toneMappingExposure).
+            blending: THREE.AdditiveBlending,
+            toneMapped: false,
             alphaTest: 0.02,
         });
 

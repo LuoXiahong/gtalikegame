@@ -177,8 +177,8 @@ describe('RenderSystem3D', () => {
         // Fog distances are scaled by the live zoom; normalise to read base values.
         RenderSystem3D.camera.zoom = 1;
         RenderSystem3D._applyFogForCurrentZoom();
-        expect(RenderSystem3D.scene.fog.near).toBe(30);
-        expect(RenderSystem3D.scene.fog.far).toBe(160);
+        expect(RenderSystem3D.scene.fog.near).toBe(50);
+        expect(RenderSystem3D.scene.fog.far).toBe(180);
         expect(RenderSystem3D.scene.environment).toBeDefined();
         expect(RenderSystem3D.composer).toBeDefined();
         expect(RenderSystem3D.ambientLight.intensity).toBeCloseTo(0.10);
@@ -364,21 +364,21 @@ describe('RenderSystem3D', () => {
 
     it('should scale fog near/far with camera zoom', () => {
         RenderSystem3D.init();
-        // night base: near 30, far 160 at zoom 1
+        // night base: near 50, far 180 at zoom 1
         RenderSystem3D.camera.zoom = 1;
         RenderSystem3D._applyFogForCurrentZoom();
-        expect(RenderSystem3D.scene.fog.near).toBe(30);
-        expect(RenderSystem3D.scene.fog.far).toBe(160);
+        expect(RenderSystem3D.scene.fog.near).toBe(50);
+        expect(RenderSystem3D.scene.fog.far).toBe(180);
 
         RenderSystem3D.camera.zoom = 2;
         RenderSystem3D._applyFogForCurrentZoom();
-        expect(RenderSystem3D.scene.fog.near).toBeCloseTo(31.5);
-        expect(RenderSystem3D.scene.fog.far).toBeCloseTo(168);
+        expect(RenderSystem3D.scene.fog.near).toBeCloseTo(52.5);
+        expect(RenderSystem3D.scene.fog.far).toBeCloseTo(189);
 
         RenderSystem3D.camera.zoom = 0.5;
         RenderSystem3D._applyFogForCurrentZoom();
-        expect(RenderSystem3D.scene.fog.near).toBeCloseTo(29.25);
-        expect(RenderSystem3D.scene.fog.far).toBeCloseTo(156);
+        expect(RenderSystem3D.scene.fog.near).toBeCloseTo(48.75);
+        expect(RenderSystem3D.scene.fog.far).toBeCloseTo(175.5);
     });
 
     it('should create custom building types via createBuilding', () => {

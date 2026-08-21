@@ -31,6 +31,22 @@ const PROP_LAMP_CLEARANCE = 2.5;
 export const BUILDING_RIM_EDGE = 0x6b727c;
 
 /**
+ * Wall base colors. Archetypes used to be differentiated by saturated brick/
+ * sandstone/cream hues (0x9c4a3a etc.) — after the night grading's 16% chroma
+ * survival, that still read as a warm mauve tint at odds with every other
+ * chilled-out surface in the scene (measured: roof frac(R>B) 0.88 vs ref
+ * 0.04). Differentiate by VALUE instead, with a slight cool bias (B >= R) to
+ * match the rest of the palette. This is a color-space fix, independent of
+ * the "night desat 0.84 + silver tint" grading decision (STATUS.md) — it
+ * changes what goes INTO the grading, not the grading itself.
+ */
+export const BUILDING_ALBEDO = {
+    residential: 0x5f6163,
+    shop: 0x9a9b9c,
+    skyscraperTiers: [0x8d9094, 0x84878b, 0x7b7e82, 0x6f7276],
+};
+
+/**
  * Roof clutter (HVAC, masts, vents, billboard frames) repeats on every building
  * with identical parameters, but each call used to allocate its own material.
  * Distinct material instances cannot share an instanced batch, so those hundreds
@@ -101,6 +117,21 @@ export const CityBuilder3D = {
             metalness: 0.0,
             envMapIntensity: 0.15
         });
+        // envMapIntensity above is silently ignored by three.js (r184) unless the material
+        // has its own explicit envMap — otherwise every material with envMap===null shares
+        // ONE scene-wide scene.environmentIntensity regardless of its own tuned value
+        // (WebGLRenderer materials.js: `material.envMap ? material.envMapIntensity :
+        // scene.environmentIntensity`). That's exactly what was happening here: this pad's
+        // deliberately-dim 0.15 (chosen so the sidewalk lamps stand on doesn't blow out —
+        // see comment above) was being replaced by whatever the global knob happened to be,
+        // so it blew out anyway the moment that knob went up for the sun/shadow work.
+        // Assigning envMap explicitly opts these two back into their own tuned value.
+        // (Other materials — road, facades, NPC/vehicle bodies — have the same bug; not
+        // fixed here, tracked as a follow-up rather than swept in unverified.)
+        if (renderSystem.scene.environment) {
+            sidewalkMat.envMap = renderSystem.scene.environment;
+            buildingZoneMat.envMap = renderSystem.scene.environment;
+        }
 
         // Sidewalk + building-zone pads are static and share one material each —
         // merge all 9 blocks into a single mesh per material instead of 18 draw calls.
@@ -407,10 +438,10 @@ export const CityBuilder3D = {
         if (type === 'skyscraper') {
             // Art Deco "wedding cake": stacked setbacks, each smaller than the last
             const tiers = [
-                { heightRatio: 0.38, scale: 1.00, color: 0xc4a882 }, // sandstone base
-                { heightRatio: 0.26, scale: 0.82, color: 0xb8956c },
-                { heightRatio: 0.20, scale: 0.64, color: 0xa8845a },
-                { heightRatio: 0.16, scale: 0.46, color: 0x8b7355 }  // darker crown
+                { heightRatio: 0.38, scale: 1.00, color: BUILDING_ALBEDO.skyscraperTiers[0] },
+                { heightRatio: 0.26, scale: 0.82, color: BUILDING_ALBEDO.skyscraperTiers[1] },
+                { heightRatio: 0.20, scale: 0.64, color: BUILDING_ALBEDO.skyscraperTiers[2] },
+                { heightRatio: 0.16, scale: 0.46, color: BUILDING_ALBEDO.skyscraperTiers[3] } // darker crown
             ];
 
             let yCursor = 0;
@@ -439,7 +470,7 @@ export const CityBuilder3D = {
 
         } else if (type === 'residential') {
             const bodyGeom = new THREE.BoxGeometry(width, height, depth);
-            const bodyMats = this.getBuildingMaterials('residential', width, height, depth, 0x9c4a3a); // brick
+            const bodyMats = this.getBuildingMaterials('residential', width, height, depth, BUILDING_ALBEDO.residential);
             const body = new THREE.Mesh(bodyGeom, bodyMats);
             body.position.y = height / 2;
             body.castShadow = true;
@@ -453,7 +484,7 @@ export const CityBuilder3D = {
 
         } else if (type === 'shop') {
             const bodyGeom = new THREE.BoxGeometry(width, height, depth);
-            const bodyMats = this.getBuildingMaterials('shop', width, height, depth, 0xd4c5a9); // cream
+            const bodyMats = this.getBuildingMaterials('shop', width, height, depth, BUILDING_ALBEDO.shop);
             const body = new THREE.Mesh(bodyGeom, bodyMats);
             body.position.y = height / 2;
             body.castShadow = true;

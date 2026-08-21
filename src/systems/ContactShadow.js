@@ -37,14 +37,16 @@ export function getContactShadowTexture() {
  * Rain-weather skew for flat ground shadow decals, so they lean the same way
  * as RainSystem's streaks instead of staying perfectly symmetric underfoot.
  *
- * RainSystem (see RainSystem.js: FALL_SPEED=400, WIND_DRIFT=15) drifts drops
- * along world ±X while falling along world Y, at a per-drop randomized sign.
- * A static ground decal can't track every drop individually, so we bake in a
- * single fixed lean using that same wind/fall ratio (15/400 ≈ 0.0375), scaled
- * up so the offset actually reads on a ~0.7 world-unit blob.
+ * RainSystem (see RainSystem.js: FALL_SPEED=400, WIND_BASE=110) drifts every
+ * drop along world +X by a shared base while falling along world Y. A static
+ * ground decal can't track every drop individually, so we bake in a single
+ * fixed lean using that same wind/fall ratio (110/400 = 0.275) directly — no
+ * extra scale needed now that the ratio itself is large enough to read on a
+ * ~0.7 world-unit blob (the old 15/400 ≈ 0.0375 ratio was too small to be
+ * visible at all without an artificial ×8 scale-up).
  */
-const RAIN_SKEW_RATIO = 15 / 400;
-const RAIN_SKEW_SCALE = 8;
+const RAIN_SKEW_RATIO = 110 / 400;
+const RAIN_SKEW_SCALE = 1;
 const RAIN_STRETCH = 1.3;
 
 /** Shared "is it raining" flag — module-level config, not per-entity state. */

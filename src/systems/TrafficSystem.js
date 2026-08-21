@@ -127,8 +127,11 @@ export const TrafficSystem = {
         const { pathName, x, y, targetIndex, pathDir, angle } = candidate;
         const cruise = GameConfig.TRAFFIC.BASE_SPEED + Math.random() * GameConfig.TRAFFIC.SPEED_VARIANCE;
 
-        // Period body paints: black, burgundy, bottle green, navy, cream
-        const colors = ['#1a1a1a', '#5c1a1a', '#1a3a2a', '#1a2744', '#d4c5a9', '#3d2e1f'];
+        // Period body paints: black, burgundy, bottle green, navy, cream, umber —
+        // desaturated (was ['#1a1a1a','#5c1a1a','#1a3a2a','#1a2744','#d4c5a9','#3d2e1f'],
+        // 4 of 6 saturated enough to stand out against the near-monochrome noir scene).
+        // Differentiated by value/slight bias, not hue, same as the building palette.
+        const colors = ['#1a1a1a', '#3a2f2c', '#262b2e', '#22262e', '#a8a49c', '#332e29'];
         const color = colors[Math.floor(Math.random() * colors.length)];
 
         const car = new Car(`traffic_${Date.now()}_${Math.random()}`, x, y, color);

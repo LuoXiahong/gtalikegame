@@ -228,7 +228,10 @@ export const RenderSystem3D = {
             TimeOfDaySettings.applyPreset('night');
             TimeOfDaySettings.applyWeather('rain');
             if (this.screenshotMode === 'street-intersection') {
-                this.screenshotScenario = { camera: { targetX: 1100, targetZ: 1100, zoom: 1.2 } };
+                // Offset off the exact intersection center so the nearest building corner
+                // crops aggressively into frame instead of sitting centered/flat (ref has a
+                // dark foreground mass pushed hard into one corner, not a symmetric plaza).
+                this.screenshotScenario = { camera: { targetX: 1170, targetZ: 1170, zoom: 1.2 } };
             } else if (this.screenshotMode === 'city-overview') {
                 this.screenshotScenario = { camera: { targetX: 1100, targetZ: 1100, zoom: 0.6 } };
             }
@@ -370,6 +373,7 @@ export const RenderSystem3D = {
 
         this.sunLight.color.setHex(preset.sun.color);
         this.sunLight.intensity = preset.sun.intensity;
+        this.scene.environmentIntensity = preset.envIntensity ?? 1;
 
         if (this.rimLight && preset.rim) {
             this.rimLight.color.setHex(preset.rim.color);
@@ -423,6 +427,7 @@ export const RenderSystem3D = {
                 color: this.sunLight.color.clone(),
                 intensity: this.sunLight.intensity,
             },
+            envIntensity: this.scene.environmentIntensity ?? 1,
             fog: {
                 color: this.scene.fog.color.clone(),
                 near: this._baseFogNear,
@@ -526,6 +531,7 @@ export const RenderSystem3D = {
 
         this.sunLight.color.copy(from.sun.color).lerp(new THREE.Color(to.sun.color), t);
         this.sunLight.intensity = THREE.MathUtils.lerp(from.sun.intensity, to.sun.intensity, t);
+        this.scene.environmentIntensity = THREE.MathUtils.lerp(from.envIntensity ?? 1, to.envIntensity ?? 1, t);
 
         if (this.rimLight && to.rim) {
             this.rimLight.color.copy(from.rim.color).lerp(new THREE.Color(to.rim.color), t);
@@ -578,9 +584,14 @@ export const RenderSystem3D = {
         this.scene.add(sun.target);
 
         sun.castShadow = true;
-        // 1024 halves the shadow depth-pass fill cost vs the previous 2048 map;
-        // bias roughly doubled to match the larger texel footprint (avoids acne).
-        sun.shadow.bias = -0.001;
+        // Shadow camera used to span a fixed 320x320-unit box centered near world
+        // origin-ish (d=1600*SF=160), most of which was never near the player —
+        // 1024 texels / 320 units ≈ 0.31 units/texel, coarse enough that building
+        // shadows barely registered even once the sun had enough intensity to cast
+        // one. update() now re-centers the sun on the camera focus every frame (same
+        // pattern as rimLight below), so the frustum only needs to cover the visible
+        // play area: d=70 gives 140/1024 ≈ 0.14 units/texel, ~2.3x sharper for free.
+        sun.shadow.bias = -0.00045;
         sun.shadow.mapSize.width = 1024;
         sun.shadow.mapSize.height = 1024;
         // Soften cast shadows a touch (Three r155+), but stay close to full occlusion —
@@ -590,7 +601,7 @@ export const RenderSystem3D = {
             sun.shadow.intensity = 0.85;
         }
 
-        const d = 1600 * SF;
+        const d = 70;
         sun.shadow.camera.left = -d;
         sun.shadow.camera.right = d;
         sun.shadow.camera.top = d;
@@ -600,6 +611,11 @@ export const RenderSystem3D = {
 
         this.scene.add(sun);
         this.sunLight = sun;
+        // Fixed light-direction offset (position - target, world units) the sun keeps
+        // relative to the camera focus every frame — see update(). Screen-projects to a
+        // top-left -> bottom-right shadow lean under this camera's fixed 45°/35.264°
+        // isometric view (verified by screenshot, not just computed).
+        this._sunOffset = new THREE.Vector3(-90, 55, -110);
 
         const rim = new THREE.DirectionalLight(0xa8b8d8, 0);
         rim.castShadow = false;
@@ -653,6 +669,16 @@ export const RenderSystem3D = {
         this.camera.position.y = Math.sin(tiltAngle) * distance;
         this.camera.position.z = sFocusZ + Math.sin(yawAngle) * Math.cos(tiltAngle) * distance;
         this.camera.lookAt(sFocusX, 0, sFocusZ);
+
+        if (this.sunLight && this._sunOffset) {
+            this.sunLight.position.set(
+                sFocusX + this._sunOffset.x,
+                this._sunOffset.y,
+                sFocusZ + this._sunOffset.z,
+            );
+            this.sunLight.target.position.set(sFocusX, 0, sFocusZ);
+            this.sunLight.target.updateMatrixWorld();
+        }
 
         if (this.rimLight) {
             const camToFocusX = sFocusX - this.camera.position.x;

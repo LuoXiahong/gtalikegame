@@ -56,7 +56,9 @@ export const Simulation = {
             World.addEntity(new NPC(cfg.id, start.x, start.y, cfg.color, patrol));
         });
 
-        World.addEntity(new Car('car1', GameConfig.SPAWN.CAR_X, GameConfig.SPAWN.CAR_Y, '#c0392b'));
+        // Was '#c0392b' (saturation 0.78) — the single most saturated color in the whole
+        // scene, standing out against an otherwise near-monochrome noir palette.
+        World.addEntity(new Car('car1', GameConfig.SPAWN.CAR_X, GameConfig.SPAWN.CAR_Y, '#4a4442'));
     },
 
     /** Fresh world + entities, e.g. on game restart. Renderer-side mesh cleanup is Game's job. */
