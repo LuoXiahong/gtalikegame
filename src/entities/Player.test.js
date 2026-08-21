@@ -11,8 +11,12 @@ describe('Player', () => {
         expect(p.transform.y).toBe(200);
         
         expect(p.physics).toBeDefined();
-        expect(p.physics.walkSpeed).toBe(170);
-        expect(p.physics.friction).toBe(0.5);
+        // Halved from 170 alongside the friction fix — 170 was tuned by feel while the
+        // friction bug silently halved real speed to 85, so 85 is what actually felt right.
+        expect(p.physics.walkSpeed).toBe(85);
+        // 1 = no decay; MovementSystem's friction is for values that persist across
+        // frames, but PlayerMovementSystem reassigns velX/velY fresh every frame.
+        expect(p.physics.friction).toBe(1);
         
         expect(p.visual.color).toBe('#e74c3c');
         

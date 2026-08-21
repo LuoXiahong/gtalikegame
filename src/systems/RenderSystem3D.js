@@ -17,15 +17,17 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { Camera } from '../world/Camera.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { getContactShadowTexture } from './ContactShadow.js';
-import { createPooledStreetLight } from './PropFactory.js';
+import { createPooledStreetLight, setSharedEnvironment as setPropSharedEnvironment } from './PropFactory.js';
 import { FacadeGenerator } from './FacadeGenerator.js';
 import { RenderSync3D } from './RenderSync3D.js';
 import { RoadTextureGenerator } from './RoadTextureGenerator.js';
+import { setSharedEnvironment as setNPCSharedEnvironment } from './NPCModelFactory.js';
+import { setSharedEnvironment as setVehicleSharedEnvironment } from './VehicleModelFactory.js';
 
 import { EventBus } from '../core/EventBus.js';
 import { EVENTS } from '../core/Events.js';
 import { Time } from '../core/Time.js';
-import { CityBuilder3D } from './CityBuilder3D.js';
+import { CityBuilder3D, setSharedEnvironment as setCitySharedEnvironment } from './CityBuilder3D.js';
 import { RetroFilmSettings } from './RetroFilmSettings.js';
 import { RetroFilmShader } from './RetroFilmShader.js';
 import { RoadBuilder3D } from './RoadBuilder3D.js';
@@ -197,6 +199,12 @@ export const RenderSystem3D = {
 
         this.setupLighting();
         this.setupEnvironment();
+        // Must run after setupEnvironment() so these opt their materials into their own
+        // envMapIntensity instead of three.js's scene-wide environmentIntensity fallback.
+        setNPCSharedEnvironment(this.scene.environment);
+        setVehicleSharedEnvironment(this.scene.environment);
+        setPropSharedEnvironment(this.scene.environment);
+        setCitySharedEnvironment(this.scene.environment);
 
         window.addEventListener('resize', () => {
             const w = parent.clientWidth || 800;

@@ -7,6 +7,13 @@ import { STREET_LIGHT_BASE } from './RenderSystem3D.js';
 
 export const PROP_TYPES = ['lampPost', 'hydrant', 'bench', 'kiosk', 'trashCan'];
 
+// Set once by RenderSystem3D after setupEnvironment() — see the identical note in
+// NPCModelFactory.js.
+let _envMap = null;
+export function setSharedEnvironment(envMap) {
+    _envMap = envMap;
+}
+
 /**
  * PointLight reach — local curb pool via lighting, not a fake disc overlay (T6).
  *
@@ -108,13 +115,17 @@ function addLampPost(group) {
     arm.position.set(0.35, 5.05, 0);
     group.add(arm);
 
-    const globeMat = sharedMat('lamp-globe', () => new THREE.MeshStandardMaterial({
-        color: 0xe4e8f0,
-        roughness: 0.55,
-        metalness: 0.05,
-        emissive: 0xc8d0e0,
-        emissiveIntensity: 0.35
-    }));
+    const globeMat = sharedMat('lamp-globe', () => {
+        const mat = new THREE.MeshStandardMaterial({
+            color: 0xe4e8f0,
+            roughness: 0.55,
+            metalness: 0.05,
+            emissive: 0xc8d0e0,
+            emissiveIntensity: 0.35
+        });
+        if (_envMap) mat.envMap = _envMap;
+        return mat;
+    });
     const globe = new THREE.Mesh(sharedGeom('lamp-globe', () => new THREE.SphereGeometry(0.32, 10, 10)), globeMat);
     globe.position.set(0.75, 4.9, 0);
     group.add(globe);

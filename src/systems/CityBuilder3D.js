@@ -90,6 +90,13 @@ export const TREE_SLOT_DEFS = [
     { ox: 85, oz: 170, kinds: ['bush', 'hedge'] }
 ];
 
+// Set once by RenderSystem3D after setupEnvironment() — see the identical note in
+// NPCModelFactory.js.
+let _envMap = null;
+export function setSharedEnvironment(envMap) {
+    _envMap = envMap;
+}
+
 export const CityBuilder3D = {
     buildCity(renderSystem) {
         const SF = WorldMetrics.SCALE_FACTOR;
@@ -117,20 +124,10 @@ export const CityBuilder3D = {
             metalness: 0.0,
             envMapIntensity: 0.15
         });
-        // envMapIntensity above is silently ignored by three.js (r184) unless the material
-        // has its own explicit envMap — otherwise every material with envMap===null shares
-        // ONE scene-wide scene.environmentIntensity regardless of its own tuned value
-        // (WebGLRenderer materials.js: `material.envMap ? material.envMapIntensity :
-        // scene.environmentIntensity`). That's exactly what was happening here: this pad's
-        // deliberately-dim 0.15 (chosen so the sidewalk lamps stand on doesn't blow out —
-        // see comment above) was being replaced by whatever the global knob happened to be,
-        // so it blew out anyway the moment that knob went up for the sun/shadow work.
-        // Assigning envMap explicitly opts these two back into their own tuned value.
-        // (Other materials — road, facades, NPC/vehicle bodies — have the same bug; not
-        // fixed here, tracked as a follow-up rather than swept in unverified.)
-        if (renderSystem.scene.environment) {
-            sidewalkMat.envMap = renderSystem.scene.environment;
-            buildingZoneMat.envMap = renderSystem.scene.environment;
+        // Pin envMap so envMapIntensity above is actually read at render time.
+        if (_envMap) {
+            sidewalkMat.envMap = _envMap;
+            buildingZoneMat.envMap = _envMap;
         }
 
         // Sidewalk + building-zone pads are static and share one material each —
@@ -505,6 +502,10 @@ export const CityBuilder3D = {
     },
 
     getBuildingMaterials(type, width, height, depth, baseColor) {
+        // No .envMap on topMat/bottomMat: they have no explicit envMapIntensity of
+        // their own (T56 decides that), so pinning envMap here would swap the global
+        // environmentIntensity for three's default of 1 instead — a brightness
+        // regression, not a fix (verified by screenshot).
         const topMat = new THREE.MeshStandardMaterial({
             color: baseColor,
             roughness: 0.8,
@@ -551,7 +552,7 @@ export const CityBuilder3D = {
         const tint = 0.95 + Math.random() * 0.1;
         color.multiplyScalar(tint);
 
-        return new THREE.MeshStandardMaterial({
+        const faceMat = new THREE.MeshStandardMaterial({
             map: texture,
             color: color,
             roughness: 0.8,
@@ -562,6 +563,8 @@ export const CityBuilder3D = {
             emissiveIntensity: emissiveMap ? 0.4 : 0,
             envMapIntensity: 0.35
         });
+        if (_envMap) faceMat.envMap = _envMap;
+        return faceMat;
     },
 
     addHVACUnits(group, roofWidth, roofDepth, roofY) {

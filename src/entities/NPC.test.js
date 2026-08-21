@@ -11,7 +11,8 @@ describe('NPC', () => {
         expect(npc.id).toBe('npc1');
         expect(npc.type).toBe('npc');
         expect(npc.transform.width).toBe(18);
-        expect(npc.physics.walkSpeed).toBe(80);
+        // Matches Player.js's walkSpeed — @user wanted NPC/hero speeds consistent.
+        expect(npc.physics.walkSpeed).toBe(85);
         expect(npc.ai.state).toBe('idle');
         expect(npc.ai.waypoints.length).toBe(4);
         expect(PedestrianPaths.isOnSidewalk(npc.transform.x, npc.transform.y)).toBe(true);

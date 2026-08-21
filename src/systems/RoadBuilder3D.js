@@ -57,6 +57,7 @@ export const RoadBuilder3D = {
             metalness: wet.metalness,
             envMapIntensity: wet.envMapIntensity,
         });
+        if (renderSystem.scene.environment) mat.envMap = renderSystem.scene.environment;
 
         const mesh = new THREE.Mesh(geom, mat);
         mesh.rotation.x = -Math.PI / 2;
@@ -98,6 +99,7 @@ export const RoadBuilder3D = {
             metalness: wet.metalness,
             envMapIntensity: wet.envMapIntensity,
         });
+        if (renderSystem.scene.environment) mat.envMap = renderSystem.scene.environment;
 
         const mesh = new THREE.Mesh(geom, mat);
         mesh.rotation.x = -Math.PI / 2;
@@ -130,6 +132,7 @@ export const RoadBuilder3D = {
             metalness: 0.0,
             envMapIntensity: 0
         });
+        if (renderSystem.scene.environment) mat.envMap = renderSystem.scene.environment;
 
         const mesh = new THREE.Mesh(geom, mat);
         mesh.rotation.x = -Math.PI / 2;

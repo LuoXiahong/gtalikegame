@@ -19,6 +19,14 @@ const WET_COLOR_MULT = 0.8;
 // unbounded leak worth a dedicated cleanup hook.
 const liveMaterials = new Set();
 
+// Set once by RenderSystem3D after setupEnvironment() — a plain function call, not
+// EventBus, because RenderSystem3D already calls into this file directly as a
+// visual/generation helper (architecture.test.js whitelist), same as createNPCModel.
+let _envMap = null;
+export function setSharedEnvironment(envMap) {
+    _envMap = envMap;
+}
+
 /**
  * Register a freshly-created material's baseline (for reversible wet/dry
  * toggles with no cumulative drift), then track it for weather updates.
@@ -27,6 +35,13 @@ const liveMaterials = new Set();
 function trackMaterial(mat) {
     mat.userData.baseRoughness = mat.roughness;
     mat.userData.baseColorHex = mat.color.getHex();
+    if (_envMap) {
+        mat.envMap = _envMap;
+        // Pin explicitly — none of these set their own envMapIntensity, so opting
+        // into .envMap without this would jump from environmentIntensity to three's
+        // default of 1.
+        mat.envMapIntensity = 0.35;
+    }
     liveMaterials.add(mat);
 }
 

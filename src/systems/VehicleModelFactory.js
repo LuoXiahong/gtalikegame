@@ -21,6 +21,13 @@ const WET_COLOR_MULT = 0.8;
 // the next weather change, not an unbounded leak worth a dedicated cleanup hook.
 const liveMaterials = new Set();
 
+// Set once by RenderSystem3D after setupEnvironment() — see the identical note in
+// NPCModelFactory.js.
+let _envMap = null;
+export function setSharedEnvironment(envMap) {
+    _envMap = envMap;
+}
+
 /**
  * Register a freshly-created material's baseline (for reversible wet/dry
  * toggles with no cumulative drift), then track it for weather updates.
@@ -29,6 +36,11 @@ const liveMaterials = new Set();
 function trackMaterial(mat) {
     mat.userData.baseRoughness = mat.roughness;
     mat.userData.baseColorHex = mat.color.getHex();
+    if (_envMap) {
+        mat.envMap = _envMap;
+        // Pin explicitly — see NPCModelFactory.js's trackMaterial for why.
+        mat.envMapIntensity = 0.35;
+    }
     liveMaterials.add(mat);
 }
 

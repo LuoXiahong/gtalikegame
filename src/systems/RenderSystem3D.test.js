@@ -182,7 +182,7 @@ describe('RenderSystem3D', () => {
         expect(RenderSystem3D.scene.environment).toBeDefined();
         expect(RenderSystem3D.composer).toBeDefined();
         expect(RenderSystem3D.ambientLight.intensity).toBeCloseTo(0.10);
-        expect(RenderSystem3D._streetLightMult).toBeCloseTo(1.7);
+        expect(RenderSystem3D._streetLightMult).toBeCloseTo(1.1);
         expect(RenderSystem3D.tiltShiftPass).toBeDefined();
         expect(RenderSystem3D.retroFilmPass).toBeDefined();
         expect(RenderSystem3D.retroFilmPass.uniforms.intensity).toBeDefined();

@@ -18,7 +18,7 @@ describe('TimeOfDaySettings', () => {
         expect(TimeOfDaySettings.current).toBe('night');
         expect(TimeOfDaySettings.weather).toBe('rain');
         expect(TimeOfDaySettings.get()).toBe(TIME_PRESETS.night);
-        expect(TimeOfDaySettings.get().streetLightMultiplier).toBe(1.7);
+        expect(TimeOfDaySettings.get().streetLightMultiplier).toBe(1.1);
         expect(TimeOfDaySettings.get().grading.desaturation).toBeCloseTo(0.84);
         expect(TimeOfDaySettings.get().rim.intensity).toBeCloseTo(0.75);
         expect(TimeOfDaySettings.isRaining()).toBe(true);

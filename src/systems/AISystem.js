@@ -164,6 +164,8 @@ export const AISystem = {
                     npc.visual.walkCycle += 10 * dt;
                 }
             } else if (npc.ai.state === 'flee') {
+                // 2.5 deliberately matches PlayerMovementSystem.js's SPRINT_MULT — keeps
+                // NPC "fast" movement consistent with the player's, not a coincidence.
                 const fleeSpeed = npc.physics.walkSpeed * 2.5;
                 if (PedestrianPaths.isOnRoad(npc.transform.x, npc.transform.y)
                     && !PedestrianPaths.isOnCrosswalk(npc.transform.x, npc.transform.y)) {

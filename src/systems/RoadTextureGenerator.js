@@ -7,9 +7,12 @@ import * as THREE from 'three';
  * Road paint values. Crosswalks were near-white (`rgba(240,242,245,0.9)`) and
  * became the brightest element in frame, pulling focus off the character under
  * the lamp — the lane dashes were toned to match so paint reads as one material.
+ * Nudged back up (2026-08-21, @user) after the fog/key-light/envMap pass gave the
+ * rest of the scene far more contrast: the T35 value now reads as flat grey
+ * concrete rather than worn paint. Still well under the lamp pool's peak.
  */
-const CROSSWALK_PAINT = 'rgba(176, 178, 182, 0.72)';
-const LANE_PAINT = 'rgba(168, 170, 174, 0.7)';
+const CROSSWALK_PAINT = 'rgba(206, 208, 212, 0.82)';
+const LANE_PAINT = 'rgba(196, 198, 202, 0.78)';
 
 /**
  * Radius covering every lobe of a puddle, measured from the puddle origin.

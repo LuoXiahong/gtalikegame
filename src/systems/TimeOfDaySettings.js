@@ -80,7 +80,7 @@ export const TIME_PRESETS = {
         // (raport-ref-vs-actual-2026-08-20.md, finding D) — this fix only removes the
         // depth-dependent veil, it doesn't manufacture contrast that isn't there yet.
         fog: { color: 0x0c0e14, near: 50, far: 180 },
-        streetLightMultiplier: 1.7,
+        streetLightMultiplier: 1.1,
         // Silver-mono push for ref parity (was 0.74 / warm-gray 0x9aa4b4)
         grading: { desaturation: 0.84, tint: 0x7a8ca0 },
         // Bumped from 0.45 — with a real directional shadow now in the scene, the
