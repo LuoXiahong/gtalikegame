@@ -5,6 +5,7 @@
 import { EventBus } from '../core/EventBus.js';
 import { EVENTS } from '../core/Events.js';
 import { RetroFilmSettings } from '../systems/RetroFilmSettings.js';
+import { FILM_STRIP_WIDTH } from '../systems/RetroFilmShader.js';
 import { I18n } from '../i18n/I18n.js';
 
 const CSS = `
@@ -21,8 +22,8 @@ const CSS = `
 #filmTally {
     position: absolute;
     top: 14px;
-    /* Clear of the sprocket strip (RetroFilmShader "strip" = 0.022 of width) — sits on the visible frame */
-    right: calc(2.2% + 14px);
+    /* Clears the sprocket strip via --film-strip (0% when the effect is off) */
+    right: calc(var(--film-strip, 0%) + 14px);
     width: 13px;
     height: 13px;
     border-radius: 50%;
@@ -34,18 +35,23 @@ const CSS = `
 #filmFrameCounter {
     position: absolute;
     bottom: 8px;
-    left: 40px;
+    left: calc(var(--film-strip, 0%) + 14px);
     font-family: 'Yomogi', cursive;
     font-size: 10px;
     letter-spacing: 0.15em;
-    color: rgba(233, 221, 194, 0.55);
+    /* Was a warm cream (233,221,194) — this sits in #filmGateChrome, a sibling of
+       #uiLayer, so the sepia() filter fix never reached it; it needed its own
+       neutral color. */
+    color: rgba(200, 202, 206, 0.55);
     background: rgba(0, 0, 0, 0.35);
     padding: 2px 6px;
     border-radius: 2px;
 }
+/* --film-sepia tracks the live RetroFilmSettings preset (0 for noir) instead of a
+   fixed value, so the HUD doesn't stay warm when the scene itself isn't. */
 #gameContainer.retro-film #uiLayer,
 #gameContainer.retro-film #mobileHUD {
-    filter: sepia(0.22) contrast(1.04) brightness(1.0);
+    filter: sepia(var(--film-sepia, 0)) contrast(1.04) brightness(1.0);
 }
 /* Keep minimap bezel cool/metallic — don't sepia the chrome ring */
 #gameContainer.retro-film #minimap {
@@ -105,6 +111,8 @@ export const FilmGateOverlay = {
         const container = document.getElementById('gameContainer');
         if (container) {
             container.classList.toggle('retro-film', this._active);
+            container.style.setProperty('--film-strip', this._active ? `${FILM_STRIP_WIDTH * 100}%` : '0%');
+            container.style.setProperty('--film-sepia', String(RetroFilmSettings.sepia / 100));
         }
     },
 

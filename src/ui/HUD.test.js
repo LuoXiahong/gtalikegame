@@ -145,13 +145,14 @@ describe('UISystem Speedometer & Minimap Logic', () => {
         expect(mockMobileHUD.style.display).toBe('grid');
     });
 
-    it('renders a health bar reflecting the player HP', async () => {
+    it('renders a health bar reflecting the player HP, hidden at full health', async () => {
         UISystem.init();
         GameState.setState(GAME_STATES.PLAY);
 
+        // Full health, no damage taken: nothing to warn about — stays off screen
+        // instead of being a permanent bright rectangle in every frame.
         UISystem.update();
-        expect(mockUiLayer.innerHTML).toContain('id="healthBar"');
-        expect(mockUiLayer.innerHTML).toContain('width:100%');
+        expect(mockUiLayer.innerHTML).not.toContain('id="healthBar"');
 
         const { World } = await import('../world/World.js');
         World.getEntitiesByType.mockReturnValueOnce([{
@@ -159,14 +160,21 @@ describe('UISystem Speedometer & Minimap Logic', () => {
             health: { current: 20, max: 100, dead: false }
         }]);
         UISystem.update();
+        expect(mockUiLayer.innerHTML).toContain('id="healthBar"');
         expect(mockUiLayer.innerHTML).toContain('width:20%');
         // Critical step keeps chroma, but stays inside the noir palette
         expect(mockUiLayer.innerHTML).toContain('#a8524e');
     });
 
-    it('groups the health bar under the minimap, not against the right edge', () => {
+    it('groups the health bar under the minimap, not against the right edge', async () => {
         UISystem.init();
         GameState.setState(GAME_STATES.PLAY);
+
+        const { World } = await import('../world/World.js');
+        World.getEntitiesByType.mockReturnValueOnce([{
+            transform: { x: 1000, y: 1000, angle: 0 },
+            health: { current: 20, max: 100, dead: false }
+        }]);
         UISystem.update();
 
         expect(mockUiLayer.innerHTML).toContain('id="healthBar"');
@@ -174,12 +182,12 @@ describe('UISystem Speedometer & Minimap Logic', () => {
         expect(mockUiLayer.innerHTML).not.toContain('right:25px; width:120px');
     });
 
-    it('renders mission progress under the minimap', () => {
+    it('renders mission progress under the REC tally, right-aligned', () => {
         UISystem.init();
         EventBus.emit('mission_update', 'Misja: Znajdź NPC');
         expect(mockUiLayer.innerHTML).toContain('id="missionProgress"');
-        // Clears the HP bar, which now occupies the slot right under the minimap
-        expect(mockUiLayer.innerHTML).toContain('top:186px');
+        expect(mockUiLayer.innerHTML).toContain('top:60px');
+        expect(mockUiLayer.innerHTML).toContain('text-align:right');
         expect(mockUiLayer.innerHTML).toContain('Misja: Znajdź NPC');
         expect(mockUiLayer.innerHTML).not.toContain('top:25px');
     });

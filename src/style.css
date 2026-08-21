@@ -34,7 +34,7 @@ canvas {
 #minimap {
     position: absolute;
     top: 20px;
-    left: 20px;
+    left: calc(var(--film-strip, 0%) + 20px);
     width: 130px !important;
     height: 130px !important;
     border-radius: 50%;

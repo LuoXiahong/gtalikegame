@@ -2,6 +2,10 @@
  * Film-stock post effect (jitter, scratches, grain, vignette) tuned to keep characters readable:
  * mild sepia, soft contrast, lifted shadows.
  */
+// Fraction of screen width the sprocket strip eats on each side — shared with
+// FilmGateOverlay.js (via --film-strip) so HUD elements can clear it too.
+export const FILM_STRIP_WIDTH = 0.022;
+
 export const RetroFilmShader = {
     uniforms: {
         tDiffuse: { value: null },
@@ -178,7 +182,7 @@ export const RetroFilmShader = {
             // Film-stock edge strip — narrow dark margins with rounded sprocket perforations.
             // This pass runs before OutputPass, so it writes scene-linear values; OutputPass's
             // ACES + linear-to-sRGB encode brightens them a lot (linear 0.004 -> sRGB ~0.05).
-            float strip = 0.022;
+            float strip = ${FILM_STRIP_WIDTH};
             if (vUv.x < strip || vUv.x > 1.0 - strip) {
                 // sx: 0 at the outer screen edge .. 1 at the boundary with the visible frame
                 float sx = (vUv.x < 0.5 ? vUv.x : 1.0 - vUv.x) / strip;

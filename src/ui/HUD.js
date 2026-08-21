@@ -20,8 +20,8 @@ const PXS_TO_KMH = WorldMetrics.SCALE_FACTOR * 3.6;
 
 /** Minimap: top 20 + 130 + border ≈ 156 → HP bar sits directly below the map */
 const HEALTH_TOP_PX = 162;
-/** Mission text clears the HP bar (162 + 14 + gap) */
-const MISSION_TOP_PX = 186;
+/** Under the REC tally + wanted stars (tally bottom ~27px, stars bottom ~56px). */
+const MISSION_TOP_PX = 60;
 
 /**
  * HP fill stays in the noir palette — bone while healthy, muted amber/red as it
@@ -35,6 +35,9 @@ const HEALTH_FILL_CRIT = '#a8524e';
 /** Same palette rule as the HP bar: the alert step keeps chroma, not neon. */
 const WANTED_STAR_IDLE = '#c9b47a';
 const WANTED_STAR_ALERT = '#b5564f';
+
+/** Was a saturated `#2ecc71` — the only HUD element that survived T33's desaturation. */
+const SPEEDOMETER_COLOR = '#9ab0a0';
 
 /**
  * Minimap blips read by value and shape, not hue — a saturated dot on a
@@ -199,7 +202,7 @@ export const UISystem = {
 
         if (this.missionText) {
             const safeMission = escapeHTML(this.missionText);
-            html += `<div id="missionProgress" style="position:absolute; top:${MISSION_TOP_PX}px; left:20px; max-width:140px; font-size:13px; font-weight:bold; color:white; font-family: 'Yomogi', cursive; letter-spacing:0.3px; line-height:1.35; ${shadowStyle}">${safeMission}</div>`;
+            html += `<div id="missionProgress" style="position:absolute; top:${MISSION_TOP_PX}px; right: calc(var(--film-strip, 0%) + 14px); max-width:280px; font-size:13px; font-weight:bold; color:white; font-family: 'Yomogi', cursive; letter-spacing:0.3px; line-height:1.35; text-align:right; ${shadowStyle}">${safeMission}</div>`;
         }
         if (this.currentDialogue) {
             const safeDialogue = escapeHTML(this.currentDialogue);
@@ -208,9 +211,10 @@ export const UISystem = {
         if (this.actionHint) {
             const safeHint = escapeHTML(this.actionHint);
             // When pad is on, action hint sits top-right to avoid F button / speedometer clash
+            const hintRight = 'right: calc(var(--film-strip, 0%) + 25px);';
             const hintPos = onScreenPad
-                ? 'bottom:auto; top:70px; right:25px;'
-                : 'bottom:25px; right:25px;';
+                ? `bottom:auto; top:70px; ${hintRight}`
+                : `bottom:25px; ${hintRight}`;
             html += `<div style="position:absolute; ${hintPos} font-size:13px; font-weight:bold; color:white; font-family: 'Yomogi', cursive; ${glassStyle} padding:6px 12px; border-radius:6px; letter-spacing:0.5px;">${safeHint}</div>`;
         }
         if (this.wantedStars > 0) {
@@ -223,15 +227,19 @@ export const UISystem = {
         }
         if (this.healthValue) {
             const pct = Math.max(0, Math.min(1, this.healthValue.current / (this.healthValue.max || 1)));
-            const barColor = pct > 0.5 ? HEALTH_FILL_OK : pct > 0.25 ? HEALTH_FILL_WARN : HEALTH_FILL_CRIT;
-            html += `<div id="healthBar" style="position:absolute; top:${HEALTH_TOP_PX}px; left:20px; width:130px; height:14px; ${glassStyle} border-radius:7px; overflow:hidden;"><div style="width:${Math.round(pct * 100)}%; height:100%; background:${barColor}; transition: width 0.15s, background-color 0.15s;"></div></div>`;
+            // Full health, no damage taken: nothing to warn about, so stay off screen
+            // instead of being the brightest fixed rectangle in every noir frame.
+            if (pct < 1) {
+                const barColor = pct > 0.5 ? HEALTH_FILL_OK : pct > 0.25 ? HEALTH_FILL_WARN : HEALTH_FILL_CRIT;
+                html += `<div id="healthBar" style="position:absolute; top:${HEALTH_TOP_PX}px; left:20px; width:130px; height:14px; ${glassStyle} border-radius:7px; overflow:hidden;"><div style="width:${Math.round(pct * 100)}%; height:100%; background:${barColor}; transition: width 0.15s, background-color 0.15s;"></div></div>`;
+            }
         }
         if (this.showSpeed) {
             // Keep speedometer clear of the on-screen pad when that pad is visible
             const speedPos = onScreenPad
                 ? 'bottom:25px; right:25px;'
                 : 'bottom:25px; left:25px;';
-            html += `<div id="speedometer" style="position:absolute; ${speedPos} font-size:24px; font-weight:bold; color:#2ecc71; font-family: 'Yomogi', cursive; letter-spacing:1px; ${shadowStyle}">${kmh} ${kmhLabel}</div>`;
+            html += `<div id="speedometer" style="position:absolute; ${speedPos} font-size:24px; font-weight:bold; color:${SPEEDOMETER_COLOR}; font-family: 'Yomogi', cursive; letter-spacing:1px; ${shadowStyle}">${kmh} ${kmhLabel}</div>`;
         }
         this.layer.innerHTML = html;
     },
