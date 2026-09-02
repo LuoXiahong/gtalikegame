@@ -1,6 +1,7 @@
 /**
  * TRAFFIC SYSTEM (TrafficSystem)
- * AI cars seek waypoints with steering + velocity inertia (no position teleport).
+ * AI cars walk the Waypoints lane graph node-to-node, choosing straight/right/left at
+ * each intersection node, with steering + velocity inertia (no position teleport).
  * Occasional drift steers off-lane; recovery is also seek-based.
  */
 import { World } from '../world/World.js';
@@ -28,6 +29,16 @@ const DRIFT_ANGLE_MAX = 0.5;
 const RECOVER_DONE_DIST = 35;
 /** Max position correction per frame — avoids visible teleports when cars meet */
 const MAX_SEPARATION_PER_FRAME = 2.5;
+
+/** Turn bias per intersection node — a left has to cross oncoming traffic, so it's rarer */
+const RIGHT_TURN_CHANCE = 0.22;
+const LEFT_TURN_CHANCE = 0.10;
+/** Per-car lateral jitter inside its lane (px) — keeps cars off one perfect line */
+const LANE_BIAS_MAX = 6;
+/** Don't spawn inside the ~70px intersection stubs — only on open road */
+const MIN_SPAWN_EDGE_LEN = 100;
+/** Cost added to a lane edge that points away from the car's heading, when rebinding */
+const RETARGET_HEADING_PENALTY = 120;
 
 function wrapAngle(a) {
     while (a > Math.PI) a -= Math.PI * 2;
@@ -124,7 +135,7 @@ export const TrafficSystem = {
         const candidate = this.findSpawnCandidate(player);
         if (!candidate) return;
 
-        const { pathName, x, y, targetIndex, pathDir, angle } = candidate;
+        const { fromNode, node, x, y, angle } = candidate;
         const cruise = GameConfig.TRAFFIC.BASE_SPEED + Math.random() * GameConfig.TRAFFIC.SPEED_VARIANCE;
 
         // Period body paints: black, burgundy, bottle green, navy, cream, umber —
@@ -138,14 +149,13 @@ export const TrafficSystem = {
         car.transform.angle = angle;
         car.ai = {
             type: 'traffic',
-            pathName,
-            targetIndex,
-            pathDir,
+            fromNode,
+            node,
             maxSpeed: cruise,
             currentSpeed: cruise * 0.5,
             vx: Math.cos(angle) * cruise * 0.5,
             vy: Math.sin(angle) * cruise * 0.5,
-            laneOffset: 0,
+            laneOffset: (Math.random() * 2 - 1) * LANE_BIAS_MAX,
             driftTimer: 0,
             driftAngle: 0,
             recovering: false,
@@ -156,7 +166,7 @@ export const TrafficSystem = {
     },
 
     /**
-     * Pick a point along some path inside [spawnRadius, despawn*0.75] of the player.
+     * Pick a point along some lane edge inside [spawnRadius, despawn*0.75] of the player.
      * Avoids spawning at map ends that sit right on the despawn edge.
      */
     findSpawnCandidate(player) {
@@ -165,28 +175,26 @@ export const TrafficSystem = {
         const inRing = [];
         const fallback = [];
 
-        for (const pathName of Object.keys(Waypoints.paths)) {
-            const path = Waypoints.paths[pathName];
-            if (path.length < 2) continue;
+        for (const edge of Waypoints.edges) {
+            if (edge.length < MIN_SPAWN_EDGE_LEN) continue;
+            const a = Waypoints.nodes[edge.from];
+            const b = Waypoints.nodes[edge.to];
+            const angle = Math.atan2(b.y - a.y, b.x - a.x);
+            const steps = Math.max(1, Math.round(edge.length / 60));
 
-            for (let i = 0; i < path.length - 1; i++) {
-                const a = path[i];
-                const b = path[i + 1];
-                for (let s = 0; s <= 10; s++) {
-                    const t = s / 10;
-                    const x = a.x + (b.x - a.x) * t;
-                    const y = a.y + (b.y - a.y) * t;
-                    const angle = Math.atan2(b.y - a.y, b.x - a.x);
-                    const entry = { pathName, x, y, targetIndex: i + 1, pathDir: 1, angle, dist: 0 };
+            for (let s = 0; s <= steps; s++) {
+                const t = s / steps;
+                const x = a.x + (b.x - a.x) * t;
+                const y = a.y + (b.y - a.y) * t;
+                const entry = { fromNode: edge.from, node: edge.to, x, y, angle, dist: 0 };
 
-                    if (player) {
-                        entry.dist = Math.hypot(x - player.transform.x, y - player.transform.y);
-                        if (entry.dist < minD) continue;
-                        fallback.push(entry);
-                        if (entry.dist <= maxD) inRing.push(entry);
-                    } else {
-                        inRing.push(entry);
-                    }
+                if (player) {
+                    entry.dist = Math.hypot(x - player.transform.x, y - player.transform.y);
+                    if (entry.dist < minD) continue;
+                    fallback.push(entry);
+                    if (entry.dist <= maxD) inRing.push(entry);
+                } else {
+                    inRing.push(entry);
                 }
             }
         }
@@ -203,35 +211,36 @@ export const TrafficSystem = {
     },
 
     /**
-     * After player exits a traffic car far from its route — rebind to nearest segment.
+     * After player exits a traffic car far from its route — rebind to the nearest lane
+     * edge. Heading is scored too, so the car resumes on the lane that matches the way
+     * it is actually pointing rather than the geometrically closest opposing lane.
      */
-    retargetNearest(car, path) {
-        let bestDist = Infinity;
-        let bestTarget = 1;
-        let bestDir = 1;
+    retargetNearest(car) {
+        let bestScore = Infinity;
+        let bestLat = Infinity;
+        let best = null;
+        const cos = Math.cos(car.transform.angle);
+        const sin = Math.sin(car.transform.angle);
 
-        for (let i = 0; i < path.length - 1; i++) {
-            const a = path[i];
-            const b = path[i + 1];
+        for (const edge of Waypoints.edges) {
+            const a = Waypoints.nodes[edge.from];
+            const b = Waypoints.nodes[edge.to];
             const { latDist } = this.projectOnSegment(car, a, b);
-            if (latDist < bestDist) {
-                bestDist = latDist;
-                // Prefer continuing toward the farther endpoint of the segment
-                const da = Math.hypot(car.transform.x - a.x, car.transform.y - a.y);
-                const db = Math.hypot(car.transform.x - b.x, car.transform.y - b.y);
-                if (db >= da) {
-                    bestTarget = i + 1;
-                    bestDir = 1;
-                } else {
-                    bestTarget = i;
-                    bestDir = -1;
-                }
+            const len = edge.length || 1;
+            const alignment = ((b.x - a.x) / len) * cos + ((b.y - a.y) / len) * sin;
+            const score = latDist + RETARGET_HEADING_PENALTY * (1 - alignment) / 2;
+            if (score < bestScore) {
+                bestScore = score;
+                bestLat = latDist;
+                best = edge;
             }
         }
 
-        car.ai.targetIndex = bestTarget;
-        car.ai.pathDir = bestDir;
-        car.ai.recovering = bestDist > ON_PATH_DIST;
+        if (best) {
+            car.ai.fromNode = best.from;
+            car.ai.node = best.to;
+        }
+        car.ai.recovering = bestLat > ON_PATH_DIST;
         car.ai.driftTimer = 0;
         car.ai.driftAngle = 0;
         car.ai.needsRetarget = false;
@@ -371,24 +380,47 @@ export const TrafficSystem = {
         }
     },
 
-    getPrevNode(path, targetIndex, pathDir) {
-        const prevIdx = targetIndex - pathDir;
-        if (prevIdx < 0 || prevIdx >= path.length) {
-            return path[targetIndex];
-        }
-        return path[prevIdx];
+    /**
+     * Shift the lane edge sideways by the car's own `laneOffset`, so cars sharing a lane
+     * don't ride one perfect line. Right-hand normal of (dx, dy) in y-down space: (-dy, dx).
+     */
+    laneSegment(car, prevNode, target) {
+        const bias = car.ai.laneOffset || 0;
+        if (!bias) return { prev: prevNode, target };
+
+        const dx = target.x - prevNode.x;
+        const dy = target.y - prevNode.y;
+        const len = Math.hypot(dx, dy);
+        if (len < 1e-6) return { prev: prevNode, target };
+
+        const nx = (-dy / len) * bias;
+        const ny = (dx / len) * bias;
+        return {
+            prev: { x: prevNode.x + nx, y: prevNode.y + ny },
+            target: { x: target.x + nx, y: target.y + ny }
+        };
     },
 
-    advanceWaypoint(car, path) {
-        if (car.ai.pathDir === undefined) car.ai.pathDir = 1;
+    /**
+     * Reached the target node — choose the next one. At an intersection node the options
+     * are "straight on" and one turn (right at the near node, left at the far one), so a
+     * turn is a plain weighted coin flip; dead ends at the city edge offer only the
+     * turnaround onto the opposite lane.
+     */
+    advanceNode(car) {
+        const options = Waypoints.turnOptions(car.ai.node, car.ai.fromNode);
+        if (options.all.length === 0) return;
 
-        const next = car.ai.targetIndex + car.ai.pathDir;
-        if (next < 0 || next >= path.length) {
-            car.ai.pathDir *= -1;
-            car.ai.targetIndex += car.ai.pathDir;
-        } else {
-            car.ai.targetIndex = next;
+        let next = null;
+        if (options.right && Math.random() < RIGHT_TURN_CHANCE) {
+            next = options.right;
+        } else if (options.left && Math.random() < LEFT_TURN_CHANCE) {
+            next = options.left;
         }
+        if (!next) next = options.straight || options.all[0];
+
+        car.ai.fromNode = car.ai.node;
+        car.ai.node = next;
     },
 
     /**
@@ -421,27 +453,24 @@ export const TrafficSystem = {
     },
 
     updateCar(car, dt) {
-        const path = Waypoints.paths[car.ai.pathName];
-        if (!path || path.length < 2) return;
-
-        if (car.ai.pathDir === undefined) car.ai.pathDir = 1;
-        if (car.ai.needsRetarget) {
-            this.retargetNearest(car, path);
+        if (car.ai.needsRetarget || !Waypoints.getNode(car.ai.node)) {
+            this.retargetNearest(car);
         }
 
-        let target = path[car.ai.targetIndex];
-        let prevNode = this.getPrevNode(path, car.ai.targetIndex, car.ai.pathDir);
+        let node = Waypoints.getNode(car.ai.node);
+        if (!node) return;
+        let from = Waypoints.getNode(car.ai.fromNode) || node;
 
-        let dx = target.x - car.transform.x;
-        let dy = target.y - car.transform.y;
-        let dist = Math.sqrt(dx * dx + dy * dy);
+        const dx = node.x - car.transform.x;
+        const dy = node.y - car.transform.y;
 
-        if (dist < ARRIVAL_RADIUS) {
-            this.advanceWaypoint(car, path);
-            target = path[car.ai.targetIndex];
-            prevNode = this.getPrevNode(path, car.ai.targetIndex, car.ai.pathDir);
+        if (Math.sqrt(dx * dx + dy * dy) < ARRIVAL_RADIUS) {
+            this.advanceNode(car);
+            node = Waypoints.getNode(car.ai.node) || node;
+            from = Waypoints.getNode(car.ai.fromNode) || node;
         }
 
+        const { prev: prevNode, target } = this.laneSegment(car, from, node);
         const seek = this.computeSeekPoint(car, prevNode, target);
         this.updateDrift(car, dt, seek.latDist);
 

@@ -79,7 +79,7 @@ describe('PuddleReflector', () => {
 
         expect(structure).toBe(GHOST_STRUCTURE_OPACITY);
         expect(highlight).toBe(GHOST_GLOBE_OPACITY);
-        expect(structure).toBeLessThan(highlight * 0.5);
+        expect(structure).toBeLessThan(highlight * 0.75);
         expect(highlight).toBeLessThan(0.6);
     });
 

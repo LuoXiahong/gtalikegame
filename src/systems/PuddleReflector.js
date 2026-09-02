@@ -43,7 +43,10 @@ export const GHOST_Y_SCALE = -0.35;
  * suggestion, and the mirrored scene bounce is pulled well down.
  */
 export const GHOST_STRUCTURE_OPACITY = 0.16;
-export const GHOST_GLOBE_OPACITY = 0.45;
+// MeshBasicMaterial, so this doesn't dim with the scene — once the asphalt around it
+// got genuinely dark (fog/key-light pass), the globe's fixed brightness stood out as a
+// ring instead of a highlight. Lowered from 0.45.
+export const GHOST_GLOBE_OPACITY = 0.25;
 export const REFLECTOR_OPACITY = 0.2;
 /** Disc tint strength — it should darken the asphalt, not stamp a patch on it. */
 export const DISC_OPACITY = 0.55;

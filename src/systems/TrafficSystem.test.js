@@ -15,6 +15,15 @@ vi.mock('../world/World.js', () => ({
     }
 }));
 
+/** Pin a car onto lane edge `index -> index + 1`, with no lane jitter, for determinism. */
+function bindToLane(car, laneName, index) {
+    const lane = Waypoints.lanes[laneName];
+    car.ai.fromNode = lane[index];
+    car.ai.node = lane[index + 1];
+    car.ai.laneOffset = 0;
+    car.ai.needsRetarget = false;
+}
+
 describe('TrafficSystem', () => {
     beforeEach(() => {
         World.entities = [];
@@ -59,9 +68,7 @@ describe('TrafficSystem', () => {
         const car = World.getEntitiesByType('car')[0];
 
         // Deterministic lane + heading so the obstacle stays in the forward sensor cone
-        car.ai.pathName = 'EW_0_E';
-        car.ai.targetIndex = 1;
-        car.ai.pathDir = 1;
+        bindToLane(car, 'EW_0_E', 0);
         const y = Waypoints.paths.EW_0_E[0].y;
         car.transform.x = 1000;
         car.transform.y = y;
@@ -150,30 +157,31 @@ describe('TrafficSystem', () => {
         expect(World.entities.includes(car)).toBe(true);
     });
 
-    it('should spawn cars with zero laneOffset on a path sample', () => {
+    it('should spawn cars bound to a lane edge with a small lane bias', () => {
         TrafficSystem.maxCars = 1;
         TrafficSystem.spawnRadius = 0;
         TrafficSystem.despawnRadius = 5000;
         TrafficSystem.update(0.1);
         const car = World.getEntitiesByType('car')[0];
-        const path = Waypoints.paths[car.ai.pathName];
-        expect(car.ai.laneOffset).toBe(0);
-        expect(path).toBeDefined();
-        // Position lies on the path segment (not necessarily path[0])
-        const a = path[0];
-        const b = path[1];
-        const { latDist } = TrafficSystem.projectOnSegment(car, a, b);
+
+        const from = Waypoints.getNode(car.ai.fromNode);
+        const target = Waypoints.getNode(car.ai.node);
+        expect(from).not.toBeNull();
+        expect(target).not.toBeNull();
+        expect(Waypoints.getSuccessors(car.ai.fromNode)).toContain(car.ai.node);
+        // Personal lane jitter is small — the car still sits on its own lane
+        expect(Math.abs(car.ai.laneOffset)).toBeLessThanOrEqual(6);
+        const { latDist } = TrafficSystem.projectOnSegment(car, from, target);
         expect(latDist).toBeLessThan(1);
     });
 
-    it('should steer toward path waypoint target', () => {
+    it('should steer toward its target node', () => {
         TrafficSystem.maxCars = 1;
         TrafficSystem.spawnRadius = 0;
         TrafficSystem.update(0.1);
         const car = World.getEntitiesByType('car')[0];
 
-        const path = Waypoints.paths[car.ai.pathName];
-        const target = path[car.ai.targetIndex];
+        const target = Waypoints.getNode(car.ai.node);
         // Point away from target so steering has work to do
         car.transform.angle = Math.atan2(target.y - car.transform.y, target.x - car.transform.x) + 1.0;
         const angleBefore = car.transform.angle;
@@ -186,46 +194,73 @@ describe('TrafficSystem', () => {
         expect(errAfter).toBeLessThan(errBefore);
     });
 
-    it('should reverse (wayback) at path end instead of jumping to start', () => {
+    it('should advance onto a successor of the reached node, never a U-turn', () => {
         TrafficSystem.maxCars = 1;
         TrafficSystem.spawnRadius = 0;
         TrafficSystem.update(0.1);
         const car = World.getEntitiesByType('car')[0];
-        const path = Waypoints.paths[car.ai.pathName];
+        bindToLane(car, 'NS_0_S', 0);
 
-        // Place car on the final waypoint, traveling forward
-        const last = path[path.length - 1];
-        car.transform.x = last.x;
-        car.transform.y = last.y;
-        car.ai.targetIndex = path.length - 1;
-        car.ai.pathDir = 1;
+        for (let i = 0; i < 200; i++) {
+            const from = Waypoints.getNode(car.ai.fromNode);
+            const reached = car.ai.node;
+            TrafficSystem.advanceNode(car);
 
-        const posBefore = { x: car.transform.x, y: car.transform.y };
-        TrafficSystem.update(0.016);
+            expect(car.ai.fromNode).toBe(reached);
+            expect(Waypoints.getSuccessors(reached)).toContain(car.ai.node);
 
-        expect(car.ai.pathDir).toBe(-1);
-        expect(car.ai.targetIndex).toBe(path.length - 2);
-        // Still near the end — no teleport to path start
-        expect(Math.hypot(car.transform.x - posBefore.x, car.transform.y - posBefore.y)).toBeLessThan(30);
-        expect(Math.hypot(car.transform.x - path[0].x, car.transform.y - path[0].y)).toBeGreaterThan(100);
+            // Outgoing leg never reverses the incoming one
+            const node = Waypoints.getNode(reached);
+            const next = Waypoints.getNode(car.ai.node);
+            const inLen = Math.hypot(node.x - from.x, node.y - from.y);
+            const outLen = Math.hypot(next.x - node.x, next.y - node.y);
+            const dot = ((node.x - from.x) / inLen) * ((next.x - node.x) / outLen)
+                + ((node.y - from.y) / inLen) * ((next.y - node.y) / outLen);
+            expect(dot).toBeGreaterThan(-0.5);
+        }
     });
 
-    it('should reverse again at path start (ping-pong)', () => {
+    it('should turn onto the cross street sometimes and mostly go straight', () => {
         TrafficSystem.maxCars = 1;
         TrafficSystem.spawnRadius = 0;
         TrafficSystem.update(0.1);
         const car = World.getEntitiesByType('car')[0];
-        const path = Waypoints.paths[car.ai.pathName];
 
-        car.transform.x = path[0].x;
-        car.transform.y = path[0].y;
-        car.ai.targetIndex = 0;
-        car.ai.pathDir = -1;
+        const lane = Waypoints.lanes.NS_0_S;
+        let straight = 0;
+        let turned = 0;
+
+        for (let i = 0; i < 400; i++) {
+            bindToLane(car, 'NS_0_S', 0);
+            const options = Waypoints.turnOptions(lane[1], lane[0]);
+            TrafficSystem.advanceNode(car);
+            if (car.ai.node === options.straight) straight++;
+            else turned++;
+        }
+
+        expect(turned).toBeGreaterThan(0);
+        expect(straight).toBeGreaterThan(turned);
+    });
+
+    it('should hand a car at the city edge to the opposite lane instead of reversing', () => {
+        TrafficSystem.maxCars = 1;
+        TrafficSystem.spawnRadius = 0;
+        TrafficSystem.update(0.1);
+        const car = World.getEntitiesByType('car')[0];
+
+        const lane = Waypoints.lanes.NS_0_S;
+        const deadEnd = Waypoints.getNode(lane[lane.length - 1]);
+        car.ai.fromNode = lane[lane.length - 2];
+        car.ai.node = lane[lane.length - 1];
+        car.ai.laneOffset = 0;
+        car.transform.x = deadEnd.x;
+        car.transform.y = deadEnd.y;
 
         TrafficSystem.update(0.016);
 
-        expect(car.ai.pathDir).toBe(1);
-        expect(car.ai.targetIndex).toBe(1);
+        expect(car.ai.node).toBe(Waypoints.lanes.NS_0_N[0]);
+        // No teleport — the car is still at the map edge where it arrived
+        expect(Math.hypot(car.transform.x - deadEnd.x, car.transform.y - deadEnd.y)).toBeLessThan(30);
     });
 
     it('should seek back toward path when far off (no teleport)', () => {
@@ -233,13 +268,12 @@ describe('TrafficSystem', () => {
         TrafficSystem.spawnRadius = 0;
         TrafficSystem.update(0.1);
         const car = World.getEntitiesByType('car')[0];
-        const path = Waypoints.paths[car.ai.pathName];
-        const prev = path[0];
-        const target = path[1];
+        bindToLane(car, 'NS_0_S', 0);
+        const prev = Waypoints.getNode(car.ai.fromNode);
+        const target = Waypoints.getNode(car.ai.node);
 
         car.transform.x = (prev.x + target.x) / 2 + 150;
         car.transform.y = (prev.y + target.y) / 2 + 150;
-        car.ai.targetIndex = 1;
         car.ai.recovering = true;
         car.ai.vx = 0;
         car.ai.vy = 0;
@@ -273,17 +307,22 @@ describe('TrafficSystem', () => {
         TrafficSystem.update(0.1);
         const car = World.getEntitiesByType('car')[0];
 
-        car.ai.pathName = 'EW_0_E';
-        car.ai.targetIndex = 1;
-        car.ai.needsRetarget = true;
         const y = Waypoints.paths.EW_0_E[0].y;
-        car.transform.x = 1800;
+        car.ai.needsRetarget = true;
+        car.ai.laneOffset = 0;
+        // Mid-block, so the nearest lane is unambiguously the eastbound one
+        car.transform.x = 1400;
         car.transform.y = y + 200;
+        car.transform.angle = 0; // heading east
 
         TrafficSystem.update(0.016);
 
         expect(car.ai.needsRetarget).toBe(false);
         expect(car.ai.recovering).toBe(true);
+        // Rebound to an eastbound edge — the lane that matches where it points
+        const from = Waypoints.getNode(car.ai.fromNode);
+        const target = Waypoints.getNode(car.ai.node);
+        expect(target.x).toBeGreaterThan(from.x);
     });
     it('should reduce speed gradually as obstacle approaches (braking lerp)', () => {
         TrafficSystem.maxCars = 1;
@@ -363,8 +402,7 @@ describe('TrafficSystem', () => {
         TrafficSystem.update(0.1);
         const car = World.getEntitiesByType('car')[0];
 
-        car.ai.pathName = 'EW_0_E';
-        car.ai.targetIndex = 1;
+        bindToLane(car, 'EW_0_E', 0);
         car.ai.driftTimer = 0;
         car.ai.recovering = false;
         car.ai.vx = 100;
@@ -392,8 +430,7 @@ describe('TrafficSystem', () => {
         TrafficSystem.update(0.1);
         const car = World.getEntitiesByType('car')[0];
 
-        car.ai.pathName = 'EW_0_E';
-        car.ai.targetIndex = 1;
+        bindToLane(car, 'EW_0_E', 0);
         car.ai.driftTimer = 0;
         car.ai.recovering = false;
         car.ai.vx = 100;
@@ -429,8 +466,7 @@ describe('TrafficSystem', () => {
         TrafficSystem.update(0.1);
         const car = World.getEntitiesByType('car')[0];
 
-        car.ai.pathName = 'EW_0_E';
-        car.ai.targetIndex = 1;
+        bindToLane(car, 'EW_0_E', 0);
         car.ai.vx = 200;
         car.ai.vy = 0;
         const y = Waypoints.paths.EW_0_E[0].y;

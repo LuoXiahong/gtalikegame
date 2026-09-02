@@ -67,8 +67,11 @@ export const PoliceSystem = {
             for (let i = 0; i < path.length - 1; i++) {
                 const a = path[i];
                 const b = path[i + 1];
-                for (let s = 0; s <= 8; s++) {
-                    const t = s / 8;
+                // Lanes are segmented at intersections — sample by length so the short
+                // intersection stubs don't outweigh open road.
+                const steps = Math.max(1, Math.round(Math.hypot(b.x - a.x, b.y - a.y) / 60));
+                for (let s = 0; s <= steps; s++) {
+                    const t = s / steps;
                     const x = a.x + (b.x - a.x) * t;
                     const y = a.y + (b.y - a.y) * t;
                     const dist = Math.hypot(x - target.transform.x, y - target.transform.y);
