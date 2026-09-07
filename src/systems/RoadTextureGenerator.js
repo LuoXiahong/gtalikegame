@@ -125,19 +125,25 @@ export const RoadTextureGenerator = {
         if (this._wetness !== 'rain') return 0;
         if (type === 'straight') return 3;
         if (type === 'intersection') return 2;
+        if (type === 'crosswalk') return 1;
         return 0;
     },
 
     /**
-     * Material knobs — road stays mostly matte; puddle gloss comes from roughnessMap
-     * (dark = shiny). Mild envMap so puddles can catch lamp/env highlights.
+     * Material knobs. Puddle gloss still comes from roughnessMap (dark = shiny) on top
+     * of this base — but the base itself used to be flatly matte (0.92 against a #e6e6e6
+     * roughness map ≈ effective 0.83), so only the puddles themselves had any sheen and
+     * the rest of the asphalt read as dry. `envMapIntensity` only actually reaches the
+     * material now that it has its own `.envMap` (see CityBuilder3D.js / RoadBuilder3D.js
+     * on why that pin was necessary at all) — before that fix this value was silently
+     * replaced by the scene-wide default, so raising it here would have done nothing.
      */
     getSurfaceMaterialProps() {
         if (this._wetness === 'rain') {
             return {
-                roughness: 0.92,
-                metalness: 0.04,
-                envMapIntensity: 0.55,
+                roughness: 0.70,
+                metalness: 0.08,
+                envMapIntensity: 1.1,
             };
         }
         return {

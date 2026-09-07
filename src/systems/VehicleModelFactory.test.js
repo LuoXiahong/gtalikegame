@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import {
     createVehicleModel,
     pickArchetypeKey,
-    VEHICLE_ARCHETYPES
+    VEHICLE_ARCHETYPES,
+    setSharedEnvironment
 } from './VehicleModelFactory.js';
 import { EventBus } from '../core/EventBus.js';
 
@@ -91,6 +92,22 @@ describe('VehicleModelFactory', () => {
             expect(darkMat.color.getHex()).toBe(baseDarkColor);
             expect(chromeMat.roughness).toBeCloseTo(baseChromeRoughness);
             expect(chromeMat.color.getHex()).toBe(baseChromeColor);
+        });
+
+        it('boosts envMapIntensity on rain (wet reflects more, not just dims) and restores on clear (T55)', () => {
+            setSharedEnvironment({ isTexture: true });
+            const model = createVehicleModel(0x2266aa, 'sedan_30s');
+            const bodyMat = model.children[0].material;
+            const base = bodyMat.envMapIntensity;
+            expect(base).toBeGreaterThan(0);
+
+            EventBus.emit('weather_change', 'rain');
+            expect(bodyMat.envMapIntensity).toBeGreaterThan(base);
+
+            EventBus.emit('weather_change', 'clear');
+            expect(bodyMat.envMapIntensity).toBeCloseTo(base);
+
+            setSharedEnvironment(null);
         });
 
         it('does not drift after repeated rain/clear toggles', () => {

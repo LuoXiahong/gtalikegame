@@ -9,10 +9,12 @@ import { addContactShadow } from './ContactShadow.js';
 import { EventBus } from '../core/EventBus.js';
 import { EVENTS } from '../core/Events.js';
 
-// Wet/dim look on rain: lower roughness (subtle sheen) + darker albedo.
-// Kept subtle so vehicles read as "wet/dim", not shiny plastic or blacked-out.
+// Wet/dim look on rain: lower roughness (subtle sheen) + darker albedo. WET_ENV_MULT
+// (T55) is the missing other half: wet lacquer is darker in diffuse but brighter in
+// reflection — without it a "wet" car body just reads as a dimmer dry one.
 const WET_ROUGHNESS_MULT = 0.6;
 const WET_COLOR_MULT = 0.8;
+const WET_ENV_MULT = 2.5;
 
 // All live vehicle materials created by createVehicleModel(), so a single
 // weather_change event can re-tune every currently-existing vehicle at once
@@ -40,6 +42,7 @@ function trackMaterial(mat) {
         mat.envMap = _envMap;
         // Pin explicitly — see NPCModelFactory.js's trackMaterial for why.
         mat.envMapIntensity = 0.35;
+        mat.userData.baseEnvMapIntensity = 0.35;
     }
     liveMaterials.add(mat);
 }
@@ -55,9 +58,15 @@ function applyWeatherToMaterials(weather) {
         if (wet) {
             mat.roughness = mat.userData.baseRoughness * WET_ROUGHNESS_MULT;
             mat.color.setHex(mat.userData.baseColorHex).multiplyScalar(WET_COLOR_MULT);
+            if (mat.userData.baseEnvMapIntensity !== undefined) {
+                mat.envMapIntensity = mat.userData.baseEnvMapIntensity * WET_ENV_MULT;
+            }
         } else {
             mat.roughness = mat.userData.baseRoughness;
             mat.color.setHex(mat.userData.baseColorHex);
+            if (mat.userData.baseEnvMapIntensity !== undefined) {
+                mat.envMapIntensity = mat.userData.baseEnvMapIntensity;
+            }
         }
         mat.needsUpdate = true;
     }

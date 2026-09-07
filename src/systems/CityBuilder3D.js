@@ -10,6 +10,7 @@ import { createPropAt } from './PropFactory.js';
 import { createTreeAt, plantHash } from './TreeFactory.js';
 import { addContactShadow } from './ContactShadow.js';
 import { bakeStaticInstances } from './StaticInstancer.js';
+import { RoofTextureGenerator } from './RoofTextureGenerator.js';
 
 /** Inset from block outer edge onto sidewalk (2D px). */
 export const LAMP_EDGE_INSET = 30;
@@ -45,6 +46,15 @@ export const BUILDING_ALBEDO = {
     shop: 0x9a9b9c,
     skyscraperTiers: [0x8d9094, 0x84878b, 0x7b7e82, 0x6f7276],
 };
+
+/**
+ * Dedicated roof color (T56) — residential/shop roofs used to inherit the exact wall
+ * baseColor via topMat, so the strongest walorowy contrast on ref (dach vs elewacja,
+ * ~94 poziomy) had nothing to work with here. Cool concrete, independent of archetype.
+ * Kept modest (not brighter than this) — a lamp-lit roof already flirts with
+ * BLOOM_THRESHOLD (see T36/T38 log in STATUS.md) and this one gets its own envMap pin.
+ */
+export const ROOF_ALBEDO = 0x86898d;
 
 /**
  * Roof clutter (HVAC, masts, vents, billboard frames) repeats on every building
@@ -502,15 +512,18 @@ export const CityBuilder3D = {
     },
 
     getBuildingMaterials(type, width, height, depth, baseColor) {
-        // No .envMap on topMat/bottomMat: they have no explicit envMapIntensity of
-        // their own (T56 decides that), so pinning envMap here would swap the global
-        // environmentIntensity for three's default of 1 instead — a brightness
-        // regression, not a fix (verified by screenshot).
+        // Dedicated roof material (T56): own albedo + weather-reactive roughnessMap
+        // sparkle, not the wall's baseColor — see ROOF_ALBEDO and RoofTextureGenerator.
+        const roofProps = RoofTextureGenerator.getSurfaceMaterialProps();
         const topMat = new THREE.MeshStandardMaterial({
-            color: baseColor,
-            roughness: 0.8,
-            metalness: 0.1
+            color: ROOF_ALBEDO,
+            roughness: roofProps.roughness,
+            metalness: roofProps.metalness,
+            roughnessMap: RoofTextureGenerator.getRoughnessTexture()
         });
+        if (_envMap) topMat.envMap = _envMap;
+        topMat.envMapIntensity = roofProps.envMapIntensity;
+        RoofTextureGenerator.trackMaterial(topMat);
         const bottomMat = topMat;
 
         let matX, matZ;

@@ -60,7 +60,7 @@ const ALLOWED_HELPER_TARGETS = new Set([
     'TreeFactory.js', 'VehicleModelFactory.js', 'RoadTextureGenerator.js', 'RoadBuilder3D.js',
     'CityBuilder3D.js', 'RetroFilmSettings.js', 'RetroFilmShader.js', 'TiltShiftShader.js',
     'TimeOfDaySettings.js', 'StaticInstancer.js', 'PuddleReflector.js', 'RainSystem.js',
-    'ScreenshotCapture.js', 'RenderSync3D.js',
+    'ScreenshotCapture.js', 'RenderSync3D.js', 'RoofTextureGenerator.js',
 ]);
 
 const FROZEN_SYSTEM_IMPORTS = new Set([

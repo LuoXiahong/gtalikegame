@@ -36,7 +36,7 @@ describe('RoadTextureGenerator', () => {
         expect(albedo.userData.puddles).toEqual([]);
     });
 
-    it('getSurfaceMaterialProps keeps rain road mostly matte (puddle gloss via map)', () => {
+    it('getSurfaceMaterialProps gives rain road a global wet-sheen (puddle gloss on top via map)', () => {
         RoadTextureGenerator._wetness = 'clear';
         expect(RoadTextureGenerator.getSurfaceMaterialProps()).toEqual({
             roughness: 1.0,
@@ -45,9 +45,9 @@ describe('RoadTextureGenerator', () => {
         });
         RoadTextureGenerator._wetness = 'rain';
         expect(RoadTextureGenerator.getSurfaceMaterialProps()).toEqual({
-            roughness: 0.92,
-            metalness: 0.04,
-            envMapIntensity: 0.55,
+            roughness: 0.70,
+            metalness: 0.08,
+            envMapIntensity: 1.1,
         });
     });
 
@@ -72,9 +72,9 @@ describe('RoadTextureGenerator', () => {
         };
         RoadTextureGenerator._wetness = 'rain';
         RoadTextureGenerator.applyWetnessToMeshes([opaque, glass]);
-        expect(opaque.material.roughness).toBeCloseTo(0.92);
-        expect(opaque.material.metalness).toBeCloseTo(0.04);
-        expect(opaque.material.envMapIntensity).toBeCloseTo(0.55);
+        expect(opaque.material.roughness).toBeCloseTo(0.70);
+        expect(opaque.material.metalness).toBeCloseTo(0.08);
+        expect(opaque.material.envMapIntensity).toBeCloseTo(1.1);
         expect(opaque.material.needsUpdate).toBe(true);
         expect(glass.material.roughness).toBe(0.85);
         expect(glass.material.envMapIntensity).toBe(0);
@@ -148,7 +148,7 @@ describe('RoadTextureGenerator', () => {
 
         RoadTextureGenerator.setWetness('rain', [mesh]);
         const rainPatches = [...RoadTextureGenerator.getTexture('straight').userData.wetPatches];
-        expect(mesh.material.envMapIntensity).toBeCloseTo(0.55);
+        expect(mesh.material.envMapIntensity).toBeCloseTo(1.1);
 
         RoadTextureGenerator.setWetness('clear', [mesh]);
         expect(RoadTextureGenerator._wetness).toBe('clear');
@@ -161,7 +161,7 @@ describe('RoadTextureGenerator', () => {
         expect(again.length).toBeGreaterThan(0);
         // Rebake replaces patch list (new random layout)
         expect(again).not.toBe(rainPatches);
-        expect(mesh.material.envMapIntensity).toBeCloseTo(0.55);
+        expect(mesh.material.envMapIntensity).toBeCloseTo(1.1);
         expect(RoadTextureGenerator.getTexture('straight').userData.puddles.length).toBeGreaterThan(0);
     });
 
@@ -206,13 +206,13 @@ describe('RoadTextureGenerator', () => {
         expect(gradients.length).toBe(1);
     });
 
-    it('_puddleCount is rain-only and zero on crosswalk', () => {
+    it('_puddleCount is rain-only, crosswalks get a puddle too now (T54)', () => {
         RoadTextureGenerator._wetness = 'clear';
         expect(RoadTextureGenerator._puddleCount('straight')).toBe(0);
         RoadTextureGenerator._wetness = 'rain';
         expect(RoadTextureGenerator._puddleCount('straight')).toBe(3);
         expect(RoadTextureGenerator._puddleCount('intersection')).toBe(2);
-        expect(RoadTextureGenerator._puddleCount('crosswalk')).toBe(0);
+        expect(RoadTextureGenerator._puddleCount('crosswalk')).toBe(1);
     });
 
     it('setWetness stays fully synchronous by default (no deferral)', () => {

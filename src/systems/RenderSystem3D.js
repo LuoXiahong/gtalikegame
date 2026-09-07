@@ -21,6 +21,7 @@ import { createPooledStreetLight, setSharedEnvironment as setPropSharedEnvironme
 import { FacadeGenerator } from './FacadeGenerator.js';
 import { RenderSync3D } from './RenderSync3D.js';
 import { RoadTextureGenerator } from './RoadTextureGenerator.js';
+import { RoofTextureGenerator } from './RoofTextureGenerator.js';
 import { setSharedEnvironment as setNPCSharedEnvironment } from './NPCModelFactory.js';
 import { setSharedEnvironment as setVehicleSharedEnvironment } from './VehicleModelFactory.js';
 
@@ -255,6 +256,7 @@ export const RenderSystem3D = {
         RainSystem.setActive(TimeOfDaySettings.isRaining());
         const roadMeshes = [...(this.laneMarkings || []), ...(this.zebras || [])];
         RoadTextureGenerator.setWetness(TimeOfDaySettings.weather, roadMeshes);
+        RoofTextureGenerator.setWetness(TimeOfDaySettings.weather);
         this.puddleReflectors = createPuddleReflectors(this.scene, {
             active: TimeOfDaySettings.isRaining()
         });
@@ -356,6 +358,7 @@ export const RenderSystem3D = {
         RainSystem.setActive(weather === 'rain');
         const roadMeshes = [...(this.laneMarkings || []), ...(this.zebras || [])];
         RoadTextureGenerator.setWetness(weather, roadMeshes, { defer: true });
+        RoofTextureGenerator.setWetness(weather);
         setPuddleReflectorsActive(this.puddleReflectors, weather === 'rain');
     },
 

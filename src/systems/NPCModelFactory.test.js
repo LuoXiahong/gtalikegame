@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { createNPCModel, NPC_COLOR_PALETTE, NPC_RIG } from './NPCModelFactory.js';
+import { createNPCModel, NPC_COLOR_PALETTE, NPC_RIG, setSharedEnvironment } from './NPCModelFactory.js';
 import { EventBus } from '../core/EventBus.js';
 
 /** First mesh found under a node (limb joints wrap their mesh). */
@@ -149,6 +149,22 @@ describe('NPCModelFactory', () => {
                 expect(m.roughness).toBeCloseTo(base[i].roughness);
                 expect(m.color.getHex()).toBe(base[i].color);
             });
+        });
+
+        it('boosts envMapIntensity on rain (wet reflects more, not just dims) and restores on clear (T55)', () => {
+            setSharedEnvironment({ isTexture: true });
+            const rig = createNPCModel(0x3d3d3d).userData.rig;
+            const mat = firstMesh(rig.torso).material;
+            const base = mat.envMapIntensity;
+            expect(base).toBeGreaterThan(0);
+
+            EventBus.emit('weather_change', 'rain');
+            expect(mat.envMapIntensity).toBeGreaterThan(base);
+
+            EventBus.emit('weather_change', 'clear');
+            expect(mat.envMapIntensity).toBeCloseTo(base);
+
+            setSharedEnvironment(null);
         });
 
         it('does not drift after repeated rain/clear toggles', () => {

@@ -4,6 +4,15 @@ import { RenderSync3D } from './RenderSync3D.js';
 import { World } from '../world/World.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { Time } from '../core/Time.js';
+import { TimeOfDaySettings } from './TimeOfDaySettings.js';
+
+/** True if `obj` or any ancestor is a T53 wet-street mirror ghost. */
+function isInsideMirrorGhost(obj) {
+    for (let p = obj; p; p = p.parent) {
+        if (p.userData?.isMirrorGhost) return true;
+    }
+    return false;
+}
 
 // Mock World
 vi.mock('../world/World.js', () => ({
@@ -33,6 +42,7 @@ describe('RenderSync3D', () => {
         World.entities = [];
         World.tilemap.getTileAt.mockReturnValue(0);
         World.missionMarker = null;
+        TimeOfDaySettings.weather = 'clear';
     });
 
     it('should create dynamic meshes for player, npc, and car', () => {
@@ -85,10 +95,11 @@ describe('RenderSync3D', () => {
         expect(carMesh.position.z).toBeCloseTo(600 * SF);
         expect(carMesh.rotation.y).toBe(0.5);
 
-        // Shadows + MeshStandardMaterial (skip flat contact-shadow blobs)
+        // Shadows + MeshStandardMaterial (skip flat contact-shadow blobs and the
+        // T53 wet-street mirror ghost, which is deliberately a cheap unlit clone)
         [playerMesh, npcMesh, carMesh].forEach(meshGroup => {
             meshGroup.traverse(child => {
-                if (child.isMesh && child.name !== 'contactShadow') {
+                if (child.isMesh && child.name !== 'contactShadow' && !isInsideMirrorGhost(child)) {
                     expect(child.material instanceof THREE.MeshStandardMaterial).toBe(true);
                     expect(child.castShadow).toBe(true);
                     expect(child.receiveShadow).toBe(true);
@@ -223,6 +234,45 @@ describe('RenderSync3D', () => {
 
         expect(mockScene.remove).toHaveBeenCalled();
         expect(RenderSync3D.targetMesh).toBeNull();
+    });
+
+    describe('wet-street mirror ghost (T53)', () => {
+        it('creates a mirror ghost for player/npc/car, hidden by default', () => {
+            World.entities = [
+                { id: 'player1', type: 'player', transform: { x: 0, y: 0, angle: 0 }, visible: true },
+                { id: 'npc1', type: 'npc', transform: { x: 0, y: 0, angle: 0 }, visible: true },
+                { id: 'car1', type: 'car', transform: { x: 0, y: 0, angle: 0 }, visible: true }
+            ];
+            RenderSync3D.update(mockScene);
+
+            for (const id of ['player1', 'npc1', 'car1']) {
+                const mesh = RenderSync3D.meshes.get(id);
+                const mirror = mesh.userData.mirror;
+                expect(mirror).toBeDefined();
+                expect(mirror.userData.isMirrorGhost).toBe(true);
+                expect(mirror.scale.y).toBeLessThan(0); // squashed + flipped below ground
+                expect(mirror.visible).toBe(false); // TimeOfDaySettings.weather === 'clear'
+            }
+        });
+
+        it('shows the mirror only when raining on asphalt, not on the sidewalk', () => {
+            World.entities = [
+                { id: 'npc1', type: 'npc', transform: { x: 0, y: 0, angle: 0 }, visible: true }
+            ];
+            World.tilemap.getTileAt.mockReturnValue(0); // street
+
+            TimeOfDaySettings.weather = 'clear';
+            RenderSync3D.update(mockScene);
+            expect(RenderSync3D.meshes.get('npc1').userData.mirror.visible).toBe(false);
+
+            TimeOfDaySettings.weather = 'rain';
+            RenderSync3D.update(mockScene);
+            expect(RenderSync3D.meshes.get('npc1').userData.mirror.visible).toBe(true);
+
+            World.tilemap.getTileAt.mockReturnValue(2); // sidewalk — no puddle sheen
+            RenderSync3D.update(mockScene);
+            expect(RenderSync3D.meshes.get('npc1').userData.mirror.visible).toBe(false);
+        });
     });
 
     it('should reset meshes and targetMesh correctly', () => {

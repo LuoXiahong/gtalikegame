@@ -6,7 +6,22 @@ import { EventBus } from '../core/EventBus.js';
 import { EVENTS } from '../core/Events.js';
 import { RetroFilmSettings } from '../systems/RetroFilmSettings.js';
 import { FILM_STRIP_WIDTH } from '../systems/RetroFilmShader.js';
+import { TimeOfDaySettings } from '../systems/TimeOfDaySettings.js';
 import { I18n } from '../i18n/I18n.js';
+
+/**
+ * Static lens-droplet spots (T57) — a handful of fixed positions rather than a
+ * simulated trickle: this is a "someone forgot to wipe the lens" cue, not a
+ * physically-accurate rain sim, so a few always-there smudges read correctly
+ * without any per-frame cost.
+ */
+const DROPLET_SPOTS = [
+    { top: '6%', left: '5%', size: 22 },
+    { top: '11%', right: '8%', size: 15 },
+    { bottom: '13%', left: '9%', size: 18 },
+    { bottom: '8%', right: '6%', size: 27 },
+    { top: '42%', left: '2.5%', size: 12 },
+];
 
 const CSS = `
 #filmGateChrome {
@@ -57,12 +72,29 @@ const CSS = `
 #gameContainer.retro-film #minimap {
     filter: contrast(1.04) brightness(1.02);
 }
+#filmLensDroplets {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+#filmLensDroplets.active {
+    opacity: 1;
+}
+.filmDroplet {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.4), rgba(200, 212, 230, 0.14) 45%, transparent 72%);
+    filter: blur(0.5px);
+}
 `;
 
 export const FilmGateOverlay = {
     _root: null,
     _counter: null,
     _tally: null,
+    _droplets: null,
     _frame: 0,
     _lastStep: 0,
     _active: false,
@@ -83,17 +115,35 @@ export const FilmGateOverlay = {
 
         const counter = document.createElement('div');
         counter.id = 'filmFrameCounter';
+
+        const droplets = document.createElement('div');
+        droplets.id = 'filmLensDroplets';
+        for (const spot of DROPLET_SPOTS) {
+            const drop = document.createElement('span');
+            drop.className = 'filmDroplet';
+            drop.style.width = `${spot.size}px`;
+            drop.style.height = `${spot.size}px`;
+            if (spot.top !== undefined) drop.style.top = spot.top;
+            if (spot.bottom !== undefined) drop.style.bottom = spot.bottom;
+            if (spot.left !== undefined) drop.style.left = spot.left;
+            if (spot.right !== undefined) drop.style.right = spot.right;
+            droplets.appendChild(drop);
+        }
+
         this._root = root;
         this._counter = counter;
         this._tally = tally;
+        this._droplets = droplets;
         this._updateCounterText();
 
         root.appendChild(tally);
         root.appendChild(counter);
+        root.appendChild(droplets);
         container.appendChild(root);
 
         this.sync();
         EventBus.on(EVENTS.RETRO_SETTINGS_CHANGE, () => this.sync());
+        EventBus.on(EVENTS.WEATHER_CHANGE, () => this.sync());
         EventBus.on(EVENTS.LOCALE_CHANGE, () => this._updateCounterText());
     },
 
@@ -113,6 +163,9 @@ export const FilmGateOverlay = {
             container.classList.toggle('retro-film', this._active);
             container.style.setProperty('--film-strip', this._active ? `${FILM_STRIP_WIDTH * 100}%` : '0%');
             container.style.setProperty('--film-sepia', String(RetroFilmSettings.sepia / 100));
+        }
+        if (this._droplets) {
+            this._droplets.classList.toggle('active', this._active && TimeOfDaySettings.isRaining());
         }
     },
 

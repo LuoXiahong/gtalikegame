@@ -29,6 +29,18 @@ const WIND_DRIFT = 15;
 const STREAK_WIDTH = 0.05;
 const STREAK_LENGTH = 3.2;
 
+/**
+ * Splash sparkle where a drop hits the ground (T57). A small pool of flat,
+ * additive discs — not one per raindrop (700 splashes/frame would be noise, not
+ * sparkle) — recycled round-robin and only triggered for a fraction of resets,
+ * so hits read as sparse glints rather than a saturated glitter carpet.
+ */
+const SPLASH_POOL_SIZE = 48;
+const SPLASH_LIFETIME = 0.3;
+const SPLASH_MAX_SCALE = 0.5;
+const SPLASH_TRIGGER_CHANCE = 0.1;
+const SPLASH_Y = 0.02;
+
 function createDropTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 8;
@@ -42,6 +54,25 @@ function createDropTexture() {
         grad.addColorStop(1, 'rgba(165, 178, 195, 0)');
         ctx.fillStyle = grad;
         ctx.fillRect(2, 0, 4, 48);
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return tex;
+}
+
+/** Soft round glint — the splash equivalent of createDropTexture's streak. */
+function createSplashTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+        const grad = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+        grad.addColorStop(0, 'rgba(235, 244, 255, 0.9)');
+        grad.addColorStop(0.4, 'rgba(210, 224, 245, 0.5)');
+        grad.addColorStop(1, 'rgba(200, 210, 225, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 32, 32);
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.needsUpdate = true;
@@ -111,6 +142,13 @@ function writeInstanceMatrix(mesh, index, x, y, z, windX, fallY, lengthScale) {
     mesh.setMatrixAt(index, _mat);
 }
 
+function writeSplashMatrix(mesh, index, x, y, z, scale) {
+    _scale.set(scale, scale, scale);
+    _mat.makeScale(_scale.x, _scale.y, _scale.z);
+    _mat.setPosition(x, y, z);
+    mesh.setMatrixAt(index, _mat);
+}
+
 export const RainSystem = {
     /** @type {THREE.InstancedMesh|null} */
     mesh: null,
@@ -126,6 +164,13 @@ export const RainSystem = {
     _lengthScales: null,
     _active: false,
     _coverage: null,
+
+    /** @type {THREE.InstancedMesh|null} T57 ground-hit splash pool. */
+    splashMesh: null,
+    _splashAge: null,
+    _splashX: null,
+    _splashZ: null,
+    _splashCursor: 0,
 
     init(scene) {
         if (this.mesh || !scene) return;
@@ -191,6 +236,39 @@ export const RainSystem = {
         this._lengthScales = lengthScales;
         this._coverage = cover;
         scene.add(mesh);
+
+        // Flat disc, lying on the ground — rotation baked into the geometry so
+        // per-instance matrices only need translation + uniform scale.
+        const splashGeometry = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+        const splashMaterial = new THREE.MeshBasicMaterial({
+            map: createSplashTexture(),
+            color: 0xdce8f8,
+            transparent: true,
+            depthWrite: false,
+            depthTest: false,
+            fog: false,
+            blending: THREE.AdditiveBlending,
+            toneMapped: false,
+            alphaTest: 0.02,
+        });
+        const splashMesh = new THREE.InstancedMesh(splashGeometry, splashMaterial, SPLASH_POOL_SIZE);
+        splashMesh.frustumCulled = false;
+        splashMesh.renderOrder = 199;
+        splashMesh.visible = false;
+        splashMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+
+        const splashAge = new Float32Array(SPLASH_POOL_SIZE).fill(SPLASH_LIFETIME);
+        for (let i = 0; i < SPLASH_POOL_SIZE; i++) {
+            writeSplashMatrix(splashMesh, i, 0, SPLASH_Y, 0, 0);
+        }
+        splashMesh.instanceMatrix.needsUpdate = true;
+
+        this.splashMesh = splashMesh;
+        this._splashAge = splashAge;
+        this._splashX = new Float32Array(SPLASH_POOL_SIZE);
+        this._splashZ = new Float32Array(SPLASH_POOL_SIZE);
+        this._splashCursor = 0;
+        scene.add(splashMesh);
     },
 
     setActive(active) {
@@ -198,6 +276,18 @@ export const RainSystem = {
         if (this.mesh) {
             this.mesh.visible = this._active;
         }
+        if (this.splashMesh) {
+            this.splashMesh.visible = this._active;
+        }
+    },
+
+    /** Recycles the oldest pool slot for a fresh ground-hit glint. */
+    _triggerSplash(x, z) {
+        const idx = this._splashCursor;
+        this._splashCursor = (idx + 1) % SPLASH_POOL_SIZE;
+        this._splashAge[idx] = 0;
+        this._splashX[idx] = x;
+        this._splashZ[idx] = z;
     },
 
     update(dt, focusX, focusZ, cameraZoom = 1, aspect = 4 / 3) {
@@ -228,6 +318,9 @@ export const RainSystem = {
             positions[i3 + 1] -= fallY * safeDt;
 
             if (positions[i3 + 1] < 0) {
+                if (Math.random() < SPLASH_TRIGGER_CHANCE) {
+                    this._triggerSplash(positions[i3], positions[i3 + 2]);
+                }
                 positions[i3 + 1] = height;
                 positions[i3] = (Math.random() * 2 - 1) * halfW;
                 positions[i3 + 2] = (Math.random() * 2 - 1) * halfD;
@@ -249,5 +342,21 @@ export const RainSystem = {
         }
 
         mesh.instanceMatrix.needsUpdate = true;
+
+        if (this.splashMesh) {
+            this.splashMesh.position.copy(mesh.position);
+            const age = this._splashAge;
+            const sx = this._splashX;
+            const sz = this._splashZ;
+            for (let i = 0; i < SPLASH_POOL_SIZE; i++) {
+                if (age[i] < SPLASH_LIFETIME) age[i] += safeDt;
+                // sin(t*PI): 0 → peak at mid-life → 0, so pool slots that were
+                // never triggered (age pinned at LIFETIME) stay at scale 0.
+                const t = Math.min(age[i] / SPLASH_LIFETIME, 1);
+                const scale = Math.sin(t * Math.PI) * SPLASH_MAX_SCALE;
+                writeSplashMatrix(this.splashMesh, i, sx[i], SPLASH_Y, sz[i], scale);
+            }
+            this.splashMesh.instanceMatrix.needsUpdate = true;
+        }
     },
 };

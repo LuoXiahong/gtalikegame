@@ -8,6 +8,53 @@ import { Time } from '../core/Time.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
 import { createNPCModel } from './NPCModelFactory.js';
 import { createVehicleModel, pickArchetypeKey } from './VehicleModelFactory.js';
+import { TimeOfDaySettings } from './TimeOfDaySettings.js';
+
+// Wet-street mirror ghost (T53): a squashed, translucent silhouette clone sitting
+// below every character/vehicle, visible only on rain and only on asphalt (not
+// sidewalk, where there's no puddle sheen to reflect in). Not SSR (closed
+// decision, see meta/STATUS.md) — same static-silhouette trick as
+// PuddleReflector's inverted lamp ghost, just applied to moving entities instead
+// of a fixed lamp. Cloned once at mesh-creation time (pre-pose), so NPC limbs
+// stay in their idle stance rather than tracking the live walk cycle — an
+// acceptable trade at 0.25 opacity and -0.55 squash, where fine limb articulation
+// doesn't read anyway.
+const MIRROR_Y_SCALE = -0.55;
+const MIRROR_OPACITY = 0.25;
+
+/**
+ * Builds a squashed, unlit silhouette clone of a freshly-created model group for
+ * use as its wet-street reflection. One shared material across every cloned mesh
+ * (it's a flat silhouette, not a lit surface) keeps the material count from
+ * doubling on every rainy frame.
+ * @param {THREE.Group} sourceGroup
+ * @returns {THREE.Group}
+ */
+function createMirrorGhost(sourceGroup) {
+    const mirror = sourceGroup.clone(true);
+    const ghostMat = new THREE.MeshBasicMaterial({
+        color: 0x0a0c10,
+        transparent: true,
+        opacity: MIRROR_OPACITY,
+        depthWrite: false,
+        fog: false
+    });
+    mirror.traverse(child => {
+        if (!child.isMesh) return;
+        if (child.name === 'contactShadow') {
+            child.visible = false;
+            return;
+        }
+        child.material = ghostMat;
+        child.castShadow = false;
+        child.receiveShadow = false;
+    });
+    mirror.scale.set(1, MIRROR_Y_SCALE, 1);
+    mirror.renderOrder = 3;
+    mirror.userData.isMirrorGhost = true;
+    mirror.visible = false;
+    return mirror;
+}
 
 export const RenderSync3D = {
     meshes: new Map(), // entityId -> THREE.Object3D
@@ -67,6 +114,12 @@ export const RenderSync3D = {
             const pose = ent.visual?.pose;
             mesh.position.y = groundY + (pose?.bounce || 0);
             this.applyPose(mesh, pose);
+
+            if (mesh.userData.mirror) {
+                // Reflections read as puddle sheen on the street — not on the
+                // raised, dry sidewalk slab.
+                mesh.userData.mirror.visible = groundY === 0 && TimeOfDaySettings.isRaining();
+            }
 
             // 2D angle → 3D yaw (Y)
             mesh.rotation.y = -ent.transform.angle;
@@ -149,6 +202,12 @@ export const RenderSync3D = {
                 child.receiveShadow = true;
             }
         });
+
+        if (ent.type === 'player' || ent.type === 'npc' || ent.type === 'car') {
+            const mirror = createMirrorGhost(group);
+            group.add(mirror);
+            group.userData.mirror = mirror;
+        }
 
         return group;
     },

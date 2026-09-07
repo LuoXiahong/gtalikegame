@@ -276,16 +276,16 @@ describe('RenderSystem3D', () => {
         RenderSystem3D.init();
         const lane = RenderSystem3D.laneMarkings[0];
         expect(lane.material.roughnessMap).toBeDefined();
-        // Default weather is rain → matte road + puddle gloss via roughnessMap
-        expect(lane.material.roughness).toBeCloseTo(0.92);
-        expect(lane.material.metalness).toBeCloseTo(0.04);
-        expect(lane.material.envMapIntensity).toBeCloseTo(0.55);
+        // Default weather is rain → global wet-sheen base + puddle gloss via roughnessMap
+        expect(lane.material.roughness).toBeCloseTo(0.70);
+        expect(lane.material.metalness).toBeCloseTo(0.08);
+        expect(lane.material.envMapIntensity).toBeCloseTo(1.1);
     });
 
     it('should dry road materials when weather switches to clear', () => {
         RenderSystem3D.init();
         const lane = RenderSystem3D.laneMarkings[0];
-        expect(lane.material.envMapIntensity).toBeCloseTo(0.55);
+        expect(lane.material.envMapIntensity).toBeCloseTo(1.1);
 
         TimeOfDaySettings.applyWeather('clear');
         expect(lane.material.roughness).toBe(1);
@@ -293,8 +293,8 @@ describe('RenderSystem3D', () => {
         expect(lane.material.envMapIntensity).toBe(0);
 
         TimeOfDaySettings.applyWeather('rain');
-        expect(lane.material.envMapIntensity).toBeCloseTo(0.55);
-        expect(lane.material.metalness).toBeCloseTo(0.04);
+        expect(lane.material.envMapIntensity).toBeCloseTo(1.1);
+        expect(lane.material.metalness).toBeCloseTo(0.08);
     });
 
     it('should keep bloom pass before film grading with soft lamp glow settings', () => {

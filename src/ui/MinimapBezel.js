@@ -1,7 +1,12 @@
 /**
- * Matte dark minimap bezel + recessed glass overlay, not a 3D mesh.
- * Palette is deliberately neutral/desaturated: the HUD must never be the most
- * saturated thing on screen next to the monochrome noir scene.
+ * Minimap bezel + recessed glass overlay, not a 3D mesh.
+ * Palette is deliberately neutral/desaturated (no hue) — the HUD must never be
+ * the most SATURATED thing on screen next to the monochrome noir scene. That's
+ * an orthogonal axis from brightness: T32 darkened this ring after "shiny-blue
+ * clashes with noir" feedback, conflating the two (it also killed the hue).
+ * T59 raises the ring back toward a brighter chrome read — same neutral grey
+ * stops, no blue reintroduced — since a truly matte ring reads flat/plastic
+ * next to ref's bright turned-metal bezel.
  */
 
 /** Ring thickness in canvas px (130×130 minimap). */
@@ -128,18 +133,18 @@ export function drawMinimapBezel(ctx, width, height) {
 
     if (typeof ctx.createConicGradient === 'function') {
         const metal = ctx.createConicGradient(-Math.PI * 0.65, cx, cy);
-        metal.addColorStop(0, '#26272a');
-        metal.addColorStop(0.1, '#63656a');
-        metal.addColorStop(0.22, '#3a3c40');
-        metal.addColorStop(0.38, '#75777d');
-        metal.addColorStop(0.5, '#2e2f33');
-        metal.addColorStop(0.62, '#5a5c61');
-        metal.addColorStop(0.78, '#222326');
-        metal.addColorStop(0.9, '#6b6d72');
-        metal.addColorStop(1, '#26272a');
+        metal.addColorStop(0, '#34363a');
+        metal.addColorStop(0.1, '#82858c');
+        metal.addColorStop(0.22, '#4c4e53');
+        metal.addColorStop(0.38, '#9a9ca3');
+        metal.addColorStop(0.5, '#3f4045');
+        metal.addColorStop(0.62, '#787a80');
+        metal.addColorStop(0.78, '#2f3033');
+        metal.addColorStop(0.9, '#8d8f95');
+        metal.addColorStop(1, '#34363a');
         ctx.fillStyle = metal;
     } else {
-        ctx.fillStyle = '#45474b';
+        ctx.fillStyle = '#5c5e63';
     }
     ctx.fill();
 
@@ -153,7 +158,7 @@ export function drawMinimapBezel(ctx, width, height) {
     // Outer specular lip
     ctx.beginPath();
     ctx.arc(cx, cy, rOuter - 1.25, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.24)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
@@ -167,21 +172,21 @@ export function drawMinimapBezel(ctx, width, height) {
     // Inner neutral highlight
     ctx.beginPath();
     ctx.arc(cx, cy, rInner + 1.75, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(205, 205, 208, 0.14)';
+    ctx.strokeStyle = 'rgba(210, 210, 214, 0.22)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Restrained glints — enough to read as metal, not as chrome
+    // Glints — brighter than T32's "restrained" pass, closer to a chrome read
     const midR = (rOuter + rInner) / 2;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.24)';
-    ctx.lineWidth = 2.25;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 2.6;
     ctx.beginPath();
     ctx.arc(cx, cy, midR, -2.35, -1.55);
     ctx.stroke();
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.lineWidth = 1.8;
     ctx.beginPath();
     ctx.arc(cx, cy, midR, 0.45, 1.05);
     ctx.stroke();

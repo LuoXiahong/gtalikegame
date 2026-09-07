@@ -7,10 +7,13 @@ import { addContactShadow } from './ContactShadow.js';
 import { EventBus } from '../core/EventBus.js';
 import { EVENTS } from '../core/Events.js';
 
-// Wet/dim look on rain: lower roughness (subtle sheen) + darker albedo.
-// Kept subtle so NPCs read as "wet/dim", not shiny plastic or blacked-out.
+// Wet/dim look on rain: lower roughness (subtle sheen) + darker albedo. Kept subtle so
+// NPCs read as "wet/dim", not shiny plastic or blacked-out. WET_ENV_MULT is the other
+// half of "wet" that was missing (T55): rain darkens in diffuse but should brighten in
+// reflection — a raincoat catching a lamp is a highlight, not just a dimmer coat.
 const WET_ROUGHNESS_MULT = 0.6;
 const WET_COLOR_MULT = 0.8;
+const WET_ENV_MULT = 2.5;
 
 // All live NPC materials created by createNPCModel(), so a single weather_change
 // event can re-tune every currently-existing NPC at once (materials are created
@@ -41,6 +44,7 @@ function trackMaterial(mat) {
         // into .envMap without this would jump from environmentIntensity to three's
         // default of 1.
         mat.envMapIntensity = 0.35;
+        mat.userData.baseEnvMapIntensity = 0.35;
     }
     liveMaterials.add(mat);
 }
@@ -56,9 +60,15 @@ function applyWeatherToMaterials(weather) {
         if (wet) {
             mat.roughness = mat.userData.baseRoughness * WET_ROUGHNESS_MULT;
             mat.color.setHex(mat.userData.baseColorHex).multiplyScalar(WET_COLOR_MULT);
+            if (mat.userData.baseEnvMapIntensity !== undefined) {
+                mat.envMapIntensity = mat.userData.baseEnvMapIntensity * WET_ENV_MULT;
+            }
         } else {
             mat.roughness = mat.userData.baseRoughness;
             mat.color.setHex(mat.userData.baseColorHex);
+            if (mat.userData.baseEnvMapIntensity !== undefined) {
+                mat.envMapIntensity = mat.userData.baseEnvMapIntensity;
+            }
         }
         mat.needsUpdate = true;
     }
