@@ -51,7 +51,7 @@ describe('RoadTextureGenerator', () => {
         });
     });
 
-    it('applyWetnessToMeshes updates opaque road materials and skips transparent', () => {
+    it('applyWetnessToMeshes wets opaque roads; overlays keep matte but track the IBL term', () => {
         const opaque = {
             material: {
                 transparent: false,
@@ -76,8 +76,14 @@ describe('RoadTextureGenerator', () => {
         expect(opaque.material.metalness).toBeCloseTo(0.08);
         expect(opaque.material.envMapIntensity).toBeCloseTo(1.1);
         expect(opaque.material.needsUpdate).toBe(true);
+        // The crosswalk overlay must not gain the asphalt's wet sheen...
         expect(glass.material.roughness).toBe(0.85);
-        expect(glass.material.envMapIntensity).toBe(0);
+        expect(glass.material.metalness).toBe(0);
+        // ...but it must get the same env light, or the paint renders darker
+        // than the road it is painted on (invisible until the lamps stopped
+        // spilling sideways onto it — T61).
+        expect(glass.material.envMapIntensity).toBeCloseTo(1.1);
+        expect(glass.material.needsUpdate).toBe(true);
     });
 
     it('setWetness lays out spaced potholes and ruts for rain on straight', () => {

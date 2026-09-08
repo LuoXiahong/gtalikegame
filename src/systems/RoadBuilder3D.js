@@ -124,13 +124,17 @@ export const RoadBuilder3D = {
         const geom = new THREE.PlaneGeometry(roadW, depth);
         const texture = RoadTextureGenerator.getTexture('crosswalk');
         // Transparent overlay: only the stripes render, asphalt below stays visible
+        const wet = RoadTextureGenerator.getSurfaceMaterialProps();
         const mat = new THREE.MeshStandardMaterial({
             map: texture,
             transparent: true,
             depthWrite: false,
+            // Matte on purpose (the wet sheen belongs to the asphalt below), but the
+            // paint needs the same IBL term as that asphalt — at 0 it renders darker
+            // than the road it is painted on.
             roughness: 0.85,
             metalness: 0.0,
-            envMapIntensity: 0
+            envMapIntensity: wet.envMapIntensity,
         });
         if (renderSystem.scene.environment) mat.envMap = renderSystem.scene.environment;
 

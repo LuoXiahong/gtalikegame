@@ -162,17 +162,22 @@ export const RoadTextureGenerator = {
 
     /**
      * Push wet/dry material params onto road meshes after texture rebake.
-     * Skips transparent overlays (crosswalk stripes — asphalt gloss shows below).
+     *
+     * Transparent overlays (crosswalk stripes) keep their matte roughness —
+     * the wet gloss belongs to the asphalt showing through below — but still
+     * track the IBL term, otherwise the paint ends up darker than that asphalt.
      * @param {Iterable<{ material?: THREE.Material }>} meshes
      */
     applyWetnessToMeshes(meshes) {
         const props = this.getSurfaceMaterialProps();
         for (const mesh of meshes || []) {
             const mat = mesh?.material;
-            if (!mat || mat.transparent) continue;
-            mat.roughness = props.roughness;
-            mat.metalness = props.metalness;
+            if (!mat) continue;
             mat.envMapIntensity = props.envMapIntensity;
+            if (!mat.transparent) {
+                mat.roughness = props.roughness;
+                mat.metalness = props.metalness;
+            }
             mat.needsUpdate = true;
         }
     },
