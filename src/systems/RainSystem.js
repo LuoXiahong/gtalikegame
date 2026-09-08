@@ -37,8 +37,11 @@ const STREAK_LENGTH = 3.2;
  */
 const SPLASH_POOL_SIZE = 48;
 const SPLASH_LIFETIME = 0.3;
-const SPLASH_MAX_SCALE = 0.5;
-const SPLASH_TRIGGER_CHANCE = 0.1;
+// Live-play feedback (@user): first pass (0.5 scale / 0.1 chance) read as a
+// following "footprint" trail rather than sparse glints once the position bug
+// above was compounding it — halved both, independent of that fix.
+const SPLASH_MAX_SCALE = 0.3;
+const SPLASH_TRIGGER_CHANCE = 0.05;
 const SPLASH_Y = 0.02;
 
 function createDropTexture() {
@@ -263,6 +266,12 @@ export const RainSystem = {
         }
         splashMesh.instanceMatrix.needsUpdate = true;
 
+        // World-space, unlike `mesh` (whose local coords are relative to the
+        // ever-shifting camera-following rain coverage window) — splashes must
+        // stay put on the ground where the drop actually landed, not drift
+        // along with whatever the coverage window is currently centred on.
+        splashMesh.position.set(0, 0, 0);
+
         this.splashMesh = splashMesh;
         this._splashAge = splashAge;
         this._splashX = new Float32Array(SPLASH_POOL_SIZE);
@@ -319,7 +328,11 @@ export const RainSystem = {
 
             if (positions[i3 + 1] < 0) {
                 if (Math.random() < SPLASH_TRIGGER_CHANCE) {
-                    this._triggerSplash(positions[i3], positions[i3 + 2]);
+                    // Convert to world space (mesh.position already holds this
+                    // frame's camera-following offset) — splashMesh itself stays
+                    // fixed at the origin, so a stored local coord would silently
+                    // re-anchor to wherever the coverage window drifts to next.
+                    this._triggerSplash(positions[i3] + mesh.position.x, positions[i3 + 2] + mesh.position.z);
                 }
                 positions[i3 + 1] = height;
                 positions[i3] = (Math.random() * 2 - 1) * halfW;
@@ -344,7 +357,6 @@ export const RainSystem = {
         mesh.instanceMatrix.needsUpdate = true;
 
         if (this.splashMesh) {
-            this.splashMesh.position.copy(mesh.position);
             const age = this._splashAge;
             const sx = this._splashX;
             const sz = this._splashZ;

@@ -222,7 +222,7 @@ describe('RenderSystem3D', () => {
         const pool = RenderSystem3D.streetLights;
         const countLights = () => {
             let n = 0;
-            RenderSystem3D.scene.traverse(o => { if (o.isPointLight) n++; });
+            RenderSystem3D.scene.traverse(o => { if (o.userData?.isStreetLight) n++; });
             return n;
         };
 
@@ -232,14 +232,51 @@ describe('RenderSystem3D', () => {
         RenderSystem3D.updateStreetLightPool(260, 260);
         const after = countLights();
 
-        // The pool moves; it never grows, shrinks or hides. three.js bakes
-        // NUM_POINT_LIGHTS into the shader, so a changing count would recompile
-        // every affected material mid-play — a visible hitch.
+        // The pool moves; it never grows, shrinks or hides. three.js bakes the
+        // light count into the shader, so a changing one would recompile every
+        // affected material mid-play — a visible hitch.
         expect(after).toBe(before);
         expect(pool.length).toBe(STREET_LIGHT_POOL_SIZE);
         expect(pool.every(l => l.visible)).toBe(true);
         // ...and it actually tracked the focus point rather than staying put.
         expect(pool.some((l, i) => !l.position.equals(nearby[i]))).toBe(true);
+    });
+
+    it('lamps are downward cones whose target tracks the light (T61)', () => {
+        RenderSystem3D.init();
+        const pool = RenderSystem3D.streetLights;
+        expect(RenderSystem3D.streetLightMode).toBe('spot');
+        expect(pool.every(l => l.isSpotLight)).toBe(true);
+        // A SpotLight aims at its target's world position, so a target outside
+        // the light's own scene graph would silently keep the cone pointing at
+        // the origin — no world matrix update, no error.
+        expect(pool.every(l => l.parent && l.target.parent === l.parent)).toBe(true);
+
+        RenderSystem3D.updateStreetLightPool(110, 110);
+        for (const light of pool) {
+            if (light.position.y < 0) continue; // parked surplus
+            expect(light.target.position.x).toBeCloseTo(light.position.x);
+            expect(light.target.position.z).toBeCloseTo(light.position.z);
+            expect(light.target.position.y).toBe(0);
+        }
+    });
+
+    it('keeps the pre-T61 isotropic bulb available as ?lamp=point', () => {
+        RenderSystem3D.init();
+        // The pool is built once per renderer lifetime, so exercise the other
+        // branch on a fresh pool rather than by re-initialising the scene.
+        const spotPool = RenderSystem3D.streetLights;
+        RenderSystem3D.streetLights = [];
+        try {
+            const pool = RenderSystem3D.initStreetLightPool('point');
+            expect(pool.length).toBe(STREET_LIGHT_POOL_SIZE);
+            expect(pool.every(l => l.isPointLight)).toBe(true);
+            // No target to move: updateStreetLightPool must not assume one.
+            expect(() => RenderSystem3D.updateStreetLightPool(110, 110)).not.toThrow();
+        } finally {
+            for (const l of RenderSystem3D.streetLights) RenderSystem3D.scene.remove(l);
+            RenderSystem3D.streetLights = spotPool;
+        }
     });
 
     it('street light pool picks the nearest lamp spots without duplicates', () => {

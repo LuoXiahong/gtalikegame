@@ -15,7 +15,7 @@ export function setSharedEnvironment(envMap) {
 }
 
 /**
- * PointLight reach — local curb pool via lighting, not a fake disc overlay (T6).
+ * Street-light reach — local curb pool via lighting, not a fake disc overlay (T6).
  *
  * Three.js windows a distance-limited light to exactly zero at `distance`, so a
  * tight radius terminates the pool on a visible hard rim. Widening the radius
@@ -27,6 +27,19 @@ export function setSharedEnvironment(envMap) {
  */
 export const STREET_LIGHT_DISTANCE = 24;
 export const STREET_LIGHT_DECAY = 2;
+
+/**
+ * Cone half-angle and edge softness of the lamp's SpotLight (T61 — the cone
+ * beat the old isotropic PointLight in the A/B, `?lamp=point` still restores it).
+ *
+ * The head sits 4.9 u up, so a half-angle of ~55 deg puts the cone's hard edge
+ * ~7 u out on the ground, past where the inverse-square falloff is already
+ * spent — the pool keeps its size, only the sideways/upward spill is cut.
+ * Penumbra carries most of the look: 0 gives a stencil-sharp ellipse, 1 blurs
+ * the cone away into the PointLight it replaced.
+ */
+export const STREET_LIGHT_ANGLE = THREE.MathUtils.degToRad(55);
+export const STREET_LIGHT_PENUMBRA = 0.75;
 
 /**
  * Every prop type repeats dozens of times (72 lamp posts alone) with fixed
@@ -89,7 +102,7 @@ export function createProp(type) {
 
 function addLampPost(group) {
     // Unlit matte paint — Standard/Lambert still pick a white streak from the
-    // PointLight on this same post (thin cylinder → specular alias flicker).
+    // street light on this same post (thin cylinder → specular alias flicker).
     const poleMat = sharedMat('lamp-pole', () => new THREE.MeshBasicMaterial({ color: 0x3a3a42 }));
     // Base plinth so the pole reads grounded from the isometric view
     const base = new THREE.Mesh(
@@ -130,7 +143,7 @@ function addLampPost(group) {
     globe.position.set(0.75, 4.9, 0);
     group.add(globe);
 
-    // Where a pooled PointLight should sit if this lamp is one of the nearest.
+    // Where a pooled light should sit if this lamp is one of the nearest.
     // The post itself no longer owns a light: 72 posts meant 72 PointLights, and
     // MeshStandardMaterial evaluates every one of them per fragment regardless of
     // distance. RenderSystem3D keeps a small fixed pool and moves it here instead.
@@ -142,18 +155,33 @@ function addLampPost(group) {
  * One pooled street light. RenderSystem3D creates a small fixed number of these
  * once and repositions them onto the nearest lamp posts every frame.
  *
- * The count must never change at runtime: three.js bakes NUM_POINT_LIGHTS into
- * the shader, so adding or hiding lights recompiles every material using them,
- * which shows up as a frame hitch.
- * @returns {THREE.PointLight}
+ * The count must never change at runtime: three.js bakes NUM_POINT_LIGHTS /
+ * NUM_SPOT_LIGHTS into the shader, so adding or hiding lights recompiles every
+ * material using them, which shows up as a frame hitch. The mode is likewise
+ * fixed at pool creation, never per frame.
+ *
+ * Both modes share colour, intensity, distance and decay, so the only
+ * difference is the angular term — three.js applies no extra gain inside a
+ * spot cone, so the pool directly under the lamp matches the PointLight.
+ * @param {'point'|'spot'} [mode]
+ * @returns {THREE.PointLight|THREE.SpotLight}
  */
-export function createPooledStreetLight() {
-    const light = new THREE.PointLight(
-        0xd0dae8,
-        STREET_LIGHT_BASE,
-        STREET_LIGHT_DISTANCE,
-        STREET_LIGHT_DECAY
-    );
+export function createPooledStreetLight(mode = 'spot') {
+    const light = mode === 'spot'
+        ? new THREE.SpotLight(
+            0xd0dae8,
+            STREET_LIGHT_BASE,
+            STREET_LIGHT_DISTANCE,
+            STREET_LIGHT_ANGLE,
+            STREET_LIGHT_PENUMBRA,
+            STREET_LIGHT_DECAY
+        )
+        : new THREE.PointLight(
+            0xd0dae8,
+            STREET_LIGHT_BASE,
+            STREET_LIGHT_DISTANCE,
+            STREET_LIGHT_DECAY
+        );
     light.castShadow = false;
     light.userData.isStreetLight = true;
     light.userData.baseIntensity = STREET_LIGHT_BASE;

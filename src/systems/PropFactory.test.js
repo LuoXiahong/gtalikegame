@@ -5,6 +5,8 @@ import {
     createPropAt,
     PROP_TYPES,
     STREET_LIGHT_DISTANCE,
+    STREET_LIGHT_ANGLE,
+    STREET_LIGHT_PENUMBRA,
     createPooledStreetLight
 } from './PropFactory.js';
 import { WorldMetrics } from '../world/WorldMetrics.js';
@@ -44,13 +46,38 @@ describe('PropFactory', () => {
     });
 
     it('createPooledStreetLight yields a reusable street light', () => {
-        const light = createPooledStreetLight();
+        const light = createPooledStreetLight('point');
         expect(light).toBeInstanceOf(THREE.PointLight);
         expect(light.userData.isStreetLight).toBe(true);
         expect(light.distance).toBe(STREET_LIGHT_DISTANCE);
         expect(light.intensity).toBeCloseTo(STREET_LIGHT_BASE);
         expect(light.castShadow).toBe(false);
         expect(light.userData.baseIntensity).toBeCloseTo(STREET_LIGHT_BASE);
+    });
+
+    it('defaults to the downward cone that won the T61 A/B', () => {
+        const light = createPooledStreetLight();
+        expect(light).toBeInstanceOf(THREE.SpotLight);
+        expect(light.angle).toBeCloseTo(STREET_LIGHT_ANGLE);
+        expect(light.penumbra).toBeCloseTo(STREET_LIGHT_PENUMBRA);
+        // Everything but the angular term must match the PointLight, otherwise
+        // the A/B compared brightness rather than light shape.
+        const point = createPooledStreetLight('point');
+        expect(light.intensity).toBeCloseTo(point.intensity);
+        expect(light.distance).toBe(point.distance);
+        expect(light.decay).toBe(point.decay);
+        expect(light.color.getHex()).toBe(point.color.getHex());
+        expect(light.castShadow).toBe(false);
+        expect(light.userData.isStreetLight).toBe(true);
+    });
+
+    it('cone reaches the kerb before its hard edge cuts in', () => {
+        // Head height from the lamp post; the cone edge must land outside the
+        // radius where the pool is still visibly bright, or it reads as a disc.
+        const headY = createProp('lampPost').userData.lampLightOffset.y;
+        const groundRadius = Math.tan(STREET_LIGHT_ANGLE) * headY;
+        expect(groundRadius).toBeGreaterThan(6);
+        expect(groundRadius).toBeLessThan(STREET_LIGHT_DISTANCE);
     });
 
     it('uses an unlit pole material so nearby PointLights cannot specular-flicker', () => {

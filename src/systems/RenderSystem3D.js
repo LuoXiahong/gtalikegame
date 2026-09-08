@@ -41,11 +41,11 @@ import {
     setPuddleReflectorsActive
 } from './PuddleReflector.js';
 
-/** Base PointLight intensity from PropFactory lamp posts. */
+/** Base street-light intensity from PropFactory lamp posts. */
 export const STREET_LIGHT_BASE = 380;
 
 /**
- * How many street lights actually exist as PointLights.
+ * How many of the map's lamp posts actually own a light.
  *
  * The map holds 72 lamp posts. Giving each one a light meant every
  * MeshStandardMaterial fragment evaluated 72 point lights, distance-culled by
@@ -54,8 +54,9 @@ export const STREET_LIGHT_BASE = 380;
  * hides the rest long before they would contribute.
  *
  * This number is deliberately constant for the lifetime of the renderer:
- * three.js compiles NUM_POINT_LIGHTS into every affected shader, so growing or
- * shrinking the set forces a recompile and a visible frame hitch.
+ * three.js compiles NUM_POINT_LIGHTS / NUM_SPOT_LIGHTS into every affected
+ * shader, so growing or shrinking the set forces a recompile and a visible
+ * frame hitch.
  */
 export const STREET_LIGHT_POOL_SIZE = 16;
 const TOD_TRANSITION_SEC = 1.5;
@@ -90,8 +91,13 @@ export const RenderSystem3D = {
     trees: [],
     billboards: [],
     props: [],
-    /** Fixed pool of PointLights (see STREET_LIGHT_POOL_SIZE). */
+    /** Fixed pool of street lights (see STREET_LIGHT_POOL_SIZE). */
     streetLights: [],
+    /**
+     * 'spot' (cone aimed straight down, default) or 'point' (the old isotropic
+     * bulb, `?lamp=point`). Read once from the URL before the pool is built.
+     */
+    streetLightMode: 'spot',
     /** Candidate world positions collected from lamp posts by CityBuilder3D. */
     lampLightSpots: [],
     laneMarkings: [],
@@ -128,8 +134,10 @@ export const RenderSystem3D = {
         const width = parent.clientWidth || 800;
         const height = parent.clientHeight || 600;
 
-        const screenshotMode = new URLSearchParams(window.location.search).get('screenshot');
+        const params = new URLSearchParams(window.location.search);
+        const screenshotMode = params.get('screenshot');
         this.screenshotMode = screenshotMode;
+        this.streetLightMode = params.get('lamp') === 'point' ? 'point' : 'spot';
         this.renderer = new THREE.WebGLRenderer({
             canvas,
             antialias: true,
@@ -460,14 +468,20 @@ export const RenderSystem3D = {
      * Build the fixed street-light pool once and park it in the scene.
      * Call after the city (and therefore `lampLightSpots`) exists.
      */
-    initStreetLightPool() {
+    initStreetLightPool(mode = this.streetLightMode) {
         if (this.streetLights.length > 0) return this.streetLights;
         for (let i = 0; i < STREET_LIGHT_POOL_SIZE; i++) {
-            const light = createPooledStreetLight();
+            const light = createPooledStreetLight(mode);
             // Park far below the map until the first assignment, so a pool larger
             // than the lamp count never lights anything by accident.
             light.position.set(0, -1000, 0);
             this.scene.add(light);
+            if (light.isSpotLight) {
+                // A SpotLight aims at its target's world position, so the target
+                // has to live in the scene graph and follow the light.
+                light.target.position.set(0, -1001, 0);
+                this.scene.add(light.target);
+            }
             this.streetLights.push(light);
         }
         return this.streetLights;
@@ -478,8 +492,8 @@ export const RenderSystem3D = {
      *
      * Uses partial selection rather than a full sort: only POOL_SIZE of ~72
      * candidates are needed, so this stays O(n·k) with no allocation per frame.
-     * Lights are never added, removed or hidden — only moved — which keeps
-     * NUM_POINT_LIGHTS constant and avoids shader recompiles.
+     * Lights are never added, removed or hidden — only moved — which keeps the
+     * shader's light count constant and avoids recompiles.
      * @param {number} fx focus world X
      * @param {number} fz focus world Z
      */
@@ -510,11 +524,14 @@ export const RenderSystem3D = {
                 // Fewer lamps than pool slots — park the surplus out of range
                 // instead of removing it, so the light count stays fixed.
                 light.position.set(0, -1000, 0);
+                if (light.isSpotLight) light.target.position.set(0, -1001, 0);
                 continue;
             }
             taken.push(bestIdx);
             const spot = spots[bestIdx];
             light.position.set(spot.x, spot.y, spot.z);
+            // Cone points straight down at the kerb under the head.
+            if (light.isSpotLight) light.target.position.set(spot.x, 0, spot.z);
         }
     },
 

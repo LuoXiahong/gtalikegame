@@ -10,9 +10,16 @@ import * as THREE from 'three';
  * Nudged back up (2026-08-21, @user) after the fog/key-light/envMap pass gave the
  * rest of the scene far more contrast: the T35 value now reads as flat grey
  * concrete rather than worn paint. Still well under the lamp pool's peak.
+ * Nudged up again (2026-09-07, @user live-play: "regresja z pasami") — T54's
+ * global wet-sheen bump (road roughness 0.92→0.70, envMapIntensity 0.55→1.1)
+ * raised the asphalt's own reflected brightness enough to close most of the gap
+ * to this paint, same category of regression as the fog/key-light pass above,
+ * just from a different source. Paint material itself (RoadBuilder3D's
+ * envMapIntensity:0 crosswalk mesh) is unaffected by T54 — only the asphalt it
+ * sits on got brighter, so the fix is here again, not a T54 rollback.
  */
-const CROSSWALK_PAINT = 'rgba(206, 208, 212, 0.82)';
-const LANE_PAINT = 'rgba(196, 198, 202, 0.78)';
+const CROSSWALK_PAINT = 'rgba(224, 226, 230, 0.90)';
+const LANE_PAINT = 'rgba(214, 216, 220, 0.86)';
 
 /**
  * Radius covering every lobe of a puddle, measured from the puddle origin.
